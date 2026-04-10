@@ -60,6 +60,8 @@ table.summary td.lbl{text-align:left;font-weight:600;background:#fafafa}
   <div class="g_id_signin" data-type="standard" data-size="large"
        data-theme="outline" data-text="sign_in_with" data-shape="rectangular"></div>
   <p class="error" id="loginErr"></p>
+  <button id="retryBtn" style="display:none;margin-top:12px;padding:8px 20px;background:#1a73e8;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:14px"
+          onclick="requestDriveToken()">Drive 접근 권한 요청</button>
 </div>
 </div>
 
@@ -99,35 +101,60 @@ table.summary td.lbl{text-align:left;font-weight:600;background:#fafafa}
 
 <script>
 // ═══════════════════════════════════════════════
-// Auth
+// Auth (same pattern as rate-dashboard)
 // ═══════════════════════════════════════════════
+const GOOGLE_CLIENT_ID = '409330651463-giie223egsskdq10etn642gjtron1hq5.apps.googleusercontent.com';
 const ALLOWED_DOMAINS = ['ekmtc.com'];
 const SCOPES = 'https://www.googleapis.com/auth/drive.readonly email profile openid';
 const DRIVE_FILE_ID = '1bgsHdl5dd8I5c7wVeXfCuMyzEAa2n89E';
 
-let gToken = null, gUser = null, DATA = null;
+let gToken = null, gUser = null, DATA = null, tokenClient = null;
 
+// Google Sign-In button callback — only verifies domain
 function onLogin(resp) {
-  const payload = JSON.parse(atob(resp.credential.split('.')[1]));
-  const domain = payload.email.split('@')[1];
-  if (ALLOWED_DOMAINS.length && !ALLOWED_DOMAINS.includes(domain)) {
+  try {
+    const payload = JSON.parse(atob(resp.credential.split('.')[1]));
+    const domain = (payload.email || '').split('@')[1] || '';
+    if (ALLOWED_DOMAINS.length && !ALLOWED_DOMAINS.includes(domain.toLowerCase())) {
+      document.getElementById('loginErr').style.display = 'block';
+      document.getElementById('loginErr').textContent = `${domain} 도메인은 접근할 수 없습니다.`;
+      return;
+    }
+    gUser = {email: payload.email, name: payload.name, picture: payload.picture};
+    sessionStorage.setItem('guser', JSON.stringify(gUser));
+    // Now request Drive access token
+    requestDriveToken();
+  } catch(e) {
     document.getElementById('loginErr').style.display = 'block';
-    document.getElementById('loginErr').textContent = `${domain} 도메인은 접근할 수 없습니다.`;
+    document.getElementById('loginErr').textContent = '로그인 처리 오류: ' + e.message;
+  }
+}
+
+function requestDriveToken() {
+  document.getElementById('loginErr').style.display = 'block';
+  document.getElementById('loginErr').style.color = '#1a73e8';
+  document.getElementById('loginErr').textContent = 'Google Drive 접근 권한을 요청합니다...';
+  if (!tokenClient) {
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: GOOGLE_CLIENT_ID,
+      scope: SCOPES,
+      callback: onTokenResponse,
+    });
+  }
+  tokenClient.requestAccessToken({prompt: ''});
+}
+
+function onTokenResponse(resp) {
+  if (resp.error) {
+    document.getElementById('loginErr').style.display = 'block';
+    document.getElementById('loginErr').style.color = '#ea4335';
+    document.getElementById('loginErr').textContent = '권한 요청 실패: ' + resp.error + '. 팝업 차단을 해제하고 아래 버튼을 클릭하세요.';
+    document.getElementById('retryBtn').style.display = 'inline-block';
     return;
   }
-  // Get access token for Drive API
-  const tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: '409330651463-giie223egsskdq10etn642gjtron1hq5.apps.googleusercontent.com',
-    scope: SCOPES,
-    callback: (tokenResp) => {
-      gToken = tokenResp.access_token;
-      gUser = {email: payload.email, name: payload.name, picture: payload.picture};
-      sessionStorage.setItem('gtoken', gToken);
-      sessionStorage.setItem('guser', JSON.stringify(gUser));
-      showApp();
-    }
-  });
-  tokenClient.requestAccessToken();
+  gToken = resp.access_token;
+  sessionStorage.setItem('gtoken', gToken);
+  showApp();
 }
 
 function checkSession() {
@@ -135,13 +162,14 @@ function checkSession() {
   const u = sessionStorage.getItem('guser');
   if (t && u) {
     gToken = t; gUser = JSON.parse(u);
-    // Verify token still valid
     fetch('https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=' + t)
-      .then(r => { if (r.ok) showApp(); else sessionStorage.clear(); });
+      .then(r => { if (r.ok) showApp(); else { sessionStorage.clear(); } })
+      .catch(() => sessionStorage.clear());
   }
 }
 
 function logout() {
+  if (gToken) google.accounts.oauth2.revoke(gToken);
   sessionStorage.clear();
   location.reload();
 }
