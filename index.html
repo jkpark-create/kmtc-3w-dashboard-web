@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>-3W Booking Dashboard</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',sans-serif;background:#f0f2f5;color:#202124}
+.login-wrap{display:flex;justify-content:center;align-items:center;height:100vh;background:#f0f2f5}
+.login-box{background:#fff;padding:40px;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.1);text-align:center}
+.login-box h2{color:#1a73e8;margin-bottom:8px}
+.login-box p{color:#5f6368;margin-bottom:24px}
+.error{color:#ea4335;margin-top:12px;display:none}
+#app{display:none}
+.header{background:linear-gradient(135deg,#1a73e8,#1557b0);padding:10px 20px;color:#fff;display:flex;justify-content:space-between;align-items:center}
+.header h1{font-size:18px;font-weight:700}
+.header .info{font-size:12px;opacity:.7}
+.header .user{font-size:12px;cursor:pointer;opacity:.8}
+.header .user:hover{opacity:1}
+.filters{background:#fff;padding:8px 20px;border-bottom:1px solid #dadce0;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.filters label{font-size:12px;color:#5f6368;white-space:nowrap}
+.filters select{padding:4px 8px;border:1px solid #dadce0;border-radius:4px;font-size:13px;min-width:70px}
+.filters .sep{width:16px}
+.tabs{display:flex;gap:0;background:#fff;border-bottom:1px solid #dadce0;padding:0 20px}
+.tabs .tab{padding:10px 16px;font-size:13px;cursor:pointer;border-bottom:3px solid transparent;color:#5f6368}
+.tabs .tab.active{color:#1a73e8;border-bottom-color:#1a73e8;font-weight:600}
+.content{padding:16px 20px}
+.row{display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.card{background:#fff;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.08);padding:16px;flex:1;min-width:120px}
+.card .label{font-size:11px;color:#5f6368;margin-bottom:4px}
+.card .value{font-size:22px;font-weight:700;color:#202124}
+.card .delta{font-size:12px;margin-left:4px}
+.card .delta.pos{color:#34a853}
+.card .delta.neg{color:#ea4335}
+.chart-row{display:flex;gap:12px;margin-bottom:12px}
+.chart-card{background:#fff;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.08);padding:16px}
+.chart-card h3{font-size:14px;font-weight:600;margin-bottom:8px}
+.chart-card .sub{font-size:11px;color:#5f6368}
+table.summary{width:100%;border-collapse:collapse;font-size:11px}
+table.summary th{background:#e8f0fe;padding:4px 6px;text-align:center;border:1px solid #dadce0;font-weight:600;white-space:nowrap}
+table.summary td{padding:4px 6px;text-align:center;border:1px solid #dadce0;white-space:nowrap}
+table.summary tr.total{font-weight:700;background:#f0f4ff}
+table.summary tr.total-m{font-weight:700;background:#e8edf5}
+table.summary td.lbl{text-align:left;font-weight:600;background:#fafafa}
+.loading{text-align:center;padding:60px;color:#5f6368;font-size:16px}
+</style>
+</head>
+<body>
+
+<!-- Login -->
+<div class="login-wrap" id="login">
+<div class="login-box">
+  <h2>-3W Booking Dashboard</h2>
+  <p>회사 Google 계정으로 로그인하세요</p>
+  <div id="g_id_onload" data-client_id="409330651463-giie223egsskdq10etn642gjtron1hq5.apps.googleusercontent.com"
+       data-callback="onLogin" data-auto_prompt="false"></div>
+  <div class="g_id_signin" data-type="standard" data-size="large"
+       data-theme="outline" data-text="sign_in_with" data-shape="rectangular"></div>
+  <p class="error" id="loginErr"></p>
+</div>
+</div>
+
+<!-- App -->
+<div id="app">
+<div class="header">
+  <h1>-3W Booking Dashboard</h1>
+  <div>
+    <span class="info" id="dataInfo"></span>
+    <span class="user" id="userInfo" onclick="logout()"></span>
+  </div>
+</div>
+
+<div class="filters">
+  <label>팀</label><select id="fTeam"><option value="ALL">전체</option></select>
+  <label>선적지</label><select id="fOri"><option value="ALL">전체</option></select>
+  <label>선적포트</label><select id="fOriP"><option value="ALL">전체</option></select>
+  <label>도착지</label><select id="fDst"><option value="ALL">전체</option></select>
+  <label>도착포트</label><select id="fDstP"><option value="ALL">전체</option></select>
+  <div class="sep"></div>
+  <label>보기</label><select id="fView"><option value="dest">도착지별</option><option value="origin">선적지별</option></select>
+  <label>월</label><select id="fMonth"></select>
+</div>
+
+<div class="tabs">
+  <div class="tab active" data-tab="t1" onclick="switchTab('t1')">① 소석률 현황</div>
+  <div class="tab" data-tab="t2" onclick="switchTab('t2')">② 부킹 트렌드</div>
+  <div class="tab" data-tab="t3" onclick="switchTab('t3')">③ 전환 퍼널</div>
+  <div class="tab" data-tab="t4" onclick="switchTab('t4')">④ 수익성</div>
+</div>
+
+<div class="content">
+  <div class="loading" id="loading">데이터 로딩 중...</div>
+  <div id="tabContent"></div>
+</div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+// Auth
+// ═══════════════════════════════════════════════
+const ALLOWED_DOMAINS = ['ekmtc.com'];
+const SCOPES = 'https://www.googleapis.com/auth/drive.readonly email profile openid';
+const DRIVE_FILE_ID = '1bgsHdl5dd8I5c7wVeXfCuMyzEAa2n89E';
+
+let gToken = null, gUser = null, DATA = null;
+
+function onLogin(resp) {
+  const payload = JSON.parse(atob(resp.credential.split('.')[1]));
+  const domain = payload.email.split('@')[1];
+  if (ALLOWED_DOMAINS.length && !ALLOWED_DOMAINS.includes(domain)) {
+    document.getElementById('loginErr').style.display = 'block';
+    document.getElementById('loginErr').textContent = `${domain} 도메인은 접근할 수 없습니다.`;
+    return;
+  }
+  // Get access token for Drive API
+  const tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: '409330651463-giie223egsskdq10etn642gjtron1hq5.apps.googleusercontent.com',
+    scope: SCOPES,
+    callback: (tokenResp) => {
+      gToken = tokenResp.access_token;
+      gUser = {email: payload.email, name: payload.name, picture: payload.picture};
+      sessionStorage.setItem('gtoken', gToken);
+      sessionStorage.setItem('guser', JSON.stringify(gUser));
+      showApp();
+    }
+  });
+  tokenClient.requestAccessToken();
+}
+
+function checkSession() {
+  const t = sessionStorage.getItem('gtoken');
+  const u = sessionStorage.getItem('guser');
+  if (t && u) {
+    gToken = t; gUser = JSON.parse(u);
+    // Verify token still valid
+    fetch('https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=' + t)
+      .then(r => { if (r.ok) showApp(); else sessionStorage.clear(); });
+  }
+}
+
+function logout() {
+  sessionStorage.clear();
+  location.reload();
+}
+
+function showApp() {
+  document.getElementById('login').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('userInfo').textContent = `${gUser.name} | 로그아웃`;
+  loadData();
+}
+
+// ═══════════════════════════════════════════════
+// Data Loading
+// ═══════════════════════════════════════════════
+async function loadData() {
+  try {
+    const resp = await fetch(`https://www.googleapis.com/drive/v3/files/${DRIVE_FILE_ID}?alt=media`, {
+      headers: {'Authorization': `Bearer ${gToken}`}
+    });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    DATA = await resp.json();
+    document.getElementById('dataInfo').textContent = `Data: ${DATA.data_date} | `;
+    initFilters();
+    document.getElementById('loading').style.display = 'none';
+    render();
+  } catch(e) {
+    document.getElementById('loading').textContent = `데이터 로드 실패: ${e.message}`;
+  }
+}
+
+// ═══════════════════════════════════════════════
+// Filters
+// ═══════════════════════════════════════════════
+function initFilters() {
+  const teams = [...new Set(DATA.monthly.map(r=>r.team))].sort();
+  fillSelect('fTeam', teams);
+  fillSelect('fMonth', DATA.months, DATA.months[DATA.months.length-2]);
+  updateCascade();
+  ['fTeam','fOri','fOriP','fDst','fDstP','fView','fMonth'].forEach(id =>
+    document.getElementById(id).addEventListener('change', () => { updateCascade(); render(); }));
+}
+
+function fillSelect(id, vals, def) {
+  const el = document.getElementById(id);
+  const cur = el.value;
+  const opts = ['<option value="ALL">전체</option>'];
+  vals.forEach(v => opts.push(`<option value="${v}">${fmtMonth(v)}</option>`));
+  el.innerHTML = opts.join('');
+  el.value = def || (vals.includes(cur) ? cur : 'ALL');
+}
+
+function fmtMonth(v) {
+  const m = v.match(/^(\d{4})(\d{2})$/);
+  return m ? `${parseInt(m[2])}월` : v;
+}
+
+function gv(id) { return document.getElementById(id).value; }
+
+function updateCascade() {
+  let d = DATA.monthly;
+  const team=gv('fTeam'), ori=gv('fOri'), oriP=gv('fOriP'), dst=gv('fDst');
+  if(team!=='ALL') d=d.filter(r=>r.team===team);
+  fillSelect('fOri', [...new Set(d.map(r=>r.origin))].sort());
+  if(ori!=='ALL') d=d.filter(r=>r.origin===ori);
+  fillSelect('fOriP', [...new Set(d.map(r=>r.ori_port))].sort());
+  if(oriP!=='ALL') d=d.filter(r=>r.ori_port===oriP);
+  fillSelect('fDst', [...new Set(d.map(r=>r.dest))].sort());
+  if(dst!=='ALL') d=d.filter(r=>r.dest===dst);
+  fillSelect('fDstP', [...new Set(d.map(r=>r.dst_port))].sort());
+}
+
+function filterMonthly(month) {
+  let d = DATA.monthly;
+  const team=gv('fTeam'),ori=gv('fOri'),oriP=gv('fOriP'),dst=gv('fDst'),dstP=gv('fDstP');
+  if(team!=='ALL') d=d.filter(r=>r.team===team);
+  if(ori!=='ALL') d=d.filter(r=>r.origin===ori);
+  if(oriP!=='ALL') d=d.filter(r=>r.ori_port===oriP);
+  if(dst!=='ALL') d=d.filter(r=>r.dest===dst);
+  if(dstP!=='ALL') d=d.filter(r=>r.dst_port===dstP);
+  if(month) d=d.filter(r=>r.YYYYMM===month);
+  return d;
+}
+
+function filterBSA(month) {
+  let b = DATA.bsa;
+  const team=gv('fTeam'),ori=gv('fOri'),oriP=gv('fOriP'),dst=gv('fDst'),dstP=gv('fDstP');
+  if(team!=='ALL') b=b.filter(r=>r.team===team);
+  if(ori!=='ALL') b=b.filter(r=>r.POR_Country===ori);
+  if(oriP!=='ALL') b=b.filter(r=>r.POR_PORT===oriP);
+  if(dst!=='ALL') b=b.filter(r=>r.DLY_Country===dst);
+  if(dstP!=='ALL') b=b.filter(r=>r.DLY_PORT===dstP);
+  if(month) b=b.filter(r=>r.YYYYMM===month);
+  return b;
+}
+
+function filterWeekly(month) {
+  let d = DATA.weekly;
+  const team=gv('fTeam'),ori=gv('fOri'),dst=gv('fDst');
+  if(team!=='ALL') d=d.filter(r=>r.team===team);
+  if(ori!=='ALL') d=d.filter(r=>r.origin===ori);
+  if(dst!=='ALL') d=d.filter(r=>r.dest===dst);
+  if(month) d=d.filter(r=>r.YYYYMM===month);
+  return d;
+}
+
+// ═══════════════════════════════════════════════
+// Aggregation helpers
+// ═══════════════════════════════════════════════
+function sum(arr, key) { return arr.reduce((s,r) => s + (r[key]||0), 0); }
+function fmt(v) { return v.toLocaleString('ko-KR', {maximumFractionDigits:0}); }
+function pct(a,b) { return b>0 ? `${(a/b*100).toFixed(0)}%` : '-'; }
+
+function viewKey() { return gv('fView') === 'origin' ? 'origin' : 'dest'; }
+function viewLabel() { return gv('fView') === 'origin' ? '선적지' : '도착지'; }
+function bsaViewKey() { return gv('fView') === 'origin' ? 'POR_Country' : 'DLY_Country'; }
+
+// ═══════════════════════════════════════════════
+// Tabs
+// ═══════════════════════════════════════════════
+let activeTab = 't1';
+function switchTab(tab) {
+  activeTab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab===tab));
+  render();
+}
+
+function render() {
+  if (!DATA) return;
+  const fn = {t1: renderTab1, t2: renderTab2, t3: renderTab3, t4: renderTab4};
+  fn[activeTab]();
+}
+
+// ═══════════════════════════════════════════════
+// Tab 1: 소석률 현황
+// ═══════════════════════════════════════════════
+function renderTab1() {
+  const month = gv('fMonth');
+  const wk = DATA.wpm[month] || 4;
+  const vk = viewKey(), vl = viewLabel(), bk = bsaViewKey();
+  const fd = filterMonthly(month);
+  const bsa = filterBSA(month);
+  const bsaTotal = sum(bsa, 'teu_bsa');
+
+  const totalBkg = sum(fd,'fst'), shipped = sum(fd,'norm_fst');
+  const w3Bkg = sum(fd,'w3_fst'), w3Ship = sum(fd,'w3_norm_fst');
+  const occ = bsaTotal>0 ? shipped/bsaTotal*100 : 0;
+  const sr = w3Bkg>0 ? w3Ship/w3Bkg*100 : 0;
+  const cm1 = sum(fd,'cm1_norm'), cm1l = sum(fd,'lst_norm');
+  const cm1teu = cm1l>0 ? cm1/cm1l : 0;
+
+  let html = `<div class="row">
+    ${kpi('전체 BKG', fmt(totalBkg), '#1a73e8')}
+    ${kpi('실선적', fmt(shipped), '#34a853')}
+    ${kpi('3주전 BKG', fmt(w3Bkg), '#6c5ce7')}
+    ${kpi('3주전 실선적', fmt(w3Ship), '#00b894')}
+    ${kpi('BSA', fmt(bsaTotal), '#5f6368')}
+    ${kpi('소석률', occ.toFixed(1)+'%', occ<=120?'#34a853':'#ea4335')}
+    ${kpi('실선적률', sr.toFixed(1)+'%', sr>=55?'#34a853':'#f9ab00')}
+    ${kpi('CM1/TEU', fmt(Math.round(cm1teu)), '#202124')}
+  </div>`;
+
+  // Charts
+  html += `<div class="chart-row">
+    <div class="chart-card" style="flex:7"><h3>월별 BKG vs BSA</h3><div id="ch1bar" style="height:450px"></div></div>
+    <div class="chart-card" style="flex:5"><h3>${vl}별 소석률 (실선적/BSA)</h3><div class="sub">${fmtMonth(month)}</div><div id="ch1occ" style="height:450px"></div></div>
+  </div>`;
+
+  // Summary table
+  html += `<div class="chart-card"><h3>${vl}별 월간 실적</h3><div id="summaryTbl"></div></div>`;
+
+  document.getElementById('tabContent').innerHTML = html;
+
+  // Bar chart
+  const ms = DATA.months.filter(m => m <= month);
+  const shipM = ms.map(m => sum(filterMonthly(m), 'norm_fst'));
+  const bsaM = ms.map(m => sum(filterBSA(m), 'teu_bsa'));
+  const occM = ms.map((m,i) => bsaM[i]>0 ? shipM[i]/bsaM[i]*100 : null);
+  const w3shipM = ms.map(m => sum(filterMonthly(m), 'w3_norm_fst'));
+  const w3occM = ms.map((m,i) => bsaM[i]>0 ? w3shipM[i]/bsaM[i]*100 : null);
+  const xl = ms.map(fmtMonth);
+
+  Plotly.newPlot('ch1bar', [
+    {x:xl, y:shipM, type:'bar', name:'실선적', marker:{color:'#1a73e8',opacity:.85}, text:shipM.map(fmt), textposition:'outside', textfont:{size:10}},
+    {x:xl, y:bsaM, type:'bar', name:'BSA', marker:{color:'#dadce0',opacity:.5}, text:bsaM.map(fmt), textposition:'outside', textfont:{size:10}},
+    {x:xl, y:occM, type:'scatter', mode:'lines+markers+text', name:'소석률(실선적/BSA)', yaxis:'y2',
+     text:occM.map(v=>v?v.toFixed(0)+'%':''), textposition:'top center', line:{color:'#ea4335',width:2}, marker:{size:8}},
+    {x:xl, y:w3occM, type:'scatter', mode:'lines+markers+text', name:'3주전실선적/BSA', yaxis:'y2',
+     text:w3occM.map(v=>v?v.toFixed(0)+'%':''), textposition:'bottom center', line:{color:'#6c5ce7',width:2,dash:'dash'}, marker:{size:6,symbol:'diamond'}},
+  ], {barmode:'group', margin:{l:50,r:50,t:20,b:30},
+      yaxis:{title:'TEU',gridcolor:'#f0f0f0'}, yaxis2:{title:'소석률 %',overlaying:'y',side:'right',range:[0,110]},
+      legend:{orientation:'h',y:1.15}, plot_bgcolor:'#fff', paper_bgcolor:'#fff'}, {displayModeBar:false});
+
+  // Occupancy bar
+  const items = groupByKey(fd, vk);
+  const bsaByKey = {};
+  bsa.forEach(r => { const k = r[bk]; bsaByKey[k] = (bsaByKey[k]||0) + r.teu_bsa; });
+  let orows = Object.entries(items).map(([k,rows]) => {
+    const s = sum(rows,'norm_fst'), b = bsaByKey[k]||0;
+    return {name:k, ship:s, bsa:b, occ: b>0?s/b*100:0};
+  }).filter(r=>r.ship>0||r.bsa>0).sort((a,b)=>a.occ-b.occ);
+
+  Plotly.newPlot('ch1occ', [{
+    y: orows.map(r=>`(${fmt(r.ship)} / ${fmt(r.bsa)})  ${r.name}`),
+    x: orows.map(r=>r.occ), type:'bar', orientation:'h',
+    marker:{color:orows.map(r=>r.occ>=65?'#34a853':r.occ>=50?'#f9ab00':'#ea4335')},
+    text:orows.map(r=>r.occ.toFixed(0)+'%'), textposition:'outside', textfont:{size:11}, cliponaxis:false
+  }], {margin:{l:200,r:60,t:20,b:30}, xaxis:{title:'소석률 %'},
+       yaxis:{tickfont:{family:'Consolas,monospace',size:11}},
+       plot_bgcolor:'#fff',paper_bgcolor:'#fff',showlegend:false,
+       shapes:[{type:'line',x0:50,x1:50,y0:-0.5,y1:orows.length-0.5,line:{dash:'dot',color:'#5f6368',width:1}}]
+  }, {displayModeBar:false});
+
+  // Summary table
+  buildSummaryTable(ms.slice(-3));
+}
+
+function kpi(label, value, color) {
+  return `<div class="card"><div class="label">${label}</div><div class="value" style="color:${color}">${value}</div></div>`;
+}
+
+function groupByKey(arr, key) {
+  const g = {};
+  arr.forEach(r => { const k = r[key]; (g[k]=g[k]||[]).push(r); });
+  return g;
+}
+
+function buildSummaryTable(months) {
+  const vk = viewKey(), vl = viewLabel(), bk = bsaViewKey();
+  const allFd = filterMonthly(null);
+  const items = [...new Set(allFd.map(r=>r[vk]))].sort((a,b) => {
+    const sa = sum(allFd.filter(r=>r[vk]===a),'w3_fst'), sb = sum(allFd.filter(r=>r[vk]===b),'w3_fst');
+    return sb - sa;
+  }).slice(0, 15);
+
+  let h = `<table class="summary"><tr><th rowspan="2">${vl}</th>`;
+  months.forEach(m => {
+    const wk = DATA.wpm[m]||4;
+    h += `<th colspan="11">${fmtMonth(m)} 실적 (${wk}주)</th>`;
+  });
+  h += '</tr><tr>';
+  months.forEach(() => {
+    h += '<th>BKG</th><th>BSA</th><th>비중</th><th>실선적</th><th>실선적률</th><th>BKG</th><th>비중</th><th>실선적</th><th>실선적률</th><th>CM1</th><th>CM1/TEU</th>';
+  });
+  h += '</tr>';
+
+  items.forEach(it => {
+    h += `<tr><td class="lbl">${it}</td>`;
+    months.forEach(m => {
+      const wk = DATA.wpm[m]||4;
+      const fd = filterMonthly(m).filter(r=>r[vk]===it);
+      const bsa_v = sum(filterBSA(m).filter(r=>r[bk]===it), 'teu_bsa') / wk;
+      const b=sum(fd,'w3_fst')/wk, n=sum(fd,'w3_norm_fst')/wk;
+      const hb=sum(fd,'w3_hi_fst')/wk, hn=sum(fd,'w3_hi_norm_fst')/wk;
+      const c1=sum(fd,'cm1_norm')/wk, cl=sum(fd,'lst_norm')/wk, ct=cl>0?c1/cl:0;
+      h += `<td>${fmt(Math.round(b))}</td><td>${fmt(Math.round(bsa_v))}</td><td>${pct(b,bsa_v)}</td><td>${fmt(Math.round(n))}</td><td>${pct(n,b)}</td>`;
+      h += `<td>${fmt(Math.round(hb))}</td><td>${pct(hb,b)}</td><td>${fmt(Math.round(hn))}</td><td>${pct(hn,hb)}</td>`;
+      h += `<td>${fmt(Math.round(c1))}</td><td>${fmt(Math.round(ct))}</td>`;
+    });
+    h += '</tr>';
+  });
+
+  // Totals
+  ['합계(주)','합계(월)'].forEach((lbl,ti) => {
+    h += `<tr class="${ti===0?'total':'total-m'}"><td class="lbl">${lbl}</td>`;
+    months.forEach(m => {
+      const wk = ti===0 ? (DATA.wpm[m]||4) : 1;
+      const fd = filterMonthly(m);
+      const bsa_v = sum(filterBSA(m), 'teu_bsa') / wk;
+      const b=sum(fd,'w3_fst')/wk, n=sum(fd,'w3_norm_fst')/wk;
+      const hb=sum(fd,'w3_hi_fst')/wk, hn=sum(fd,'w3_hi_norm_fst')/wk;
+      const c1=sum(fd,'cm1_norm')/wk, cl=sum(fd,'lst_norm')/wk, ct=cl>0?c1/cl:0;
+      h += `<td>${fmt(Math.round(b))}</td><td>${fmt(Math.round(bsa_v))}</td><td>${pct(b,bsa_v)}</td><td>${fmt(Math.round(n))}</td><td>${pct(n,b)}</td>`;
+      h += `<td>${fmt(Math.round(hb))}</td><td>${pct(hb,b)}</td><td>${fmt(Math.round(hn))}</td><td>${pct(hn,hb)}</td>`;
+      h += `<td>${fmt(Math.round(c1))}</td><td>${fmt(Math.round(ct))}</td>`;
+    });
+    h += '</tr>';
+  });
+
+  h += '</table>';
+  document.getElementById('summaryTbl').innerHTML = h;
+}
+
+// ═══════════════════════════════════════════════
+// Tab 2: 부킹 트렌드
+// ═══════════════════════════════════════════════
+function renderTab2() {
+  const month = gv('fMonth'), vk = viewKey(), vl = viewLabel();
+  const fd = filterMonthly(month);
+  const w3 = fd; // already has w3_fst columns
+
+  const items = groupByKey(fd, vk);
+  let rows = Object.entries(items).map(([k,r]) => ({
+    name:k, bkg:sum(r,'w3_fst'), ship:sum(r,'w3_norm_fst'), hi:sum(r,'w3_hi_fst')
+  })).sort((a,b)=>b.bkg-a.bkg).slice(0,15);
+
+  let html = `<div class="chart-card"><h3>3주전 BKG 현황 (${fmtMonth(month)})</h3>
+  <table class="summary"><tr><th>${vl}</th><th>BKG</th><th>실선적</th><th>실선적률</th><th>고수익BKG</th><th>고수익%</th></tr>`;
+  rows.forEach(r => {
+    html += `<tr><td class="lbl">${r.name}</td><td>${fmt(r.bkg)}</td><td>${fmt(r.ship)}</td><td>${pct(r.ship,r.bkg)}</td><td>${fmt(r.hi)}</td><td>${pct(r.hi,r.bkg)}</td></tr>`;
+  });
+  const tb=rows.reduce((s,r)=>s+r.bkg,0), ts=rows.reduce((s,r)=>s+r.ship,0), th=rows.reduce((s,r)=>s+r.hi,0);
+  html += `<tr class="total"><td class="lbl">합계</td><td>${fmt(tb)}</td><td>${fmt(ts)}</td><td>${pct(ts,tb)}</td><td>${fmt(th)}</td><td>${pct(th,tb)}</td></tr></table></div>`;
+
+  // Weekly chart
+  const wkData = filterWeekly(month);
+  const weeks = [...new Set(wkData.map(r=>r.week_start_date))].sort();
+  const topDests = Object.entries(groupByKey(wkData, vk==='origin'?'origin':'dest'))
+    .sort((a,b)=>sum(b[1],'w3_fst')-sum(a[1],'w3_fst')).slice(0,8).map(e=>e[0]);
+
+  html += `<div class="chart-card"><h3>주차별 3주전 BKG</h3><div id="ch2wk" style="height:290px"></div></div>`;
+  document.getElementById('tabContent').innerHTML = html;
+
+  const traces = topDests.map((d,i) => ({
+    x: weeks.map(w=>w.replace(/\D+/g,'-').replace(/-$/,'').slice(5)),
+    y: weeks.map(w => sum(wkData.filter(r=>(r[vk==='origin'?'origin':'dest']===d)&&r.week_start_date===w), 'w3_fst')),
+    type:'bar', name:d
+  }));
+  Plotly.newPlot('ch2wk', traces, {barmode:'stack',margin:{l:40,r:20,t:20,b:30},
+    yaxis:{title:'TEU',gridcolor:'#f0f0f0'},legend:{orientation:'h',y:1.12},
+    plot_bgcolor:'#fff',paper_bgcolor:'#fff'}, {displayModeBar:false});
+}
+
+// ═══════════════════════════════════════════════
+// Tab 3: 전환 퍼널
+// ═══════════════════════════════════════════════
+function renderTab3() {
+  const month = gv('fMonth');
+  const fd = filterMonthly(month);
+  const w3b = sum(fd,'w3_fst'), w3c = sum(fd,'w3_canc_fst'), w3n = sum(fd,'w3_norm_fst');
+
+  let html = `<div class="chart-row">
+    <div class="chart-card" style="flex:5"><h3>WOS-3 → 실선적</h3><div id="ch3fn" style="height:330px"></div></div>
+    <div class="chart-card" style="flex:7"><h3>실선적률 추이</h3><div id="ch3tr" style="height:330px"></div></div>
+  </div>`;
+  document.getElementById('tabContent').innerHTML = html;
+
+  Plotly.newPlot('ch3fn', [{type:'funnel', y:['3주전 BKG','캔슬 제외','실선적(Normal)'],
+    x:[w3b, w3b-w3c, w3n], textinfo:'value+percent initial',
+    marker:{color:['#1a73e8','#f9ab00','#34a853']}}],
+    {margin:{l:20,r:20,t:20,b:20},plot_bgcolor:'#fff',paper_bgcolor:'#fff'}, {displayModeBar:false});
+
+  // Trend
+  const vk = viewKey();
+  const allFd = filterMonthly(null);
+  const topItems = Object.entries(groupByKey(filterMonthly(month), vk))
+    .sort((a,b)=>sum(b[1],'w3_fst')-sum(a[1],'w3_fst')).slice(0,8).map(e=>e[0]);
+
+  const traces = topItems.map(it => ({
+    x: DATA.months.map(fmtMonth),
+    y: DATA.months.map(m => {
+      const d = filterMonthly(m).filter(r=>r[vk]===it);
+      const b=sum(d,'w3_fst'), n=sum(d,'w3_norm_fst');
+      return b>0 ? n/b*100 : null;
+    }),
+    mode:'lines+markers', name:it, connectgaps:true
+  }));
+  Plotly.newPlot('ch3tr', traces, {margin:{l:40,r:20,t:20,b:30},
+    yaxis:{title:'3주전 실선적률 %',gridcolor:'#f0f0f0'},
+    legend:{orientation:'h',y:1.12},plot_bgcolor:'#fff',paper_bgcolor:'#fff'}, {displayModeBar:false});
+}
+
+// ═══════════════════════════════════════════════
+// Tab 4: 수익성
+// ═══════════════════════════════════════════════
+function renderTab4() {
+  const month = gv('fMonth'), vk = viewKey();
+  const fd = filterMonthly(month);
+  const items = Object.entries(groupByKey(fd, vk)).map(([k,r]) => ({
+    name:k, bkg:sum(r,'w3_fst'), cm1:sum(r,'cm1_norm'), cm1l:sum(r,'lst_norm'),
+    hi:sum(r,'w3_hi_fst')
+  })).filter(r=>r.bkg>0).sort((a,b)=>b.bkg-a.bkg).slice(0,10);
+
+  let html = `<div class="chart-row">
+    <div class="chart-card" style="flex:1"><h3>CM1/TEU (${fmtMonth(month)})</h3><div id="ch4cm" style="height:330px"></div></div>
+    <div class="chart-card" style="flex:1"><h3>고수익화주 비중</h3><div id="ch4hi" style="height:330px"></div></div>
+  </div>`;
+  document.getElementById('tabContent').innerHTML = html;
+
+  const sorted = [...items].sort((a,b) => (a.cm1l>0?a.cm1/a.cm1l:0) - (b.cm1l>0?b.cm1/b.cm1l:0));
+  Plotly.newPlot('ch4cm', [{
+    y:sorted.map(r=>r.name), x:sorted.map(r=>r.cm1l>0?Math.round(r.cm1/r.cm1l):0),
+    type:'bar', orientation:'h', marker:{color:'#1a73e8',opacity:.85},
+    text:sorted.map(r=>r.cm1l>0?fmt(Math.round(r.cm1/r.cm1l)):'0'), textposition:'auto', textfont:{color:'#fff'}
+  }], {margin:{l:60,r:30,t:20,b:30},xaxis:{title:'CM1/TEU',gridcolor:'#f0f0f0'},
+       plot_bgcolor:'#fff',paper_bgcolor:'#fff'}, {displayModeBar:false});
+
+  const show = items.map(r=>r.name);
+  const traces = DATA.months.map(m => {
+    const mfd = filterMonthly(m);
+    return {x:show, y:show.map(it => {
+      const d = mfd.filter(r=>r[vk]===it);
+      const b=sum(d,'w3_fst'), h=sum(d,'w3_hi_fst');
+      return b>0?h/b*100:0;
+    }), type:'bar', name:fmtMonth(m), text:show.map(it => {
+      const d = mfd.filter(r=>r[vk]===it);
+      const b=sum(d,'w3_fst'), h=sum(d,'w3_hi_fst');
+      return b>0?(h/b*100).toFixed(0)+'%':'';
+    }), textposition:'auto', textfont:{size:9}};
+  });
+  Plotly.newPlot('ch4hi', traces, {barmode:'group',margin:{l:40,r:20,t:20,b:30},
+    yaxis:{title:'%',gridcolor:'#f0f0f0',range:[0,60]},
+    legend:{orientation:'h',y:1.12},plot_bgcolor:'#fff',paper_bgcolor:'#fff'}, {displayModeBar:false});
+}
+
+// ═══════════════════════════════════════════════
+// Init
+// ═══════════════════════════════════════════════
+checkSession();
+</script>
+</body>
+</html>
