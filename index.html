@@ -451,41 +451,110 @@ function buildSummaryTable(months) {
 // ═══════════════════════════════════════════════
 // Tab 2: 부킹 트렌드
 // ═══════════════════════════════════════════════
+let t2sub = 'dest';
 function renderTab2() {
   const month = gv('fMonth'), vk = viewKey(), vl = viewLabel();
   const fd = filterMonthly(month);
-  const w3 = fd; // already has w3_fst columns
 
-  const items = groupByKey(fd, vk);
-  let rows = Object.entries(items).map(([k,r]) => ({
-    name:k, bkg:sum(r,'w3_fst'), ship:sum(r,'w3_norm_fst'), hi:sum(r,'w3_hi_fst')
-  })).sort((a,b)=>b.bkg-a.bkg).slice(0,15);
+  // Sub-tabs
+  let html = `<div style="display:flex;gap:0;margin-bottom:12px;border-bottom:2px solid #dadce0">
+    ${['dest','origin','cust'].map(t => {
+      const lbl = t==='dest'?'도착지별':t==='origin'?'선적지별':'화주별';
+      const cls = t2sub===t ? 'color:#1a73e8;border-bottom:3px solid #1a73e8;font-weight:600' : 'color:#5f6368;border-bottom:3px solid transparent';
+      return `<div style="padding:8px 16px;font-size:13px;cursor:pointer;${cls}" onclick="t2sub='${t}';renderTab2()">${lbl}</div>`;
+    }).join('')}
+  </div>`;
 
-  let html = `<div class="chart-card"><h3>3주전 BKG 현황 (${fmtMonth(month)})</h3>
-  <table class="summary"><tr><th>${vl}</th><th>BKG</th><th>실선적</th><th>실선적률</th><th>고수익BKG</th><th>고수익%</th></tr>`;
-  rows.forEach(r => {
-    html += `<tr><td class="lbl">${r.name}</td><td>${fmt(r.bkg)}</td><td>${fmt(r.ship)}</td><td>${pct(r.ship,r.bkg)}</td><td>${fmt(r.hi)}</td><td>${pct(r.hi,r.bkg)}</td></tr>`;
-  });
-  const tb=rows.reduce((s,r)=>s+r.bkg,0), ts=rows.reduce((s,r)=>s+r.ship,0), th=rows.reduce((s,r)=>s+r.hi,0);
-  html += `<tr class="total"><td class="lbl">합계</td><td>${fmt(tb)}</td><td>${fmt(ts)}</td><td>${pct(ts,tb)}</td><td>${fmt(th)}</td><td>${pct(th,tb)}</td></tr></table></div>`;
+  if (t2sub === 'cust') {
+    // 화주별 뷰
+    html += renderShipperTable(month);
+  } else {
+    const useVk = t2sub === 'origin' ? 'origin' : 'dest';
+    const useVl = t2sub === 'origin' ? '선적지' : '도착지';
 
-  // Weekly chart
-  const wkData = filterWeekly(month);
-  const weeks = [...new Set(wkData.map(r=>r.week_start_date))].sort();
-  const topDests = Object.entries(groupByKey(wkData, vk==='origin'?'origin':'dest'))
-    .sort((a,b)=>sum(b[1],'w3_fst')-sum(a[1],'w3_fst')).slice(0,8).map(e=>e[0]);
+    const items = groupByKey(fd, useVk);
+    let rows = Object.entries(items).map(([k,r]) => ({
+      name:k, bkg:sum(r,'w3_fst'), ship:sum(r,'w3_norm_fst'), hi:sum(r,'w3_hi_fst')
+    })).sort((a,b)=>b.bkg-a.bkg).slice(0,15);
 
-  html += `<div class="chart-card"><h3>주차별 3주전 BKG</h3><div id="ch2wk" style="height:290px"></div></div>`;
+    html += `<div class="chart-card"><h3>3주전 BKG 현황 - ${useVl}별 (${fmtMonth(month)})</h3>
+    <table class="summary"><tr><th>${useVl}</th><th>BKG</th><th>실선적</th><th>실선적률</th><th>고수익BKG</th><th>고수익%</th></tr>`;
+    rows.forEach(r => {
+      html += `<tr><td class="lbl">${r.name}</td><td>${fmt(r.bkg)}</td><td>${fmt(r.ship)}</td><td>${pct(r.ship,r.bkg)}</td><td>${fmt(r.hi)}</td><td>${pct(r.hi,r.bkg)}</td></tr>`;
+    });
+    const tb=rows.reduce((s,r)=>s+r.bkg,0), ts=rows.reduce((s,r)=>s+r.ship,0), th2=rows.reduce((s,r)=>s+r.hi,0);
+    html += `<tr class="total"><td class="lbl">합계</td><td>${fmt(tb)}</td><td>${fmt(ts)}</td><td>${pct(ts,tb)}</td><td>${fmt(th2)}</td><td>${pct(th2,tb)}</td></tr></table></div>`;
+
+    // Weekly chart
+    const wkData = filterWeekly(month);
+    const weeks = [...new Set(wkData.map(r=>r.week_start_date))].sort();
+    const wkKey = useVk==='origin'?'origin':'dest';
+    const topDests = Object.entries(groupByKey(wkData, wkKey))
+      .sort((a,b)=>sum(b[1],'w3_fst')-sum(a[1],'w3_fst')).slice(0,8).map(e=>e[0]);
+
+    html += `<div class="chart-card"><h3>주차별 3주전 BKG</h3><div id="ch2wk" style="height:290px"></div></div>`;
+    document.getElementById('tabContent').innerHTML = html;
+
+    const traces = topDests.map((d,i) => ({
+      x: weeks.map(w=>w.replace(/\D+/g,'-').replace(/-$/,'').slice(5)),
+      y: weeks.map(w => sum(wkData.filter(r=>r[wkKey]===d&&r.week_start_date===w), 'w3_fst')),
+      type:'bar', name:d
+    }));
+    Plotly.newPlot('ch2wk', traces, {barmode:'stack',margin:{l:40,r:20,t:20,b:30},
+      yaxis:{title:'TEU',gridcolor:'#f0f0f0'},legend:{orientation:'h',y:1.12},
+      plot_bgcolor:'#fff',paper_bgcolor:'#fff'}, {displayModeBar:false});
+    return;
+  }
   document.getElementById('tabContent').innerHTML = html;
+}
 
-  const traces = topDests.map((d,i) => ({
-    x: weeks.map(w=>w.replace(/\D+/g,'-').replace(/-$/,'').slice(5)),
-    y: weeks.map(w => sum(wkData.filter(r=>(r[vk==='origin'?'origin':'dest']===d)&&r.week_start_date===w), 'w3_fst')),
-    type:'bar', name:d
-  }));
-  Plotly.newPlot('ch2wk', traces, {barmode:'stack',margin:{l:40,r:20,t:20,b:30},
-    yaxis:{title:'TEU',gridcolor:'#f0f0f0'},legend:{orientation:'h',y:1.12},
-    plot_bgcolor:'#fff',paper_bgcolor:'#fff'}, {displayModeBar:false});
+function filterShipper(month) {
+  if (!DATA.shipper) return [];
+  let d = DATA.shipper;
+  const team=gv('fTeam'),ori=gv('fOri'),oriP=gv('fOriP'),dst=gv('fDst'),dstP=gv('fDstP');
+  if(team!=='ALL') d=d.filter(r=>r.team===team);
+  if(ori!=='ALL') d=d.filter(r=>r.origin===ori);
+  if(oriP!=='ALL') d=d.filter(r=>r.ori_port===oriP);
+  if(dst!=='ALL') d=d.filter(r=>r.dest===dst);
+  if(dstP!=='ALL') d=d.filter(r=>r.dst_port===dstP);
+  if(month) d=d.filter(r=>r.YYYYMM===month);
+  return d;
+}
+
+function renderShipperTable(month) {
+  const sd = filterShipper(month);
+  const wk = DATA.wpm[month]||4;
+
+  // Aggregate by shipper
+  const byShpr = {};
+  sd.forEach(r => {
+    const k = r.BKG_SHPR_CST_ENM || r.BKG_SHPR_CST_NO;
+    if (!byShpr[k]) byShpr[k] = {bkg:0,ship:0,hi:0,hi_ship:0,cm1:0,cm1l:0};
+    const s = byShpr[k];
+    s.bkg += r.w3_fst||0; s.ship += r.w3_norm_fst||0;
+    s.hi += r.w3_hi_fst||0; s.hi_ship += r.w3_hi_norm_fst||0;
+    s.cm1 += r.cm1_norm||0; s.cm1l += r.lst_norm||0;
+  });
+
+  let rows = Object.entries(byShpr).map(([k,s]) => ({name:k,...s}))
+    .sort((a,b)=>b.bkg-a.bkg).slice(0,30);
+
+  let h = `<div class="chart-card"><h3>화주별 3주전 BKG (${fmtMonth(month)}, 주간평균)</h3>
+  <table class="summary"><tr><th>화주</th><th>BKG</th><th>실선적</th><th>실선적률</th><th>고수익BKG</th><th>고수익%</th><th>CM1</th><th>CM1/TEU</th></tr>`;
+
+  rows.forEach(r => {
+    const b=r.bkg/wk, n=r.ship/wk, hb=r.hi/wk, c1=r.cm1/wk, ct=r.cm1l>0?r.cm1/r.cm1l:0;
+    h += `<tr><td class="lbl">${r.name}</td><td>${fmt(Math.round(b))}</td><td>${fmt(Math.round(n))}</td><td>${pct(n,b)}</td>`;
+    h += `<td>${fmt(Math.round(hb))}</td><td>${pct(hb,b)}</td><td>${fmt(Math.round(c1))}</td><td>${fmt(Math.round(ct))}</td></tr>`;
+  });
+
+  const tb=rows.reduce((s,r)=>s+r.bkg,0)/wk, ts=rows.reduce((s,r)=>s+r.ship,0)/wk;
+  const th2=rows.reduce((s,r)=>s+r.hi,0)/wk, tc=rows.reduce((s,r)=>s+r.cm1,0)/wk;
+  const tl=rows.reduce((s,r)=>s+r.cm1l,0), tct=tl>0?rows.reduce((s,r)=>s+r.cm1,0)/tl:0;
+  h += `<tr class="total"><td class="lbl">합계</td><td>${fmt(Math.round(tb))}</td><td>${fmt(Math.round(ts))}</td><td>${pct(ts,tb)}</td>`;
+  h += `<td>${fmt(Math.round(th2))}</td><td>${pct(th2,tb)}</td><td>${fmt(Math.round(tc))}</td><td>${fmt(Math.round(tct))}</td></tr>`;
+  h += '</table></div>';
+  return h;
 }
 
 // ═══════════════════════════════════════════════
