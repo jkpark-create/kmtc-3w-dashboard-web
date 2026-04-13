@@ -543,7 +543,7 @@ function buildSummaryTable(months) {
   });
   h += '</tr><tr>';
   months.forEach(() => {
-    h += '<th>BKG</th><th>BSA</th><th>${L('비중','%')}</th><th>실선적</th><th>실선적률</th><th>BKG</th><th>비중</th><th>실선적</th><th>실선적률</th><th>CM1</th><th>CM1/TEU</th>';
+    h += `<th>BKG</th><th>BSA</th><th>${L('비중','Ratio')}</th><th>${L('실선적','Ship')}</th><th>${L('실선적률','Rate')}</th><th>BKG</th><th>${L('비중','Ratio')}</th><th>${L('실선적','Ship')}</th><th>${L('실선적률','Rate')}</th><th>CM1</th><th>CM1/TEU</th>`;
   });
   h += '</tr>';
 
