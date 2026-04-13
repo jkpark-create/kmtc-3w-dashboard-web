@@ -153,7 +153,7 @@ document.addEventListener('DOMContentLoaded', applyLang);
 <!-- ═══════════════════════════════════════ -->
 <h2 id="tab1" class="ko">Tab 1: 소석률 현황</h2>
 <h2 class="en" style="display:none">Tab 1: Occupancy Status</h2>
-<div class="card">
+<div class="card ko">
   <h3>KPI 카드</h3>
   <table>
     <tr><th>카드</th><th>계산 기준</th></tr>
@@ -191,11 +191,21 @@ document.addEventListener('DOMContentLoaded', applyLang);
     <tr><td>CM1 / CM1/TEU</td><td>수익 지표</td></tr>
   </table>
 </div>
+<div class="card en" style="display:none">
+  <h3>KPI Cards</h3>
+  <p>Total BKG | Shipment(Normal) | WOS-3 BKG | WOS-3 Shipment | BSA | Occupancy | Shipment Rate | CM1/TEU</p>
+  <h3>Monthly BKG vs BSA Chart</h3>
+  <p>Blue bar=Shipment(Normal), Gray bar=BSA, Red line=Occupancy(Normal/BSA), Purple dashed=WOS-3 Shipment/BSA</p>
+  <h3>Occupancy Bar (by Region)</h3>
+  <p>Green(&ge;65%) | Yellow(50-65%) | Red(&lt;50%)</p>
+  <h3>Monthly Performance Table</h3>
+  <p>Weekly average for last 3 months: BKG, BSA, Ratio, Shipment, Rate, High-profit metrics, CM1/TEU</p>
+</div>
 
 <!-- ═══════════════════════════════════════ -->
 <h2 id="tab2" class="ko">Tab 2: 부킹 트렌드</h2>
 <h2 class="en" style="display:none">Tab 2: Booking Trends</h2>
-<div class="card">
+<div class="card ko">
   <h3>서브탭</h3>
   <table>
     <tr><th>서브탭</th><th>내용</th></tr>
@@ -208,11 +218,19 @@ document.addEventListener('DOMContentLoaded', applyLang);
   <h3>주차별 3주전 BKG 차트</h3>
   <p>선택 월의 주차별 BKG를 도착지 스택 바 차트로 표시합니다.</p>
 </div>
+<div class="card en" style="display:none">
+  <h3>Sub-tabs</h3>
+  <p><strong>By Region</strong>: WOS-3 BKG by dest/origin (follows global View filter) |
+  <strong>By Shipper</strong>: Profit tag, salesperson, BKG, Shipment, CM1/TEU |
+  <strong>By Salesperson</strong>: Shipper count, BKG, Shipment, High-profit ratio</p>
+  <h3>Weekly WOS-3 BKG Chart</h3>
+  <p>Stacked bar by destination for the selected month.</p>
+</div>
 
 <!-- ═══════════════════════════════════════ -->
 <h2 id="tab3" class="ko">Tab 3: 전환 분석</h2>
 <h2 class="en" style="display:none">Tab 3: Conversion Analysis</h2>
-<div class="card">
+<div class="card ko">
   <h3>WOS-3 → 실선적 퍼널</h3>
   <p>3주전 부킹이 실선적까지 전환되는 과정을 퍼널 차트로 시각화합니다.</p>
   <p><code>3주전 BKG → 캔슬 제외 → 실선적(Normal)</code></p>
@@ -227,11 +245,19 @@ document.addEventListener('DOMContentLoaded', applyLang);
     <li><strong>화주별 캔슬 Top 15</strong> — 캔슬이 많은 화주 식별</li>
   </ul>
 </div>
+<div class="card en" style="display:none">
+  <h3>Funnel: WOS-3 &rarr; Shipment</h3>
+  <p>WOS-3 BKG &rarr; Cancel removed &rarr; Shipment(Normal)</p>
+  <h3>Shipment Rate Trend</h3>
+  <p>Monthly shipment rate by destination (line chart).</p>
+  <h3>Cancel Analysis</h3>
+  <p>Cancel rate by region | Monthly cancel trend | Top 15 cancel shippers</p>
+</div>
 
 <!-- ═══════════════════════════════════════ -->
 <h2 id="tab4" class="ko">Tab 4: 수익성 분석</h2>
 <h2 class="en" style="display:none">Tab 4: Profitability Analysis</h2>
-<div class="card">
+<div class="card ko">
   <h3>CM1/TEU 분석</h3>
   <ul>
     <li><strong>도착지별 CM1/TEU</strong> — 구간별 수익성 비교</li>
@@ -248,11 +274,19 @@ document.addEventListener('DOMContentLoaded', applyLang);
   <p>Top 10/20 화주가 전체 CM1의 몇 %를 차지하는지, 누적 커브로 표시합니다.</p>
   <p>집중도가 높을수록 소수 화주 의존도가 높음을 의미합니다.</p>
 </div>
+<div class="card en" style="display:none">
+  <h3>CM1/TEU Analysis</h3>
+  <p>By destination | Monthly trend</p>
+  <h3>Shipper Ranking</h3>
+  <p>Top 10 (green) / Bottom 10 (red) by CM1/TEU</p>
+  <h3>Revenue Concentration</h3>
+  <p>Top 10/20 shippers share of total CM1 + cumulative curve. Higher = more dependency.</p>
+</div>
 
 <!-- ═══════════════════════════════════════ -->
 <h2 id="tab5" class="ko">Tab 5: 부킹 패턴</h2>
 <h2 class="en" style="display:none">Tab 5: Booking Patterns</h2>
-<div class="card">
+<div class="card ko">
   <h3>WOS 단계별 부킹 접수 분석</h3>
   <p>부킹이 출항 대비 언제 접수되는지를 분석합니다.</p>
   <table>
@@ -268,6 +302,14 @@ document.addEventListener('DOMContentLoaded', applyLang);
 
   <h3>화주별 부킹 접수 시점</h3>
   <p>화주별 WOS 분포를 확인하여 부킹 패턴을 분석합니다.</p>
+</div>
+<div class="card en" style="display:none">
+  <h3>WOS Stage Analysis</h3>
+  <p>WOS-3(&ge;15d) | WOS-2(8-14d) | WOS-1(1-7d) | WOS(&le;0d)</p>
+  <h3>Regional Booking Timing</h3>
+  <p>100% stacked bar: higher WOS-3 ratio = earlier booking pattern.</p>
+  <h3>Shipper Booking Timing</h3>
+  <p>Per-shipper WOS distribution with profit tag and salesperson.</p>
 </div>
 
 <!-- ═══════════════════════════════════════ -->
@@ -329,11 +371,21 @@ document.addEventListener('DOMContentLoaded', applyLang);
     <tr><td>주차별</td><td>WW 컬럼으로 주차 필터 가능</td></tr>
   </table>
 </div>
+<div class="card en" style="display:none">
+  <h3>445 Calendar</h3>
+  <p>4-4-5 week pattern: Jan(4wk) Feb(4wk) Mar(5wk) Apr(4wk) May(4wk) Jun(5wk)...</p>
+  <h3>Shipment: LST_Status=Normal only</h3>
+  <h3>WOS Classification: Based on BKG Schedule week start - Booking date</h3>
+  <h3>Exclusion: Cancel within 3 days | Cancel within 7 days + 21+ days before departure</h3>
+  <h3>Profit Tag Priority</h3>
+  <p>1. Prev month + same POR | 2. Prev month + all POR | 3. Current month | 4. Grade C+D=High, A+B=Low</p>
+  <h3>BSA: Tableau BSA raw view, by team (OBT/EST/IST/JBT), WW weekly filter available</h3>
+</div>
 
 <!-- ═══════════════════════════════════════ -->
 <h2 id="update" class="ko">데이터 업데이트</h2>
 <h2 class="en" style="display:none">Data Updates</h2>
-<div class="card">
+<div class="card ko">
   <h3>일일 업데이트 프로세스</h3>
   <p><code>daily_3w_dashboard.py</code>를 실행하면 다음 순서로 진행됩니다:</p>
   <ol>
@@ -353,6 +405,14 @@ document.addEventListener('DOMContentLoaded', applyLang);
   <h3>웹 배포</h3>
   <p>dist/data.json을 GitHub Pages에 push하면 웹 대시보드에 자동 반영됩니다.</p>
   <p>URL: <a href="https://jkpark-create.github.io/kmtc-3w-dashboard-web/">https://jkpark-create.github.io/kmtc-3w-dashboard-web/</a></p>
+</div>
+<div class="card en" style="display:none">
+  <h3>Daily Update</h3>
+  <p>Run <code>daily_3w_dashboard.py</code>: 1) Tableau download 2) Snapshot processing 3) JSON upload</p>
+  <h3>Data Range</h3>
+  <p>1.csv: 2025-12-28 ~ current week +4 weeks | 2.csv: Full | BSA: 2025-2027 all months</p>
+  <h3>Web: Push dist/data.json to GitHub Pages</h3>
+  <p><a href="https://jkpark-create.github.io/kmtc-3w-dashboard-web/">https://jkpark-create.github.io/kmtc-3w-dashboard-web/</a></p>
 </div>
 
 <div style="text-align:center;padding:40px;color:#5f6368;font-size:12px">

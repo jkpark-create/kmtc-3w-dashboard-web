@@ -568,15 +568,15 @@ function buildSummaryTable(months) {
 // ═══════════════════════════════════════════════
 // Tab 2: 부킹 트렌드
 // ═══════════════════════════════════════════════
-let t2sub = 'dest';
+let t2sub = 'region';
 function renderTab2() {
   const month = gv('fMonth'), vk = viewKey(), vl = viewLabel();
   const fd = filterMonthly(month);
 
   // Sub-tabs
   let html = `<div style="display:flex;gap:0;margin-bottom:12px;border-bottom:2px solid #dadce0">
-    ${['dest','origin','cust','sales'].map(t => {
-      const lbl = t==='dest'?'도착지별':t==='origin'?'선적지별':t==='cust'?'화주별':'영업사원별';
+    ${['region','cust','sales'].map(t => {
+      const lbl = t==='region'?'지역별':t==='cust'?'화주별':'영업사원별';
       const cls = t2sub===t ? 'color:#1a73e8;border-bottom:3px solid #1a73e8;font-weight:600' : 'color:#5f6368;border-bottom:3px solid transparent';
       return `<div style="padding:8px 16px;font-size:13px;cursor:pointer;${cls}" onclick="t2sub='${t}';renderTab2()">${lbl}</div>`;
     }).join('')}
@@ -604,36 +604,29 @@ function renderTab2() {
           legend:{orientation:'h',y:1.1},plot_bgcolor:'#fff',paper_bgcolor:'#fff'}, {displayModeBar:false});
     }
     return;
-  } else if (t2sub === 'cust') {
-    // 화주별 뷰
-    html += renderShipperTable(month);
-  } else {
-    const useVk = t2sub === 'origin' ? 'origin' : 'dest';
-    const useVl = t2sub === 'origin' ? '선적지' : '도착지';
-
+  } else if (t2sub === 'region') {
+    // 지역별: 글로벌 보기 필터(도착지/선적지) 연동
+    const useVk = viewKey(), useVl = viewLabel();
     const items = groupByKey(fd, useVk);
     let rows = Object.entries(items).map(([k,r]) => ({
       name:k, bkg:profitSum(r,'w3_fst'), ship:profitSum(r,'w3_norm_fst'), hi:sum(r,'w3_hi_fst')
     })).sort((a,b)=>b.bkg-a.bkg).slice(0,15);
 
-    html += `<div class="chart-card"><h3>3주전 BKG 현황 - ${useVl}별 (${fmtMonth(month)})</h3>
-    <table class="summary"><tr><th>${useVl}</th><th>BKG</th><th>실선적</th><th>실선적률</th><th>고수익BKG</th><th>고수익%</th></tr>`;
+    html += `<div class="chart-card"><h3>3주전 BKG 현황 - ${useVl} (${fmtMonth(month)})</h3>
+    <table class="summary"><tr><th>${useVl}</th><th>BKG</th><th>실선적(Normal)</th><th>실선적률</th><th>고수익BKG</th><th>고수익%</th></tr>`;
     rows.forEach(r => {
       html += `<tr><td class="lbl">${r.name}</td><td>${fmt(r.bkg)}</td><td>${fmt(r.ship)}</td><td>${pct(r.ship,r.bkg)}</td><td>${fmt(r.hi)}</td><td>${pct(r.hi,r.bkg)}</td></tr>`;
     });
     const tb=rows.reduce((s,r)=>s+r.bkg,0), ts=rows.reduce((s,r)=>s+r.ship,0), th2=rows.reduce((s,r)=>s+r.hi,0);
     html += `<tr class="total"><td class="lbl">합계</td><td>${fmt(tb)}</td><td>${fmt(ts)}</td><td>${pct(ts,tb)}</td><td>${fmt(th2)}</td><td>${pct(th2,tb)}</td></tr></table></div>`;
 
-    // Weekly chart
     const wkData = filterWeekly(month);
     const weeks = [...new Set(wkData.map(r=>r.week_start_date))].sort();
-    const wkKey = useVk==='origin'?'origin':'dest';
+    const wkKey = useVk;
     const topDests = Object.entries(groupByKey(wkData, wkKey))
       .sort((a,b)=>sum(b[1],'w3_fst')-sum(a[1],'w3_fst')).slice(0,8).map(e=>e[0]);
-
     html += `<div class="chart-card"><h3>주차별 3주전 BKG</h3><div id="ch2wk" style="height:290px"></div></div>`;
     document.getElementById('tabContent').innerHTML = html;
-
     const traces = topDests.map((d,i) => ({
       x: weeks.map(w=>fmtWeekLabel(w)),
       y: weeks.map(w => sum(wkData.filter(r=>r[wkKey]===d&&r.week_start_date===w), 'w3_fst')),
@@ -645,6 +638,9 @@ function renderTab2() {
       yaxis:{title:'TEU',gridcolor:'#f0f0f0'},legend:{orientation:'h',y:1.12},
       plot_bgcolor:'#fff',paper_bgcolor:'#fff'}, {displayModeBar:false});
     return;
+  } else if (t2sub === 'cust') {
+    // 화주별 뷰
+    html += renderShipperTable(month);
   }
   document.getElementById('tabContent').innerHTML = html;
 }
