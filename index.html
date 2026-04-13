@@ -645,7 +645,16 @@ function renderTab2() {
     const topDests = Object.entries(groupByKey(wkData, wkKey))
       .sort((a,b)=>sum(b[1],'w3_fst')-sum(a[1],'w3_fst')).slice(0,8).map(e=>e[0]);
     html += `<div class="chart-card"><h3>${L('주차별 3주전 BKG','Weekly WOS-3 BKG')}</h3><div id="ch2wk" style="height:290px"></div></div>`;
+
+    // 고수익 vs 저수익 리드타임 비교 + 고수익 비중 추이
+    html += `<div class="chart-row">
+      <div class="chart-card" style="flex:1"><h3>${L('고수익 vs 저수익 리드타임 비중','High vs Low Profit Lead Time Ratio')}</h3><div id="ch2lt" style="height:320px"></div></div>
+      <div class="chart-card" style="flex:1"><h3>${L('고수익화주 비중 추이','High-Profit Shipper Ratio Trend')}</h3><div id="ch2hi" style="height:320px"></div></div>
+    </div>`;
+
     document.getElementById('tabContent').innerHTML = html;
+
+    // Weekly BKG chart
     const traces = topDests.map((d,i) => ({
       x: weeks.map(w=>fmtWeekLabel(w)),
       y: weeks.map(w => sum(wkData.filter(r=>r[wkKey]===d&&r.week_start_date===w), 'w3_fst')),
@@ -656,6 +665,43 @@ function renderTab2() {
       xaxis:{type:'category',categoryorder:'array',categoryarray:wkLabels},
       yaxis:{title:'TEU',gridcolor:'#f0f0f0'},legend:{orientation:'h',y:1.12},
       plot_bgcolor:'#fff',paper_bgcolor:'#fff'}, {displayModeBar:false});
+
+    // 고수익 vs 저수익 리드타임 비교 (shipper 데이터 기반)
+    const sd = filterShipper(month);
+    const hiSD = sd.filter(r => r['\uace0\uc218\uc775\ud0dc\uadf8'] === '고수익');
+    const loSD = sd.filter(r => r['\uace0\uc218\uc775\ud0dc\uadf8'] === '저수익');
+    const wosKeys = ['w3_fst','w2_fst','w1_fst','wos_fst'];
+    const wosLabels = ['WOS-3','WOS-2','WOS-1','WOS'];
+    const hiTotal = wosKeys.reduce((s,k) => s + sum(hiSD,k), 0);
+    const loTotal = wosKeys.reduce((s,k) => s + sum(loSD,k), 0);
+    const hiPcts = wosKeys.map(k => hiTotal > 0 ? sum(hiSD,k)/hiTotal*100 : 0);
+    const loPcts = wosKeys.map(k => loTotal > 0 ? sum(loSD,k)/loTotal*100 : 0);
+
+    Plotly.newPlot('ch2lt', [
+      {x: wosLabels, y: hiPcts, type:'bar', name: L('고수익','High-Profit'), marker:{color:'#34a853'},
+       text: hiPcts.map(v=>v.toFixed(0)+'%'), textposition:'auto', textfont:{size:12}},
+      {x: wosLabels, y: loPcts, type:'bar', name: L('저수익','Low-Profit'), marker:{color:'#ea4335'},
+       text: loPcts.map(v=>v.toFixed(0)+'%'), textposition:'auto', textfont:{size:12}},
+    ], {barmode:'group', margin:{l:40,r:20,t:20,b:30},
+      yaxis:{title:'%',gridcolor:'#f0f0f0',range:[0,100]},
+      legend:{orientation:'h',y:1.1}, plot_bgcolor:'#fff',paper_bgcolor:'#fff'}, {displayModeBar:false});
+
+    // 고수익화주 비중 월별 추이
+    const hiTrend = DATA.months.map(m => {
+      const msd = filterShipper(m);
+      if (!msd.length) return null;
+      const total = sum(msd, 'w3_fst');
+      const hi = sum(msd.filter(r => r['\uace0\uc218\uc775\ud0dc\uadf8'] === '고수익'), 'w3_fst');
+      return total > 0 ? hi/total*100 : null;
+    });
+    Plotly.newPlot('ch2hi', [{
+      x: DATA.months.map(fmtMonth), y: hiTrend,
+      mode:'lines+markers+text', line:{color:'#1a73e8',width:3}, marker:{size:8},
+      text: hiTrend.map(v => v !== null ? v.toFixed(0)+'%' : ''), textposition:'top center'
+    }], {margin:{l:40,r:20,t:30,b:30},
+      yaxis:{title:L('고수익 비중 %','High-Profit %'),gridcolor:'#f0f0f0',range:[0,100]},
+      plot_bgcolor:'#fff',paper_bgcolor:'#fff',showlegend:false}, {displayModeBar:false});
+
     return;
   } else if (t2sub === 'cust') {
     // 화주별 뷰
