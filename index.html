@@ -184,9 +184,7 @@ function showApp() {
 // ═══════════════════════════════════════════════
 async function loadData() {
   try {
-    const resp = await fetch(`https://www.googleapis.com/drive/v3/files/${DRIVE_FILE_ID}?alt=media`, {
-      headers: {'Authorization': `Bearer ${gToken}`}
-    });
+    const resp = await fetch('data.json');
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     DATA = await resp.json();
     document.getElementById('dataInfo').textContent = `Data: ${DATA.data_date} | `;
@@ -315,6 +313,26 @@ function viewKey() { return gv('fView') === 'origin' ? 'origin' : 'dest'; }
 function viewLabel() { return gv('fView') === 'origin' ? '선적지' : '도착지'; }
 function bsaViewKey() { return gv('fView') === 'origin' ? 'POR_Country' : 'DLY_Country'; }
 
+// 화주구분 필터: 고수익/저수익에 따라 BKG/실선적 수치 조정
+function profitSum(arr, key) {
+  const p = gv('fProfit');
+  if (p === 'ALL') return sum(arr, key);
+  // w3_fst → hi면 w3_hi_fst, lo면 w3_fst - w3_hi_fst
+  const hiKey = key.replace('w3_','w3_hi_').replace('norm_fst','norm_fst');
+  const mapping = {
+    'w3_fst': ['w3_hi_fst', r=>r.w3_fst-r.w3_hi_fst],
+    'w3_norm_fst': ['w3_hi_norm_fst', r=>r.w3_norm_fst-r.w3_hi_norm_fst],
+    'w3_canc_fst': ['w3_hi_fst', r=>0], // no hi cancel data
+    'fst': ['w3_hi_fst', r=>r.fst], // fallback
+    'norm_fst': ['w3_hi_norm_fst', r=>r.norm_fst],
+  };
+  if (mapping[key]) {
+    if (p==='hi') return sum(arr, mapping[key][0]);
+    if (p==='lo') return arr.reduce((s,r) => s + mapping[key][1](r), 0);
+  }
+  return sum(arr, key);
+}
+
 // ═══════════════════════════════════════════════
 // Tabs
 // ═══════════════════════════════════════════════
@@ -342,8 +360,8 @@ function renderTab1() {
   const bsa = filterBSA(month);
   const bsaTotal = sum(bsa, 'teu_bsa');
 
-  const totalBkg = sum(fd,'fst'), shipped = sum(fd,'norm_fst');
-  const w3Bkg = sum(fd,'w3_fst'), w3Ship = sum(fd,'w3_norm_fst');
+  const totalBkg = profitSum(fd,'fst'), shipped = profitSum(fd,'norm_fst');
+  const w3Bkg = profitSum(fd,'w3_fst'), w3Ship = profitSum(fd,'w3_norm_fst');
   const occ = bsaTotal>0 ? shipped/bsaTotal*100 : 0;
   const sr = w3Bkg>0 ? w3Ship/w3Bkg*100 : 0;
   const cm1 = sum(fd,'cm1_norm'), cm1l = sum(fd,'lst_norm');
@@ -373,10 +391,10 @@ function renderTab1() {
 
   // Bar chart
   const ms = DATA.months.filter(m => m <= month);
-  const shipM = ms.map(m => sum(filterMonthly(m), 'norm_fst'));
+  const shipM = ms.map(m => profitSum(filterMonthly(m), 'norm_fst'));
   const bsaM = ms.map(m => sum(filterBSA(m), 'teu_bsa'));
   const occM = ms.map((m,i) => bsaM[i]>0 ? shipM[i]/bsaM[i]*100 : null);
-  const w3shipM = ms.map(m => sum(filterMonthly(m), 'w3_norm_fst'));
+  const w3shipM = ms.map(m => profitSum(filterMonthly(m), 'w3_norm_fst'));
   const w3occM = ms.map((m,i) => bsaM[i]>0 ? w3shipM[i]/bsaM[i]*100 : null);
   const xl = ms.map(fmtMonth);
 
@@ -396,7 +414,7 @@ function renderTab1() {
   const bsaByKey = {};
   bsa.forEach(r => { const k = r[bk]; bsaByKey[k] = (bsaByKey[k]||0) + r.teu_bsa; });
   let orows = Object.entries(items).map(([k,rows]) => {
-    const s = sum(rows,'norm_fst'), b = bsaByKey[k]||0;
+    const s = profitSum(rows,'norm_fst'), b = bsaByKey[k]||0;
     return {name:k, ship:s, bsa:b, occ: b>0?s/b*100:0};
   }).filter(r=>r.ship>0||r.bsa>0).sort((a,b)=>a.occ-b.occ);
 
@@ -507,7 +525,7 @@ function renderTab2() {
 
     const items = groupByKey(fd, useVk);
     let rows = Object.entries(items).map(([k,r]) => ({
-      name:k, bkg:sum(r,'w3_fst'), ship:sum(r,'w3_norm_fst'), hi:sum(r,'w3_hi_fst')
+      name:k, bkg:profitSum(r,'w3_fst'), ship:profitSum(r,'w3_norm_fst'), hi:sum(r,'w3_hi_fst')
     })).sort((a,b)=>b.bkg-a.bkg).slice(0,15);
 
     html += `<div class="chart-card"><h3>3주전 BKG 현황 - ${useVl}별 (${fmtMonth(month)})</h3>
