@@ -39,13 +39,32 @@ li{margin:4px 0}
 </head>
 <body>
 <div class="header">
-  <h1>-3W Booking Dashboard 사용 가이드</h1>
-  <a href="index.html">대시보드로 돌아가기</a>
+  <h1 class="ko">-3W Booking Dashboard 사용 가이드</h1>
+  <h1 class="en" style="display:none">-3W Booking Dashboard User Guide</h1>
+  <div>
+    <button onclick="toggleLang()" id="langBtn" style="background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.4);padding:4px 12px;border-radius:4px;cursor:pointer;font-size:12px;margin-right:12px">EN</button>
+    <a href="index.html" class="ko">대시보드로 돌아가기</a>
+    <a href="index.html" class="en" style="display:none">Back to Dashboard</a>
+  </div>
 </div>
+<script>
+let lang = localStorage.getItem('lang') || 'ko';
+function toggleLang() {
+  lang = lang === 'ko' ? 'en' : 'ko';
+  localStorage.setItem('lang', lang);
+  applyLang();
+}
+function applyLang() {
+  document.querySelectorAll('.ko').forEach(el => el.style.display = lang==='ko' ? '' : 'none');
+  document.querySelectorAll('.en').forEach(el => el.style.display = lang==='en' ? '' : 'none');
+  document.getElementById('langBtn').textContent = lang==='ko' ? 'EN' : 'KO';
+}
+document.addEventListener('DOMContentLoaded', applyLang);
+</script>
 
 <div class="container">
 
-<div class="toc">
+<div class="toc ko">
 <h3>목차</h3>
 <ul>
   <li><a href="#overview">개요</a></li>
@@ -59,10 +78,25 @@ li{margin:4px 0}
   <li><a href="#update">데이터 업데이트</a></li>
 </ul>
 </div>
+<div class="toc en" style="display:none">
+<h3>Table of Contents</h3>
+<ul>
+  <li><a href="#overview">Overview</a></li>
+  <li><a href="#filters">Filter Usage</a></li>
+  <li><a href="#tab1">Tab 1: Occupancy Status</a></li>
+  <li><a href="#tab2">Tab 2: Booking Trends</a></li>
+  <li><a href="#tab3">Tab 3: Conversion Analysis</a></li>
+  <li><a href="#tab4">Tab 4: Profitability Analysis</a></li>
+  <li><a href="#tab5">Tab 5: Booking Patterns</a></li>
+  <li><a href="#data">Data Definitions</a></li>
+  <li><a href="#update">Data Updates</a></li>
+</ul>
+</div>
 
 <!-- ═══════════════════════════════════════ -->
-<h2 id="overview">개요</h2>
-<div class="card">
+<h2 id="overview" class="ko">개요</h2>
+<h2 id="overview" class="en" style="display:none">Overview</h2>
+<div class="card ko">
   <p><strong>-3W Booking Dashboard</strong>는 출항 3주 전(WOS-3) 부킹 현황을 모니터링하는 대시보드입니다.</p>
   <p>부킹 접수부터 실선적까지의 전환 과정을 추적하고, 고수익 화주 관리 및 수익성 분석을 지원합니다.</p>
   <h3>주요 기능</h3>
@@ -74,10 +108,23 @@ li{margin:4px 0}
     <li><strong>부킹 패턴</strong> — WOS 단계별 부킹 접수 시점 분석</li>
   </ul>
 </div>
+<div class="card en" style="display:none">
+  <p><strong>-3W Booking Dashboard</strong> monitors booking status 3 weeks before sailing (WOS-3).</p>
+  <p>It tracks the conversion from booking to actual shipment, manages high-profit shippers, and provides profitability analysis.</p>
+  <h3>Key Features</h3>
+  <ul>
+    <li><strong>Occupancy Status</strong> — Monitor shipment/BSA ratio</li>
+    <li><strong>Booking Trends</strong> — Booking status by destination/origin/shipper/salesperson</li>
+    <li><strong>Conversion Analysis</strong> — Cancel rate analysis and shipment conversion tracking</li>
+    <li><strong>Profitability</strong> — CM1/TEU analysis and revenue concentration</li>
+    <li><strong>Booking Patterns</strong> — WOS stage-based booking timing analysis</li>
+  </ul>
+</div>
 
 <!-- ═══════════════════════════════════════ -->
-<h2 id="filters">필터 사용법</h2>
-<div class="card">
+<h2 id="filters" class="ko">필터 사용법</h2>
+<h2 class="en" style="display:none">Filter Usage</h2>
+<div class="card ko">
   <h3>글로벌 필터</h3>
   <p>화면 상단의 필터는 모든 탭에 공통 적용됩니다.</p>
   <table>
@@ -104,7 +151,8 @@ li{margin:4px 0}
 </div>
 
 <!-- ═══════════════════════════════════════ -->
-<h2 id="tab1">Tab 1: 소석률 현황</h2>
+<h2 id="tab1" class="ko">Tab 1: 소석률 현황</h2>
+<h2 class="en" style="display:none">Tab 1: Occupancy Status</h2>
 <div class="card">
   <h3>KPI 카드</h3>
   <table>
@@ -145,7 +193,8 @@ li{margin:4px 0}
 </div>
 
 <!-- ═══════════════════════════════════════ -->
-<h2 id="tab2">Tab 2: 부킹 트렌드</h2>
+<h2 id="tab2" class="ko">Tab 2: 부킹 트렌드</h2>
+<h2 class="en" style="display:none">Tab 2: Booking Trends</h2>
 <div class="card">
   <h3>서브탭</h3>
   <table>
@@ -161,7 +210,8 @@ li{margin:4px 0}
 </div>
 
 <!-- ═══════════════════════════════════════ -->
-<h2 id="tab3">Tab 3: 전환 분석</h2>
+<h2 id="tab3" class="ko">Tab 3: 전환 분석</h2>
+<h2 class="en" style="display:none">Tab 3: Conversion Analysis</h2>
 <div class="card">
   <h3>WOS-3 → 실선적 퍼널</h3>
   <p>3주전 부킹이 실선적까지 전환되는 과정을 퍼널 차트로 시각화합니다.</p>
@@ -179,7 +229,8 @@ li{margin:4px 0}
 </div>
 
 <!-- ═══════════════════════════════════════ -->
-<h2 id="tab4">Tab 4: 수익성 분석</h2>
+<h2 id="tab4" class="ko">Tab 4: 수익성 분석</h2>
+<h2 class="en" style="display:none">Tab 4: Profitability Analysis</h2>
 <div class="card">
   <h3>CM1/TEU 분석</h3>
   <ul>
@@ -199,7 +250,8 @@ li{margin:4px 0}
 </div>
 
 <!-- ═══════════════════════════════════════ -->
-<h2 id="tab5">Tab 5: 부킹 패턴</h2>
+<h2 id="tab5" class="ko">Tab 5: 부킹 패턴</h2>
+<h2 class="en" style="display:none">Tab 5: Booking Patterns</h2>
 <div class="card">
   <h3>WOS 단계별 부킹 접수 분석</h3>
   <p>부킹이 출항 대비 언제 접수되는지를 분석합니다.</p>
@@ -219,8 +271,9 @@ li{margin:4px 0}
 </div>
 
 <!-- ═══════════════════════════════════════ -->
-<h2 id="data">데이터 기준 정의</h2>
-<div class="card">
+<h2 id="data" class="ko">데이터 기준 정의</h2>
+<h2 class="en" style="display:none">Data Definitions</h2>
+<div class="card ko">
   <h3>주차/월 기준 (445 캘린더)</h3>
   <p>4-4-5 주차 패턴을 사용합니다. 2026년 기준:</p>
   <table>
@@ -278,7 +331,8 @@ li{margin:4px 0}
 </div>
 
 <!-- ═══════════════════════════════════════ -->
-<h2 id="update">데이터 업데이트</h2>
+<h2 id="update" class="ko">데이터 업데이트</h2>
+<h2 class="en" style="display:none">Data Updates</h2>
 <div class="card">
   <h3>일일 업데이트 프로세스</h3>
   <p><code>daily_3w_dashboard.py</code>를 실행하면 다음 순서로 진행됩니다:</p>
