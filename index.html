@@ -312,8 +312,8 @@ function filterBSA(month, week) {
   if(dst!=='ALL') b=b.filter(r=>r.DLY_Country===dst);
   if(dstP!=='ALL') b=b.filter(r=>r.DLY_PORT===dstP);
   if(month) b=b.filter(r=>r.YYYYMM===month);
-  // 주차 필터
-  const wk = week || gv('fWeek');
+  // 주차 필터: week=null이면 전체 월, week=undefined이면 gv 사용
+  const wk = week === null ? 'ALL' : (week !== undefined ? week : gv('fWeek'));
   if(wk && wk!=='ALL') {
     const ww = weekToWW(wk);
     if(ww) b=b.filter(r=>r.WW===ww);
@@ -403,8 +403,8 @@ function renderTab1() {
   const fd = filterMonthly(month);
   // BSA: 주차 선택 시 주평균 (월BSA/주수)
   const _weekSel = gv('fWeek') !== 'ALL';
-  const _bsaRaw = sum(filterBSA(month, null), 'teu_bsa');  // 항상 월 전체
-  const bsaTotal = _weekSel ? _bsaRaw / (DATA.wpm[month]||4) : _bsaRaw;
+  const _bsaRaw = sum(filterBSA(month, null), 'teu_bsa');  // 월 전체 BSA
+  const bsaTotal = _weekSel ? Math.round(_bsaRaw / (DATA.wpm[month]||4)) : _bsaRaw;
 
   const totalBkg = profitSum(fd,'fst'), shipped = profitSum(fd,'norm_fst');
   const w3Bkg = profitSum(fd,'w3_fst'), w3Ship = profitSum(fd,'w3_norm_fst');
@@ -474,10 +474,10 @@ function renderTab1() {
 
   // Occupancy bar
   const items = groupByKey(fd, vk);
-  const _bsaAll = filterBSA(month, null); // 항상 월 전체
+  const _bsaAll = filterBSA(month, null); // 월 전체 BSA
   const bsaByKey = {};
   _bsaAll.forEach(r => { const k = r[bk]; bsaByKey[k] = (bsaByKey[k]||0) + r.teu_bsa; });
-  if (_weekSel) { Object.keys(bsaByKey).forEach(k => bsaByKey[k] /= (DATA.wpm[month]||4)); }
+  if (_weekSel) { const _wk = DATA.wpm[month]||4; Object.keys(bsaByKey).forEach(k => bsaByKey[k] = Math.round(bsaByKey[k] / _wk)); }
   let orows = Object.entries(items).map(([k,rows]) => {
     const s = profitSum(rows,'norm_fst'), b = bsaByKey[k]||0;
     return {name:k, ship:s, bsa:b, occ: b>0?s/b*100:0};
