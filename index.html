@@ -204,9 +204,31 @@ async function loadData() {
 function initFilters() {
   const teams = [...new Set(DATA.monthly.map(r=>r.team))].sort();
   fillSelect('fTeam', teams);
-  fillSelect('fMonth', DATA.months, DATA.months[DATA.months.length-2]);
+  // 기본 월: 현재 주 + 3주 후의 월
+  const _now = new Date();
+  const _sun = new Date(_now); _sun.setDate(_now.getDate() - _now.getDay()); // 이번주 일요일
+  const _target = new Date(_sun); _target.setDate(_sun.getDate() + 21); // +3주
+  const _defMonth = `${_target.getFullYear()}${String(_target.getMonth()+1).padStart(2,'0')}`;
+  const defMonth = DATA.months.includes(_defMonth) ? _defMonth : DATA.months[DATA.months.length-1];
+  fillSelect('fMonth', DATA.months, defMonth);
   updateCascade();
   updateWeekOpts();
+  // 기본 주차: +3주 후의 주차
+  const _targetWk = `${_target.getFullYear()}년 ${String(_target.getMonth()+1).padStart(2,'0')}월 ${String(_target.getDate()).padStart(2,'0')}일`;
+  const wkEl = document.getElementById('fWeek');
+  const wkOpts = [...wkEl.options].map(o=>o.value);
+  // 가장 가까운 주차 찾기
+  const _tgtTime = _target.getTime();
+  let bestWk = 'ALL';
+  wkOpts.forEach(w => {
+    if (w==='ALL') return;
+    const m = w.match(/(\d{1,2})\D+(\d{1,2})\D*$/);
+    if (m) {
+      const d = new Date(_target.getFullYear(), parseInt(m[1])-1, parseInt(m[2]));
+      if (Math.abs(d.getTime()-_tgtTime) < 4*86400000) bestWk = w;
+    }
+  });
+  if (bestWk !== 'ALL') wkEl.value = bestWk;
   ['fTeam','fOri','fOriP','fDst','fDstP','fView','fProfit','fSales'].forEach(id =>
     document.getElementById(id).addEventListener('change', () => { updateCascade(); render(); }));
   document.getElementById('fMonth').addEventListener('change', () => { updateWeekOpts(); updateCascade(); render(); });
