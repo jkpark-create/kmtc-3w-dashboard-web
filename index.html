@@ -91,6 +91,7 @@ table.summary td.lbl{text-align:left;font-weight:600;background:#fafafa}
   <div class="tab" data-tab="t2" onclick="switchTab('t2')">② 부킹 트렌드</div>
   <div class="tab" data-tab="t3" onclick="switchTab('t3')">③ 전환 퍼널</div>
   <div class="tab" data-tab="t4" onclick="switchTab('t4')">④ 수익성</div>
+  <div class="tab" data-tab="t5" onclick="switchTab('t5')">⑤ 부킹 패턴</div>
 </div>
 
 <div class="content">
@@ -319,6 +320,11 @@ function sum(arr, key) { return arr.reduce((s,r) => s + (r[key]||0), 0); }
 function fmt(v) { return v.toLocaleString('ko-KR', {maximumFractionDigits:0}); }
 function pct(a,b) { return b>0 ? `${(a/b*100).toFixed(0)}%` : '-'; }
 
+function fmtWeekLabel(w) {
+  // "2026년 01월 04일" or "2026-01-04" → "01/04"
+  const m = w.match(/(\d{1,2})\D+(\d{1,2})\D*$/);
+  return m ? `${m[1]}/${m[2]}` : w;
+}
 function viewKey() { return gv('fView') === 'origin' ? 'origin' : 'dest'; }
 function viewLabel() { return gv('fView') === 'origin' ? '선적지' : '도착지'; }
 function bsaViewKey() { return gv('fView') === 'origin' ? 'POR_Country' : 'DLY_Country'; }
@@ -355,7 +361,7 @@ function switchTab(tab) {
 
 function render() {
   if (!DATA) return;
-  const fn = {t1: renderTab1, t2: renderTab2, t3: renderTab3, t4: renderTab4};
+  const fn = {t1: renderTab1, t2: renderTab2, t3: renderTab3, t4: renderTab4, t5: renderTab5};
   fn[activeTab]();
 }
 
@@ -586,11 +592,13 @@ function renderTab2() {
     document.getElementById('tabContent').innerHTML = html;
 
     const traces = topDests.map((d,i) => ({
-      x: weeks.map(w=>w.replace(/\D+/g,'-').replace(/-$/,'').slice(5)),
+      x: weeks.map(w=>fmtWeekLabel(w)),
       y: weeks.map(w => sum(wkData.filter(r=>r[wkKey]===d&&r.week_start_date===w), 'w3_fst')),
       type:'bar', name:d
     }));
+    const wkLabels = weeks.map(w=>fmtWeekLabel(w));
     Plotly.newPlot('ch2wk', traces, {barmode:'stack',margin:{l:40,r:20,t:20,b:30},
+      xaxis:{type:'category',categoryorder:'array',categoryarray:wkLabels},
       yaxis:{title:'TEU',gridcolor:'#f0f0f0'},legend:{orientation:'h',y:1.12},
       plot_bgcolor:'#fff',paper_bgcolor:'#fff'}, {displayModeBar:false});
     return;
@@ -619,20 +627,20 @@ function renderShipperTable(month) {
     return {name:k, sales, bkg:s.bkg, ship:s.ship, hi:s.hi, hi_ship:s.hi_ship, cm1:s.cm1, cm1l:s.cm1l};
   }).sort((a,b)=>b.bkg-a.bkg).slice(0,30);
 
-  let h = `<div class="chart-card"><h3>화주별 3주전 BKG (${fmtMonth(month)}, 주간평균)</h3>
+  let h = `<div class="chart-card"><h3>화주별 3주전 BKG (${fmtMonth(month)})</h3>
   <table class="summary"><tr><th>화주</th><th>영업사원</th><th>BKG</th><th>실선적</th><th>실선적률</th><th>고수익BKG</th><th>고수익%</th><th>CM1</th><th>CM1/TEU</th></tr>`;
 
   rows.forEach(r => {
-    const b=r.bkg/wk, n=r.ship/wk, hb=r.hi/wk, c1=r.cm1/wk, ct=r.cm1l>0?r.cm1/r.cm1l:0;
-    h += `<tr><td class="lbl">${r.name}</td><td>${r.sales}</td><td>${fmt(Math.round(b))}</td><td>${fmt(Math.round(n))}</td><td>${pct(n,b)}</td>`;
-    h += `<td>${fmt(Math.round(hb))}</td><td>${pct(hb,b)}</td><td>${fmt(Math.round(c1))}</td><td>${fmt(Math.round(ct))}</td></tr>`;
+    const ct = r.cm1l>0 ? r.cm1/r.cm1l : 0;
+    h += `<tr><td class="lbl">${r.name}</td><td>${r.sales}</td><td>${fmt(r.bkg)}</td><td>${fmt(r.ship)}</td><td>${pct(r.ship,r.bkg)}</td>`;
+    h += `<td>${fmt(r.hi)}</td><td>${pct(r.hi,r.bkg)}</td><td>${fmt(Math.round(r.cm1))}</td><td>${fmt(Math.round(ct))}</td></tr>`;
   });
 
-  const tb=rows.reduce((s,r)=>s+r.bkg,0)/wk, ts=rows.reduce((s,r)=>s+r.ship,0)/wk;
-  const th2=rows.reduce((s,r)=>s+r.hi,0)/wk, tc=rows.reduce((s,r)=>s+r.cm1,0)/wk;
-  const tl=rows.reduce((s,r)=>s+r.cm1l,0), tct=tl>0?rows.reduce((s,r)=>s+r.cm1,0)/tl:0;
-  h += `<tr class="total"><td class="lbl">합계</td><td>${fmt(Math.round(tb))}</td><td>${fmt(Math.round(ts))}</td><td>${pct(ts,tb)}</td>`;
-  h += `<td>${fmt(Math.round(th2))}</td><td>${pct(th2,tb)}</td><td>${fmt(Math.round(tc))}</td><td>${fmt(Math.round(tct))}</td></tr>`;
+  const tb=rows.reduce((s,r)=>s+r.bkg,0), ts=rows.reduce((s,r)=>s+r.ship,0);
+  const th2=rows.reduce((s,r)=>s+r.hi,0), tc=rows.reduce((s,r)=>s+r.cm1,0);
+  const tl=rows.reduce((s,r)=>s+r.cm1l,0), tct=tl>0?tc/tl:0;
+  h += `<tr class="total"><td class="lbl">합계</td><td></td><td>${fmt(tb)}</td><td>${fmt(ts)}</td><td>${pct(ts,tb)}</td>`;
+  h += `<td>${fmt(th2)}</td><td>${pct(th2,tb)}</td><td>${fmt(Math.round(tc))}</td><td>${fmt(Math.round(tct))}</td></tr>`;
   h += '</table></div>';
   return h;
 }
@@ -658,21 +666,21 @@ function renderSalesmanTable(month) {
     name:k, bkg:s.bkg, ship:s.ship, hi:s.hi, cm1:s.cm1, cm1l:s.cm1l, custCnt:s.custs.size
   })).sort((a,b)=>b.bkg-a.bkg);
 
-  let h = `<div class="chart-card"><h3>영업사원별 실적 (${fmtMonth(month)}, 주간평균)</h3>
+  let h = `<div class="chart-card"><h3>영업사원별 실적 (${fmtMonth(month)})</h3>
   <table class="summary"><tr><th>영업사원</th><th>화주수</th><th>BKG</th><th>실선적</th><th>실선적률</th><th>고수익BKG</th><th>고수익%</th><th>CM1</th><th>CM1/TEU</th></tr>`;
 
   rows.forEach(r => {
-    const b=r.bkg/wk, n=r.ship/wk, hb=r.hi/wk, c1=r.cm1/wk, ct=r.cm1l>0?r.cm1/r.cm1l:0;
-    h += `<tr><td class="lbl">${r.name}</td><td>${r.custCnt}</td><td>${fmt(Math.round(b))}</td><td>${fmt(Math.round(n))}</td><td>${pct(n,b)}</td>`;
-    h += `<td>${fmt(Math.round(hb))}</td><td>${pct(hb,b)}</td><td>${fmt(Math.round(c1))}</td><td>${fmt(Math.round(ct))}</td></tr>`;
+    const ct = r.cm1l>0?r.cm1/r.cm1l:0;
+    h += `<tr><td class="lbl">${r.name}</td><td>${r.custCnt}</td><td>${fmt(r.bkg)}</td><td>${fmt(r.ship)}</td><td>${pct(r.ship,r.bkg)}</td>`;
+    h += `<td>${fmt(r.hi)}</td><td>${pct(r.hi,r.bkg)}</td><td>${fmt(Math.round(r.cm1))}</td><td>${fmt(Math.round(ct))}</td></tr>`;
   });
 
-  const tb=rows.reduce((s,r)=>s+r.bkg,0)/wk, ts=rows.reduce((s,r)=>s+r.ship,0)/wk;
-  const th2=rows.reduce((s,r)=>s+r.hi,0)/wk, tc=rows.reduce((s,r)=>s+r.cm1,0)/wk;
-  const tl=rows.reduce((s,r)=>s+r.cm1l,0), tct=tl>0?rows.reduce((s,r)=>s+r.cm1,0)/tl:0;
+  const tb=rows.reduce((s,r)=>s+r.bkg,0), ts=rows.reduce((s,r)=>s+r.ship,0);
+  const th2=rows.reduce((s,r)=>s+r.hi,0), tc=rows.reduce((s,r)=>s+r.cm1,0);
+  const tl=rows.reduce((s,r)=>s+r.cm1l,0), tct=tl>0?tc/tl:0;
   const tcust = new Set(sd.map(r=>r.BKG_SHPR_CST_ENM||r.BKG_SHPR_CST_NO)).size;
-  h += `<tr class="total"><td class="lbl">합계</td><td>${tcust}</td><td>${fmt(Math.round(tb))}</td><td>${fmt(Math.round(ts))}</td><td>${pct(ts,tb)}</td>`;
-  h += `<td>${fmt(Math.round(th2))}</td><td>${pct(th2,tb)}</td><td>${fmt(Math.round(tc))}</td><td>${fmt(Math.round(tct))}</td></tr>`;
+  h += `<tr class="total"><td class="lbl">합계</td><td>${tcust}</td><td>${fmt(tb)}</td><td>${fmt(ts)}</td><td>${pct(ts,tb)}</td>`;
+  h += `<td>${fmt(th2)}</td><td>${pct(th2,tb)}</td><td>${fmt(Math.round(tc))}</td><td>${fmt(Math.round(tct))}</td></tr>`;
   h += '</table></div>';
 
   // Salesman bar chart
@@ -763,6 +771,80 @@ function renderTab4() {
 }
 
 // ═══════════════════════════════════════════════
+// ═══════════════════════════════════════════════
+// Tab 5: 부킹 패턴 (WOS 단계별)
+// ═══════════════════════════════════════════════
+function renderTab5() {
+  const month = gv('fMonth'), vk = viewKey(), vl = viewLabel();
+  const fd = filterMonthly(month);
+  const bk = bsaViewKey();
+  const wosKeys = ['w3_fst','w2_fst','w1_fst','wos_fst'];
+  const wosLabels = ['WOS-3','WOS-2','WOS-1','WOS'];
+
+  // 1. 지역별 WOS 분포 테이블
+  const items = groupByKey(fd, vk);
+  let destRows = Object.entries(items).map(([k,r]) => {
+    const total = r.reduce((s,x)=>(wosKeys.forEach(w=>s+=x[w]||0),s),0);
+    return {name:k, total, w3:sum(r,'w3_fst'), w2:sum(r,'w2_fst')||0, w1:sum(r,'w1_fst')||0, wos:sum(r,'wos_fst')||0};
+  }).sort((a,b)=>b.total-a.total).slice(0,15);
+
+  let html = `<div class="chart-card"><h3>${vl}별 부킹 접수 시점 분석 (${fmtMonth(month)})</h3>
+  <table class="summary"><tr><th>${vl}</th><th>전체BKG</th><th>WOS-3</th><th>비중</th><th>WOS-2</th><th>비중</th><th>WOS-1</th><th>비중</th><th>WOS</th><th>비중</th></tr>`;
+  destRows.forEach(r => {
+    html += `<tr><td class="lbl">${r.name}</td><td>${fmt(r.total)}</td>`;
+    html += `<td>${fmt(r.w3)}</td><td>${pct(r.w3,r.total)}</td>`;
+    html += `<td>${fmt(r.w2)}</td><td>${pct(r.w2,r.total)}</td>`;
+    html += `<td>${fmt(r.w1)}</td><td>${pct(r.w1,r.total)}</td>`;
+    html += `<td>${fmt(r.wos)}</td><td>${pct(r.wos,r.total)}</td></tr>`;
+  });
+  const tt=destRows.reduce((s,r)=>s+r.total,0), tw3=destRows.reduce((s,r)=>s+r.w3,0);
+  const tw2=destRows.reduce((s,r)=>s+r.w2,0), tw1=destRows.reduce((s,r)=>s+r.w1,0), twos=destRows.reduce((s,r)=>s+r.wos,0);
+  html += `<tr class="total"><td class="lbl">합계</td><td>${fmt(tt)}</td><td>${fmt(tw3)}</td><td>${pct(tw3,tt)}</td><td>${fmt(tw2)}</td><td>${pct(tw2,tt)}</td><td>${fmt(tw1)}</td><td>${pct(tw1,tt)}</td><td>${fmt(twos)}</td><td>${pct(twos,tt)}</td></tr>`;
+  html += '</table></div>';
+
+  // 2. 지역별 WOS 비중 stacked bar chart
+  html += `<div class="chart-card"><h3>${vl}별 부킹 시점 비중</h3><div id="ch5wos" style="height:400px"></div></div>`;
+
+  // 3. 업체별 WOS 분포
+  const sd = filterShipper(month);
+  const byShpr = {};
+  sd.forEach(r => {
+    const k = r.BKG_SHPR_CST_ENM || r.BKG_SHPR_CST_NO;
+    if (!byShpr[k]) byShpr[k] = {w3:0,w2:0,w1:0,wos:0,sm:new Set()};
+    const s = byShpr[k];
+    s.w3 += r.w3_fst||0; s.w2 += r.w2_fst||0; s.w1 += r.w1_fst||0; s.wos += r.wos_fst||0;
+    if (r.Salesman_POR) s.sm.add(r.Salesman_POR);
+  });
+  let custRows = Object.entries(byShpr).map(([k,s]) => {
+    const total = s.w3+s.w2+s.w1+s.wos;
+    return {name:k, sales:[...s.sm].join(', '), total, w3:s.w3, w2:s.w2, w1:s.w1, wos:s.wos};
+  }).sort((a,b)=>b.total-a.total).slice(0,30);
+
+  html += `<div class="chart-card"><h3>화주별 부킹 접수 시점 (${fmtMonth(month)})</h3>
+  <table class="summary"><tr><th>화주</th><th>영업사원</th><th>전체BKG</th><th>WOS-3</th><th>비중</th><th>WOS-2</th><th>비중</th><th>WOS-1</th><th>비중</th><th>WOS</th><th>비중</th></tr>`;
+  custRows.forEach(r => {
+    html += `<tr><td class="lbl">${r.name}</td><td>${r.sales}</td><td>${fmt(r.total)}</td>`;
+    html += `<td>${fmt(r.w3)}</td><td>${pct(r.w3,r.total)}</td>`;
+    html += `<td>${fmt(r.w2)}</td><td>${pct(r.w2,r.total)}</td>`;
+    html += `<td>${fmt(r.w1)}</td><td>${pct(r.w1,r.total)}</td>`;
+    html += `<td>${fmt(r.wos)}</td><td>${pct(r.wos,r.total)}</td></tr>`;
+  });
+  html += '</table></div>';
+
+  document.getElementById('tabContent').innerHTML = html;
+
+  // Render stacked bar
+  const colors = ['#1a73e8','#f9ab00','#ea4335','#5f6368'];
+  const top10 = destRows.slice(0,10);
+  Plotly.newPlot('ch5wos', wosLabels.map((lbl,i) => ({
+    x: top10.map(r=>r.name),
+    y: top10.map(r=>[r.w3,r.w2,r.w1,r.wos][i]),
+    type:'bar', name:lbl, marker:{color:colors[i]}
+  })), {barmode:'stack',margin:{l:40,r:20,t:20,b:30},
+    yaxis:{title:'TEU',gridcolor:'#f0f0f0'},
+    legend:{orientation:'h',y:1.1},plot_bgcolor:'#fff',paper_bgcolor:'#fff'}, {displayModeBar:false});
+}
+
 // Init
 // ═══════════════════════════════════════════════
 checkSession();
