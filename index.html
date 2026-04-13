@@ -265,10 +265,10 @@ function updateWeekOpts() {
   const weeks = [...new Set(DATA.weekly.filter(r=>r.YYYYMM===month).map(r=>r.week_start_date))].sort();
   const el = document.getElementById('fWeek');
   const cur = el.value;
-  let opts = '<option value="ALL">전체</option>';
+  let opts = `<option value="ALL">${L('전체','All')}</option>`;
   weeks.forEach((w,i) => {
     const lbl = w.replace(/\D+/g,'-').replace(/-$/,'').slice(5);
-    opts += `<option value="${w}">${i+1}주차 (${lbl})</option>`;
+    opts += `<option value="${w}">${i+1}${L('주차','wk')} (${lbl})</option>`;
   });
   el.innerHTML = opts;
   el.value = weeks.includes(cur) ? cur : 'ALL';
@@ -475,11 +475,11 @@ function renderTab1() {
   const xl = ms.map(fmtMonth);
 
   Plotly.newPlot('ch1bar', [
-    {x:xl, y:shipM, type:'bar', name:L('실선적(Normal)','Shipment(Normal)'), marker:{color:'#1a73e8',opacity:.85}, text:shipM.map(fmt), textposition:'outside', textfont:{size:10}},
+    {x:xl, y:shipM, type:'bar', name:L('실선적(Normal)','LFT(Normal)'), marker:{color:'#1a73e8',opacity:.85}, text:shipM.map(fmt), textposition:'outside', textfont:{size:10}},
     {x:xl, y:bsaM, type:'bar', name:'BSA', marker:{color:'#dadce0',opacity:.5}, text:bsaM.map(fmt), textposition:'outside', textfont:{size:10}},
     {x:xl, y:occM, type:'scatter', mode:'lines+markers+text', name:L('소석률(Normal/BSA)','Occ(Normal/BSA)'), yaxis:'y2',
      text:occM.map(v=>v?v.toFixed(0)+'%':''), textposition:'top center', line:{color:'#ea4335',width:2}, marker:{size:8}},
-    {x:xl, y:w3occM, type:'scatter', mode:'lines+markers+text', name:L('3주전실선적/BSA','WOS-3 Ship/BSA'), yaxis:'y2',
+    {x:xl, y:w3occM, type:'scatter', mode:'lines+markers+text', name:L('3주전실선적/BSA','WOS-3 LFT/BSA'), yaxis:'y2',
      text:w3occM.map(v=>v?v.toFixed(0)+'%':''), textposition:'bottom center', line:{color:'#6c5ce7',width:2,dash:'dash'}, marker:{size:6,symbol:'diamond'}},
   ], (() => {
     const allVals = [...shipM, ...bsaM];
@@ -488,7 +488,7 @@ function renderTab1() {
     const y2max = Math.max(110, Math.ceil(Math.max(...allOcc, 100) * 1.15 / 10) * 10);
     return {barmode:'group', margin:{l:50,r:50,t:40,b:30},
       yaxis:{title:'TEU',gridcolor:'#f0f0f0',range:[0,y1max]},
-      yaxis2:{title:'소석률 %',overlaying:'y',side:'right',range:[0,y2max]},
+      yaxis2:{title:L('소석률 %','Occ %'),overlaying:'y',side:'right',range:[0,y2max]},
       legend:{orientation:'h',y:1.15}, plot_bgcolor:'#fff', paper_bgcolor:'#fff'};
   })(), {displayModeBar:false});
 
@@ -508,7 +508,7 @@ function renderTab1() {
     x: orows.map(r=>r.occ), type:'bar', orientation:'h',
     marker:{color:orows.map(r=>r.occ>=65?'#34a853':r.occ>=50?'#f9ab00':'#ea4335')},
     text:orows.map(r=>r.occ.toFixed(0)+'%'), textposition:'outside', textfont:{size:11}, cliponaxis:false
-  }], {margin:{l:200,r:60,t:20,b:30}, xaxis:{title:'소석률 %'},
+  }], {margin:{l:200,r:60,t:20,b:30}, xaxis:{title:L('소석률 %','Occ %')},
        yaxis:{tickfont:{family:'Consolas,monospace',size:11}},
        plot_bgcolor:'#fff',paper_bgcolor:'#fff',showlegend:false,
        shapes:[{type:'line',x0:50,x1:50,y0:-0.5,y1:orows.length-0.5,line:{dash:'dot',color:'#5f6368',width:1}}]
@@ -543,7 +543,7 @@ function buildSummaryTable(months) {
   });
   h += '</tr><tr>';
   months.forEach(() => {
-    h += `<th>BKG</th><th>BSA</th><th>${L('비중','Ratio')}</th><th>${L('실선적','Ship')}</th><th>${L('실선적률','Rate')}</th><th>BKG</th><th>${L('비중','Ratio')}</th><th>${L('실선적','Ship')}</th><th>${L('실선적률','Rate')}</th><th>CM1</th><th>CM1/TEU</th>`;
+    h += `<th>BKG</th><th>BSA</th><th>${L('비중','Ratio')}</th><th>${L('실선적','LFT')}</th><th>${L('실선적률','Rate')}</th><th>BKG</th><th>${L('비중','Ratio')}</th><th>${L('실선적','LFT')}</th><th>${L('실선적률','Rate')}</th><th>CM1</th><th>CM1/TEU</th>`;
   });
   h += '</tr>';
 
@@ -618,7 +618,7 @@ function renderTab2() {
     if (document.getElementById('ch2sm')) {
       Plotly.newPlot('ch2sm', [
         {y:smRows.map(r=>r.name).reverse(), x:smRows.map(r=>r.bkg).reverse(), type:'bar', orientation:'h', name:'BKG', marker:{color:'#1a73e8',opacity:.7}},
-        {y:smRows.map(r=>r.name).reverse(), x:smRows.map(r=>r.ship).reverse(), type:'bar', orientation:'h', name:'실선적(Normal)', marker:{color:'#34a853',opacity:.7}},
+        {y:smRows.map(r=>r.name).reverse(), x:smRows.map(r=>r.ship).reverse(), type:'bar', orientation:'h', name:L('실선적(Normal)','LFT(Normal)'), marker:{color:'#34a853',opacity:.7}},
       ], {barmode:'group',margin:{l:80,r:30,t:20,b:30},xaxis:{title:'TEU (주간평균)',gridcolor:'#f0f0f0'},
           legend:{orientation:'h',y:1.1},plot_bgcolor:'#fff',paper_bgcolor:'#fff'}, {displayModeBar:false});
     }
@@ -632,7 +632,7 @@ function renderTab2() {
     })).sort((a,b)=>b.bkg-a.bkg).slice(0,15);
 
     html += `<div class="chart-card"><h3>${L('3주전 BKG 현황','WOS-3 BKG Status')} - ${useVl} (${fmtMonth(month)})</h3>
-    <table class="summary"><tr><th>${useVl}</th><th>BKG</th><th>${L('실선적(Normal)','Ship(Normal)')}</th><th>${L('실선적률','Ship Rate')}</th><th>${L('고수익BKG','Hi BKG')}</th><th>${L('고수익%','Hi%')}</th></tr>`;
+    <table class="summary"><tr><th>${useVl}</th><th>BKG</th><th>${L('실선적(Normal)','LFT(Normal)')}</th><th>${L('실선적률','LFT Rate')}</th><th>${L('고수익BKG','Hi BKG')}</th><th>${L('고수익%','Hi%')}</th></tr>`;
     rows.forEach(r => {
       html += `<tr><td class="lbl">${r.name}</td><td>${fmt(r.bkg)}</td><td>${fmt(r.ship)}</td><td>${pct(r.ship,r.bkg)}</td><td>${fmt(r.hi)}</td><td>${pct(r.hi,r.bkg)}</td></tr>`;
     });
@@ -688,7 +688,7 @@ function renderShipperTable(month) {
   }).sort((a,b)=>b.bkg-a.bkg);
 
   let h = `<div class="chart-card"><h3>${L('화주별 3주전 BKG','WOS-3 BKG by Shipper')} (${fmtMonth(month)})</h3>
-  <table class="summary"><tr><th>${L('화주','Shipper')}</th><th>${L('고수익태그','Profit Tag')}</th><th>${L('영업사원','Salesperson')}</th><th>BKG</th><th>${L('실선적','Ship')}</th><th>${L('실선적률','Rate')}</th><th>${L('고수익BKG','Hi BKG')}</th><th>${L('고수익%','Hi%')}</th><th>CM1</th><th>CM1/TEU</th></tr>`;
+  <table class="summary"><tr><th>${L('화주','Shipper')}</th><th>${L('고수익태그','Profit Tag')}</th><th>${L('영업사원','Salesperson')}</th><th>BKG</th><th>${L('실선적','LFT')}</th><th>${L('실선적률','Rate')}</th><th>${L('고수익BKG','Hi BKG')}</th><th>${L('고수익%','Hi%')}</th><th>CM1</th><th>CM1/TEU</th></tr>`;
 
   rows.forEach(r => {
     const ct = r.cm1l>0 ? r.cm1/r.cm1l : 0;
@@ -727,7 +727,7 @@ function renderSalesmanTable(month) {
   })).sort((a,b)=>b.bkg-a.bkg);
 
   let h = `<div class="chart-card"><h3>${L('영업사원별 실적','Salesperson Performance')} (${fmtMonth(month)})</h3>
-  <table class="summary"><tr><th>${L('영업사원','Salesperson')}</th><th>${L('화주수','Shippers')}</th><th>BKG</th><th>${L('실선적','Ship')}</th><th>${L('실선적률','Rate')}</th><th>${L('고수익BKG','Hi BKG')}</th><th>${L('고수익%','Hi%')}</th><th>CM1</th><th>CM1/TEU</th></tr>`;
+  <table class="summary"><tr><th>${L('영업사원','Salesperson')}</th><th>${L('화주수','Shippers')}</th><th>BKG</th><th>${L('실선적','LFT')}</th><th>${L('실선적률','Rate')}</th><th>${L('고수익BKG','Hi BKG')}</th><th>${L('고수익%','Hi%')}</th><th>CM1</th><th>CM1/TEU</th></tr>`;
 
   rows.forEach(r => {
     const ct = r.cm1l>0?r.cm1/r.cm1l:0;
@@ -739,12 +739,12 @@ function renderSalesmanTable(month) {
   const th2=rows.reduce((s,r)=>s+r.hi,0), tc=rows.reduce((s,r)=>s+r.cm1,0);
   const tl=rows.reduce((s,r)=>s+r.cm1l,0), tct=tl>0?tc/tl:0;
   const tcust = new Set(sd.map(r=>r.BKG_SHPR_CST_NO).filter(v=>v)).size;
-  h += `<tr class="total"><td class="lbl">합계</td><td>${tcust}</td><td>${fmt(tb)}</td><td>${fmt(ts)}</td><td>${pct(ts,tb)}</td>`;
+  h += `<tr class="total"><td class="lbl">${L('합계','Total')}</td><td>${tcust}</td><td>${fmt(tb)}</td><td>${fmt(ts)}</td><td>${pct(ts,tb)}</td>`;
   h += `<td>${fmt(th2)}</td><td>${pct(th2,tb)}</td><td>${fmt(Math.round(tc))}</td><td>${fmt(Math.round(tct))}</td></tr>`;
   h += '</table></div>';
 
   // Salesman bar chart
-  h += `<div class="chart-card"><h3>${L('영업사원별 BKG vs 실선적률','Salesperson BKG vs Ship Rate')}</h3><div id="ch2sm" style="height:350px"></div></div>`;
+  h += `<div class="chart-card"><h3>${L('영업사원별 BKG vs 실선적률','Salesperson BKG vs LFT Rate')}</h3><div id="ch2sm" style="height:350px"></div></div>`;
   return h;
 }
 
@@ -758,7 +758,7 @@ function renderTab3() {
   const w3b = profitSum(fd,'w3_fst'), w3c = profitSum(fd,'w3_canc_fst'), w3n = profitSum(fd,'w3_norm_fst');
 
   let html = `<div class="chart-row">
-    <div class="chart-card" style="flex:5"><h3>WOS-3 → ${L('실선적(Normal)','Shipment(Normal)')}</h3><div id="ch3fn" style="height:300px"></div></div>
+    <div class="chart-card" style="flex:5"><h3>WOS-3 → ${L('실선적(Normal)','LFT(Normal)')}</h3><div id="ch3fn" style="height:300px"></div></div>
     <div class="chart-card" style="flex:7"><h3>${vl} ${L('실선적률 추이','Ship Rate Trend')}</h3><div id="ch3tr" style="height:300px"></div></div>
   </div>`;
 
@@ -786,7 +786,7 @@ function renderTab3() {
   })).filter(r=>r.cancel>0).sort((a,b)=>b.cancel-a.cancel).slice(0,15);
 
   html += `<div class="chart-card"><h3>${L('화주별 캔슬 Top 15','Top 15 Cancel Shippers')} (${fmtMonth(month)})</h3>
-  <table class="summary"><tr><th>${L('화주','Shipper')}</th><th>${L('3주전BKG','WOS-3 BKG')}</th><th>${L('캔슬','Cancel')}</th><th>${L('캔슬률','Cancel%')}</th><th>${L('실선적(Normal)','Ship(Normal)')}</th><th>${L('실선적률','Ship%')}</th></tr>`;
+  <table class="summary"><tr><th>${L('화주','Shipper')}</th><th>${L('3주전BKG','WOS-3 BKG')}</th><th>${L('캔슬','Cancel')}</th><th>${L('캔슬률','Cancel%')}</th><th>${L('실선적(Normal)','LFT(Normal)')}</th><th>${L('실선적률','LFT%')}</th></tr>`;
   cancelRows.forEach(r => {
     html += `<tr><td class="lbl">${r.name}</td><td>${fmt(r.bkg)}</td><td style="color:#ea4335">${fmt(r.cancel)}</td><td>${r.rate.toFixed(0)}%</td><td>${fmt(r.ship)}</td><td>${pct(r.ship,r.bkg)}</td></tr>`;
   });
@@ -795,7 +795,7 @@ function renderTab3() {
   document.getElementById('tabContent').innerHTML = html;
 
   // Funnel
-  Plotly.newPlot('ch3fn', [{type:'funnel', y:[L('3주전 BKG','WOS-3 BKG'),L('캔슬 제외','Cancel Removed'),L('실선적(Normal)','Shipment(Normal)')],
+  Plotly.newPlot('ch3fn', [{type:'funnel', y:[L('3주전 BKG','WOS-3 BKG'),L('캔슬 제외','Cancel Removed'),L('실선적(Normal)','LFT(Normal)')],
     x:[w3b, w3b-w3c, w3n], textinfo:'value+percent initial',
     marker:{color:['#1a73e8','#f9ab00','#34a853']}}],
     {margin:{l:20,r:20,t:20,b:20},plot_bgcolor:'#fff',paper_bgcolor:'#fff'}, {displayModeBar:false});
@@ -810,7 +810,7 @@ function renderTab3() {
       const b=profitSum(d,'w3_fst'), n=profitSum(d,'w3_norm_fst');
       return b>0 ? n/b*100 : null;
     }), mode:'lines+markers', name:it, connectgaps:true
-  })), {margin:{l:40,r:20,t:20,b:30},yaxis:{title:L('실선적률 %','Ship Rate %'),gridcolor:'#f0f0f0'},
+  })), {margin:{l:40,r:20,t:20,b:30},yaxis:{title:L('실선적률 %','LFT Rate %'),gridcolor:'#f0f0f0'},
     legend:{orientation:'h',y:1.12},plot_bgcolor:'#fff',paper_bgcolor:'#fff'}, {displayModeBar:false});
 
   // 캔슬률 바 차트
@@ -829,7 +829,7 @@ function renderTab3() {
     mode:'lines+markers+text', name:L('전체 캔슬률','Overall Cancel Rate'), line:{color:'#ea4335',width:3}, marker:{size:8},
     text: DATA.months.map(m => { const d=filterMonthly(m); const b=profitSum(d,'w3_fst'),c=profitSum(d,'w3_canc_fst'); return b>0?(c/b*100).toFixed(0)+'%':''; }),
     textposition:'top center'
-  }], {margin:{l:40,r:20,t:30,b:30},yaxis:{title:'캔슬률 %',gridcolor:'#f0f0f0'},
+  }], {margin:{l:40,r:20,t:30,b:30},yaxis:{title:L('캔슬률 %','Cancel %'),gridcolor:'#f0f0f0'},
     plot_bgcolor:'#fff',paper_bgcolor:'#fff'}, {displayModeBar:false});
 }
 
@@ -868,13 +868,13 @@ function renderTab4() {
 
   html += `<div class="chart-row">
     <div class="chart-card" style="flex:1"><h3>CM1/TEU Top 10 ${L('화주','Shippers')}</h3>
-    <table class="summary"><tr><th>화주</th><th>영업사원</th><th>BKG</th><th>CM1/TEU</th><th>CM1</th></tr>`;
+    <table class="summary"><tr><th>${L('화주','Shipper')}</th><th>${L('영업사원','Sales')}</th><th>BKG</th><th>CM1/TEU</th><th>CM1</th></tr>`;
   top10.forEach(r => {
     html += `<tr><td class="lbl">${r.name}</td><td>${r.sales}</td><td>${fmt(r.bkg)}</td><td style="color:#34a853;font-weight:600">${fmt(Math.round(r.ct))}</td><td>${fmt(Math.round(r.cm1))}</td></tr>`;
   });
   html += `</table></div>
     <div class="chart-card" style="flex:1"><h3>CM1/TEU Bottom 10 ${L('화주','Shippers')}</h3>
-    <table class="summary"><tr><th>화주</th><th>영업사원</th><th>BKG</th><th>CM1/TEU</th><th>CM1</th></tr>`;
+    <table class="summary"><tr><th>${L('화주','Shipper')}</th><th>${L('영업사원','Sales')}</th><th>BKG</th><th>CM1/TEU</th><th>CM1</th></tr>`;
   bot10.forEach(r => {
     html += `<tr><td class="lbl">${r.name}</td><td>${r.sales}</td><td>${fmt(r.bkg)}</td><td style="color:#ea4335">${fmt(Math.round(r.ct))}</td><td>${fmt(Math.round(r.cm1))}</td></tr>`;
   });
@@ -947,7 +947,7 @@ function renderTab5() {
     return {name:k, total, w3:sum(r,'w3_fst'), w2:sum(r,'w2_fst')||0, w1:sum(r,'w1_fst')||0, wos:sum(r,'wos_fst')||0};
   }).sort((a,b)=>b.total-a.total).slice(0,15);
 
-  let html = `<div class="chart-card"><h3>${vl}별 부킹 접수 시점 분석 (${fmtMonth(month)})</h3>
+  let html = `<div class="chart-card"><h3>${vl} ${L('부킹 접수 시점 분석','Booking Timing')} (${fmtMonth(month)})</h3>
   <table class="summary"><tr><th>${vl}</th><th>${L('전체BKG','Total BKG')}</th><th>WOS-3</th><th>비중</th><th>WOS-2</th><th>비중</th><th>WOS-1</th><th>비중</th><th>WOS</th><th>비중</th></tr>`;
   destRows.forEach(r => {
     html += `<tr><td class="lbl">${r.name}</td><td>${fmt(r.total)}</td>`;
@@ -958,7 +958,7 @@ function renderTab5() {
   });
   const tt=destRows.reduce((s,r)=>s+r.total,0), tw3=destRows.reduce((s,r)=>s+r.w3,0);
   const tw2=destRows.reduce((s,r)=>s+r.w2,0), tw1=destRows.reduce((s,r)=>s+r.w1,0), twos=destRows.reduce((s,r)=>s+r.wos,0);
-  html += `<tr class="total"><td class="lbl">합계</td><td>${fmt(tt)}</td><td>${fmt(tw3)}</td><td>${pct(tw3,tt)}</td><td>${fmt(tw2)}</td><td>${pct(tw2,tt)}</td><td>${fmt(tw1)}</td><td>${pct(tw1,tt)}</td><td>${fmt(twos)}</td><td>${pct(twos,tt)}</td></tr>`;
+  html += `<tr class="total"><td class="lbl">${L('합계','Total')}</td><td>${fmt(tt)}</td><td>${fmt(tw3)}</td><td>${pct(tw3,tt)}</td><td>${fmt(tw2)}</td><td>${pct(tw2,tt)}</td><td>${fmt(tw1)}</td><td>${pct(tw1,tt)}</td><td>${fmt(twos)}</td><td>${pct(twos,tt)}</td></tr>`;
   html += '</table></div>';
 
   // 2. 지역별 WOS 비중 stacked bar chart
@@ -1004,7 +1004,7 @@ function renderTab5() {
     text: top10.map(r=> r.total>0 ? ([r.w3,r.w2,r.w1,r.wos][i]/r.total*100).toFixed(0)+'%' : ''),
     textposition:'inside', textfont:{size:10,color:'#fff'}, hovertemplate:'%{x}: %{y:.1f}%<extra>'+lbl+'</extra>'
   })), {barmode:'stack',margin:{l:40,r:20,t:20,b:30},
-    yaxis:{title:'비중 %',gridcolor:'#f0f0f0',range:[0,100]},
+    yaxis:{title:L('비중 %','Ratio %'),gridcolor:'#f0f0f0',range:[0,100]},
     legend:{orientation:'h',y:1.1},plot_bgcolor:'#fff',paper_bgcolor:'#fff'}, {displayModeBar:false});
 }
 
@@ -1039,8 +1039,8 @@ const T = {
     view: 'View', month: 'Month', week: 'Week', profitType: 'Profit', sales: 'Salesperson',
     viewDest: 'By Dest', viewOri: 'By Origin', all: 'All', hi: 'High', lo: 'Low',
     tab1: '① Occupancy', tab2: '② Trends', tab3: '③ Conversion', tab4: '④ Profitability', tab5: '⑤ Patterns',
-    totalBkg: 'Total BKG', shipment: 'Shipment(Normal)', w3bkg: 'WOS-3 BKG', w3ship: 'WOS-3 Shipment',
-    bsa: 'BSA', occ: 'Occupancy', shipRate: 'Ship Rate', loading: 'Loading data...',
+    totalBkg: 'Total BKG', shipment: 'LFT(Normal)', w3bkg: 'WOS-3 BKG', w3ship: 'WOS-3 LFT(Normal)',
+    bsa: 'BSA', occ: 'Occupancy', shipRate: 'LFT Rate', loading: 'Loading data...',
     login: 'Sign in with company Google account', loginBtn: 'Sign in with Google',
     monthlyChart: 'Monthly BKG vs BSA', occChart: 'Occupancy', byRegion: 'By Region',
     monthlySummary: 'Monthly Performance', bkgTrend: 'Booking Trends', conversion: 'Conversion Analysis',
