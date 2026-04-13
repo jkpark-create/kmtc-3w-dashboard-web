@@ -1038,9 +1038,15 @@ function renderTab5() {
   });
   html += '</table></div>';
 
+  // 4. 고수익 vs 저수익 리드타임 + 비중 추이
+  html += `<div class="chart-row">
+    <div class="chart-card" style="flex:1"><h3>${L('고수익 vs 저수익 리드타임 비중','High vs Low Profit Lead Time')}</h3><div id="ch5lt" style="height:320px"></div></div>
+    <div class="chart-card" style="flex:1"><h3>${L('고수익화주 WOS-3 비중 추이','High-Profit WOS-3 Ratio Trend')}</h3><div id="ch5hi" style="height:320px"></div></div>
+  </div>`;
+
   document.getElementById('tabContent').innerHTML = html;
 
-  // Render 100% stacked bar (비중)
+  // Render 100% stacked bar (지역별 비중)
   const colors = ['#1a73e8','#f9ab00','#ea4335','#5f6368'];
   const top10 = destRows.slice(0,10);
   Plotly.newPlot('ch5wos', wosLabels.map((lbl,i) => ({
@@ -1052,6 +1058,38 @@ function renderTab5() {
   })), {barmode:'stack',margin:{l:40,r:20,t:20,b:30},
     yaxis:{title:L('비중 %','Ratio %'),gridcolor:'#f0f0f0',range:[0,100]},
     legend:{orientation:'h',y:1.1},plot_bgcolor:'#fff',paper_bgcolor:'#fff'}, {displayModeBar:false});
+
+  // 고수익 vs 저수익 리드타임 비교
+  const hiSD5 = sd.filter(r => r['\uace0\uc218\uc775\ud0dc\uadf8'] === '고수익');
+  const loSD5 = sd.filter(r => r['\uace0\uc218\uc775\ud0dc\uadf8'] === '저수익');
+  const hiT5 = wosKeys.reduce((s,k) => s + sum(hiSD5,k), 0);
+  const loT5 = wosKeys.reduce((s,k) => s + sum(loSD5,k), 0);
+  Plotly.newPlot('ch5lt', [
+    {x:wosLabels, y:wosKeys.map(k => hiT5>0 ? sum(hiSD5,k)/hiT5*100 : 0), type:'bar',
+     name:L('고수익','High-Profit'), marker:{color:'#34a853'},
+     text:wosKeys.map(k => hiT5>0 ? (sum(hiSD5,k)/hiT5*100).toFixed(0)+'%' : ''), textposition:'auto', textfont:{size:12}},
+    {x:wosLabels, y:wosKeys.map(k => loT5>0 ? sum(loSD5,k)/loT5*100 : 0), type:'bar',
+     name:L('저수익','Low-Profit'), marker:{color:'#ea4335'},
+     text:wosKeys.map(k => loT5>0 ? (sum(loSD5,k)/loT5*100).toFixed(0)+'%' : ''), textposition:'auto', textfont:{size:12}},
+  ], {barmode:'group',margin:{l:40,r:20,t:20,b:30},
+    yaxis:{title:'%',gridcolor:'#f0f0f0',range:[0,100]},
+    legend:{orientation:'h',y:1.1},plot_bgcolor:'#fff',paper_bgcolor:'#fff'}, {displayModeBar:false});
+
+  // 고수익화주 WOS-3 비중 월별 추이
+  const hiTrend5 = DATA.months.map(m => {
+    const msd = filterShipper(m);
+    if (!msd.length) return null;
+    const total = sum(msd, 'w3_fst');
+    const hi = sum(msd.filter(r => r['\uace0\uc218\uc775\ud0dc\uadf8'] === '고수익'), 'w3_fst');
+    return total > 0 ? hi/total*100 : null;
+  });
+  Plotly.newPlot('ch5hi', [{
+    x: DATA.months.map(fmtMonth), y: hiTrend5,
+    mode:'lines+markers+text', line:{color:'#1a73e8',width:3}, marker:{size:8},
+    text: hiTrend5.map(v => v !== null ? v.toFixed(0)+'%' : ''), textposition:'top center'
+  }], {margin:{l:40,r:20,t:30,b:30},
+    yaxis:{title:L('고수익 비중 %','High-Profit %'),gridcolor:'#f0f0f0',range:[0,100]},
+    plot_bgcolor:'#fff',paper_bgcolor:'#fff',showlegend:false}, {displayModeBar:false});
 }
 
 // ═══════════════════════════════════════════════
