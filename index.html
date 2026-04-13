@@ -82,7 +82,7 @@ table.summary td.lbl{text-align:left;font-weight:600;background:#fafafa}
   <label>보기</label><select id="fView"><option value="dest">도착지별</option><option value="origin">선적지별</option></select>
   <label>월</label><select id="fMonth"></select>
   <label>주차</label><select id="fWeek"><option value="ALL">전체</option></select>
-  <label>화주구분</label><select id="fProfit"><option value="ALL">전체</option><option value="hi">고수익화주</option><option value="lo">저수익화주</option></select>
+  <label>화주구분</label><select id="fProfit"><option value="ALL">전체</option><option value="hi">고수익</option><option value="lo">저수익</option></select>
   <label>영업사원</label><select id="fSales"><option value="ALL">전체</option></select>
 </div>
 
@@ -310,6 +310,9 @@ function filterShipper(month) {
   if(month) d=d.filter(r=>r.YYYYMM===month);
   const sales = gv('fSales');
   if(sales!=='ALL') d=d.filter(r=>r.Salesman_POR===sales);
+  const profit = gv('fProfit');
+  if(profit==='hi') d=d.filter(r=>r['\uace0\uc218\uc775\ud0dc\uadf8']==='고수익');
+  if(profit==='lo') d=d.filter(r=>r['\uace0\uc218\uc775\ud0dc\uadf8']==='저수익');
   return d;
 }
 
@@ -614,25 +617,28 @@ function renderShipperTable(month) {
   const byShpr = {};
   sd.forEach(r => {
     const k = r.BKG_SHPR_CST_ENM || r.BKG_SHPR_CST_NO;
-    if (!byShpr[k]) byShpr[k] = {bkg:0,ship:0,hi:0,hi_ship:0,cm1:0,cm1l:0,_sales:new Set()};
+    if (!byShpr[k]) byShpr[k] = {bkg:0,ship:0,hi:0,hi_ship:0,cm1:0,cm1l:0,_sales:new Set(),_tags:new Set()};
     const s = byShpr[k];
     s.bkg += r.w3_fst||0; s.ship += r.w3_norm_fst||0;
     s.hi += r.w3_hi_fst||0; s.hi_ship += r.w3_hi_norm_fst||0;
     s.cm1 += r.cm1_norm||0; s.cm1l += r.lst_norm||0;
     if (r.Salesman_POR) s._sales.add(r.Salesman_POR);
+    if (r['\uace0\uc218\uc775\ud0dc\uadf8']) s._tags.add(r['\uace0\uc218\uc775\ud0dc\uadf8']);
   });
 
   let rows = Object.entries(byShpr).map(([k,s]) => {
     const sales = [...s._sales].join(', ');
-    return {name:k, sales, bkg:s.bkg, ship:s.ship, hi:s.hi, hi_ship:s.hi_ship, cm1:s.cm1, cm1l:s.cm1l};
+    const tag = [...s._tags].join(', ');
+    return {name:k, tag, sales, bkg:s.bkg, ship:s.ship, hi:s.hi, hi_ship:s.hi_ship, cm1:s.cm1, cm1l:s.cm1l};
   }).sort((a,b)=>b.bkg-a.bkg);
 
   let h = `<div class="chart-card"><h3>화주별 3주전 BKG (${fmtMonth(month)})</h3>
-  <table class="summary"><tr><th>화주</th><th>영업사원</th><th>BKG</th><th>실선적</th><th>실선적률</th><th>고수익BKG</th><th>고수익%</th><th>CM1</th><th>CM1/TEU</th></tr>`;
+  <table class="summary"><tr><th>화주</th><th>고수익태그</th><th>영업사원</th><th>BKG</th><th>실선적</th><th>실선적률</th><th>고수익BKG</th><th>고수익%</th><th>CM1</th><th>CM1/TEU</th></tr>`;
 
   rows.forEach(r => {
     const ct = r.cm1l>0 ? r.cm1/r.cm1l : 0;
-    h += `<tr><td class="lbl">${r.name}</td><td>${r.sales}</td><td>${fmt(r.bkg)}</td><td>${fmt(r.ship)}</td><td>${pct(r.ship,r.bkg)}</td>`;
+    const tagStyle = r.tag==='고수익' ? 'color:#34a853;font-weight:600' : r.tag==='저수익' ? 'color:#ea4335' : '';
+    h += `<tr><td class="lbl">${r.name}</td><td style="${tagStyle}">${r.tag}</td><td>${r.sales}</td><td>${fmt(r.bkg)}</td><td>${fmt(r.ship)}</td><td>${pct(r.ship,r.bkg)}</td>`;
     h += `<td>${fmt(r.hi)}</td><td>${pct(r.hi,r.bkg)}</td><td>${fmt(Math.round(r.cm1))}</td><td>${fmt(Math.round(ct))}</td></tr>`;
   });
 
@@ -809,20 +815,22 @@ function renderTab5() {
   const byShpr = {};
   sd.forEach(r => {
     const k = r.BKG_SHPR_CST_ENM || r.BKG_SHPR_CST_NO;
-    if (!byShpr[k]) byShpr[k] = {w3:0,w2:0,w1:0,wos:0,sm:new Set()};
+    if (!byShpr[k]) byShpr[k] = {w3:0,w2:0,w1:0,wos:0,sm:new Set(),tags:new Set()};
     const s = byShpr[k];
     s.w3 += r.w3_fst||0; s.w2 += r.w2_fst||0; s.w1 += r.w1_fst||0; s.wos += r.wos_fst||0;
     if (r.Salesman_POR) s.sm.add(r.Salesman_POR);
+    if (r['\uace0\uc218\uc775\ud0dc\uadf8']) s.tags.add(r['\uace0\uc218\uc775\ud0dc\uadf8']);
   });
   let custRows = Object.entries(byShpr).map(([k,s]) => {
     const total = s.w3+s.w2+s.w1+s.wos;
-    return {name:k, sales:[...s.sm].join(', '), total, w3:s.w3, w2:s.w2, w1:s.w1, wos:s.wos};
+    return {name:k, tag:[...s.tags].join(', '), sales:[...s.sm].join(', '), total, w3:s.w3, w2:s.w2, w1:s.w1, wos:s.wos};
   }).sort((a,b)=>b.total-a.total);
 
   html += `<div class="chart-card"><h3>화주별 부킹 접수 시점 (${fmtMonth(month)})</h3>
-  <table class="summary"><tr><th>화주</th><th>영업사원</th><th>전체BKG</th><th>WOS-3</th><th>비중</th><th>WOS-2</th><th>비중</th><th>WOS-1</th><th>비중</th><th>WOS</th><th>비중</th></tr>`;
+  <table class="summary"><tr><th>화주</th><th>고수익태그</th><th>영업사원</th><th>전체BKG</th><th>WOS-3</th><th>비중</th><th>WOS-2</th><th>비중</th><th>WOS-1</th><th>비중</th><th>WOS</th><th>비중</th></tr>`;
   custRows.forEach(r => {
-    html += `<tr><td class="lbl">${r.name}</td><td>${r.sales}</td><td>${fmt(r.total)}</td>`;
+    const tagStyle = r.tag==='고수익' ? 'color:#34a853;font-weight:600' : r.tag==='저수익' ? 'color:#ea4335' : '';
+    html += `<tr><td class="lbl">${r.name}</td><td style="${tagStyle}">${r.tag}</td><td>${r.sales}</td><td>${fmt(r.total)}</td>`;
     html += `<td>${fmt(r.w3)}</td><td>${pct(r.w3,r.total)}</td>`;
     html += `<td>${fmt(r.w2)}</td><td>${pct(r.w2,r.total)}</td>`;
     html += `<td>${fmt(r.w1)}</td><td>${pct(r.w1,r.total)}</td>`;
