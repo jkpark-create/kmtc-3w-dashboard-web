@@ -81,6 +81,8 @@ table.summary td.lbl{text-align:left;font-weight:600;background:#fafafa}
   <div class="sep"></div>
   <label>보기</label><select id="fView"><option value="dest">도착지별</option><option value="origin">선적지별</option></select>
   <label>월</label><select id="fMonth"></select>
+  <label>주차</label><select id="fWeek"><option value="ALL">전체</option></select>
+  <label>화주구분</label><select id="fProfit"><option value="ALL">전체</option><option value="hi">고수익화주</option><option value="lo">저수익화주</option></select>
 </div>
 
 <div class="tabs">
@@ -204,8 +206,11 @@ function initFilters() {
   fillSelect('fTeam', teams);
   fillSelect('fMonth', DATA.months, DATA.months[DATA.months.length-2]);
   updateCascade();
-  ['fTeam','fOri','fOriP','fDst','fDstP','fView','fMonth'].forEach(id =>
+  updateWeekOpts();
+  ['fTeam','fOri','fOriP','fDst','fDstP','fView','fProfit'].forEach(id =>
     document.getElementById(id).addEventListener('change', () => { updateCascade(); render(); }));
+  document.getElementById('fMonth').addEventListener('change', () => { updateWeekOpts(); updateCascade(); render(); });
+  document.getElementById('fWeek').addEventListener('change', () => { render(); });
 }
 
 function fillSelect(id, vals, def) {
@@ -237,14 +242,37 @@ function updateCascade() {
   fillSelect('fDstP', [...new Set(d.map(r=>r.dst_port))].sort());
 }
 
-function filterMonthly(month) {
-  let d = DATA.monthly;
-  const team=gv('fTeam'),ori=gv('fOri'),oriP=gv('fOriP'),dst=gv('fDst'),dstP=gv('fDstP');
+function updateWeekOpts() {
+  const month = gv('fMonth');
+  const weeks = [...new Set(DATA.weekly.filter(r=>r.YYYYMM===month).map(r=>r.week_start_date))].sort();
+  const el = document.getElementById('fWeek');
+  const cur = el.value;
+  let opts = '<option value="ALL">전체</option>';
+  weeks.forEach((w,i) => {
+    const lbl = w.replace(/\D+/g,'-').replace(/-$/,'').slice(5);
+    opts += `<option value="${w}">${i+1}주차 (${lbl})</option>`;
+  });
+  el.innerHTML = opts;
+  el.value = weeks.includes(cur) ? cur : 'ALL';
+}
+
+function applyGlobalFilter(d, isMonthly) {
+  const team=gv('fTeam'),ori=gv('fOri'),dst=gv('fDst');
   if(team!=='ALL') d=d.filter(r=>r.team===team);
   if(ori!=='ALL') d=d.filter(r=>r.origin===ori);
-  if(oriP!=='ALL') d=d.filter(r=>r.ori_port===oriP);
-  if(dst!=='ALL') d=d.filter(r=>r.dest===dst);
-  if(dstP!=='ALL') d=d.filter(r=>r.dst_port===dstP);
+  if(isMonthly) {
+    const oriP=gv('fOriP'),dstP=gv('fDstP');
+    if(oriP!=='ALL') d=d.filter(r=>r.ori_port===oriP);
+    if(dst!=='ALL') d=d.filter(r=>r.dest===dst);
+    if(dstP!=='ALL') d=d.filter(r=>r.dst_port===dstP);
+  } else {
+    if(dst!=='ALL') d=d.filter(r=>r.dest===dst);
+  }
+  return d;
+}
+
+function filterMonthly(month) {
+  let d = applyGlobalFilter([...DATA.monthly], true);
   if(month) d=d.filter(r=>r.YYYYMM===month);
   return d;
 }
@@ -262,11 +290,16 @@ function filterBSA(month) {
 }
 
 function filterWeekly(month) {
-  let d = DATA.weekly;
-  const team=gv('fTeam'),ori=gv('fOri'),dst=gv('fDst');
-  if(team!=='ALL') d=d.filter(r=>r.team===team);
-  if(ori!=='ALL') d=d.filter(r=>r.origin===ori);
-  if(dst!=='ALL') d=d.filter(r=>r.dest===dst);
+  let d = applyGlobalFilter([...DATA.weekly], false);
+  if(month) d=d.filter(r=>r.YYYYMM===month);
+  const week = gv('fWeek');
+  if(week!=='ALL') d=d.filter(r=>r.week_start_date===week);
+  return d;
+}
+
+function filterShipper(month) {
+  if (!DATA.shipper) return [];
+  let d = applyGlobalFilter([...DATA.shipper], true);
   if(month) d=d.filter(r=>r.YYYYMM===month);
   return d;
 }
@@ -506,19 +539,6 @@ function renderTab2() {
     return;
   }
   document.getElementById('tabContent').innerHTML = html;
-}
-
-function filterShipper(month) {
-  if (!DATA.shipper) return [];
-  let d = DATA.shipper;
-  const team=gv('fTeam'),ori=gv('fOri'),oriP=gv('fOriP'),dst=gv('fDst'),dstP=gv('fDstP');
-  if(team!=='ALL') d=d.filter(r=>r.team===team);
-  if(ori!=='ALL') d=d.filter(r=>r.origin===ori);
-  if(oriP!=='ALL') d=d.filter(r=>r.ori_port===oriP);
-  if(dst!=='ALL') d=d.filter(r=>r.dest===dst);
-  if(dstP!=='ALL') d=d.filter(r=>r.dst_port===dstP);
-  if(month) d=d.filter(r=>r.YYYYMM===month);
-  return d;
 }
 
 function renderShipperTable(month) {
