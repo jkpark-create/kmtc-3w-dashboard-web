@@ -68,7 +68,8 @@ table.summary td.lbl{text-align:left;font-weight:600;background:#fafafa}
   <h1>-3W Booking Dashboard</h1>
   <div>
     <span class="info" id="dataInfo"></span>
-    <a href="guide.html" style="color:rgba(255,255,255,.8);font-size:12px;margin-right:12px;text-decoration:none" target="_blank">사용가이드</a>
+    <button onclick="toggleLang()" id="langBtn" style="background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.4);padding:3px 10px;border-radius:4px;cursor:pointer;font-size:11px;margin-right:8px">EN</button>
+    <a href="guide.html" style="color:rgba(255,255,255,.8);font-size:12px;margin-right:12px;text-decoration:none" target="_blank" id="guideLink">사용가이드</a>
     <span class="user" id="userInfo" onclick="logout()"></span>
   </div>
 </div>
@@ -912,7 +913,9 @@ function renderTab4() {
 // ═══════════════════════════════════════════════
 function renderTab5() {
   const month = gv('fMonth'), vk = viewKey(), vl = viewLabel();
-  const fd = filterMonthly(month);
+  const week = gv('fWeek');
+  // 주차 선택 시 weekly 데이터 사용, 전체면 monthly 사용
+  const fd = week !== 'ALL' ? filterWeekly(month) : filterMonthly(month);
   const bk = bsaViewKey();
   const wosKeys = ['w3_fst','w2_fst','w1_fst','wos_fst'];
   const wosLabels = ['WOS-3','WOS-2','WOS-1','WOS'];
@@ -985,8 +988,67 @@ function renderTab5() {
     legend:{orientation:'h',y:1.1},plot_bgcolor:'#fff',paper_bgcolor:'#fff'}, {displayModeBar:false});
 }
 
+// ═══════════════════════════════════════════════
+// Language Toggle (KO/EN)
+// ═══════════════════════════════════════════════
+let _lang = localStorage.getItem('lang') || 'ko';
+const T = {
+  ko: {
+    title: '-3W Booking Dashboard',
+    guide: '사용가이드',
+    team: '팀', origin: '선적지', oriPort: '선적포트', dest: '도착지', dstPort: '도착포트',
+    view: '보기', month: '월', week: '주차', profitType: '화주구분', sales: '영업사원',
+    viewDest: '도착지별', viewOri: '선적지별', all: '전체', hi: '고수익', lo: '저수익',
+    tab1: '① 소석률 현황', tab2: '② 부킹 트렌드', tab3: '③ 전환 분석', tab4: '④ 수익성', tab5: '⑤ 부킹 패턴',
+    totalBkg: '전체 BKG', shipment: '실선적(Normal)', w3bkg: '3주전 BKG', w3ship: '3주전 실선적(Normal)',
+    bsa: 'BSA', occ: '소석률', shipRate: '실선적률', loading: '데이터 로딩 중...',
+    login: '회사 Google 계정으로 로그인하세요', loginBtn: 'Google 계정으로 로그인',
+  },
+  en: {
+    title: '-3W Booking Dashboard',
+    guide: 'Guide',
+    team: 'Team', origin: 'Origin', oriPort: 'Ori Port', dest: 'Dest', dstPort: 'Dst Port',
+    view: 'View', month: 'Month', week: 'Week', profitType: 'Profit', sales: 'Salesperson',
+    viewDest: 'By Dest', viewOri: 'By Origin', all: 'All', hi: 'High', lo: 'Low',
+    tab1: '① Occupancy', tab2: '② Trends', tab3: '③ Conversion', tab4: '④ Profitability', tab5: '⑤ Patterns',
+    totalBkg: 'Total BKG', shipment: 'Shipment(Normal)', w3bkg: 'WOS-3 BKG', w3ship: 'WOS-3 Shipment',
+    bsa: 'BSA', occ: 'Occupancy', shipRate: 'Ship Rate', loading: 'Loading data...',
+    login: 'Sign in with company Google account', loginBtn: 'Sign in with Google',
+  }
+};
+
+function toggleLang() {
+  _lang = _lang === 'ko' ? 'en' : 'ko';
+  localStorage.setItem('lang', _lang);
+  applyLang();
+  if (DATA) render();
+}
+
+function applyLang() {
+  const t = T[_lang];
+  document.getElementById('langBtn').textContent = _lang === 'ko' ? 'EN' : 'KO';
+  document.getElementById('guideLink').textContent = t.guide;
+  // Filter labels
+  document.querySelectorAll('.filters label').forEach((el, i) => {
+    const keys = ['team','origin','oriPort','dest','dstPort','view','month','week','profitType','sales'];
+    if (keys[i]) el.textContent = t[keys[i]];
+  });
+  // Tab labels
+  document.querySelectorAll('.tabs .tab').forEach((el, i) => {
+    const keys = ['tab1','tab2','tab3','tab4','tab5'];
+    if (keys[i]) el.textContent = t[keys[i]];
+  });
+  // View dropdown
+  const vEl = document.getElementById('fView');
+  if (vEl) { vEl.options[0].text = t.viewDest; vEl.options[1].text = t.viewOri; }
+  // Login
+  const loginP = document.querySelector('.login-box p');
+  if (loginP) loginP.textContent = t.login;
+}
+
 // Init
 // ═══════════════════════════════════════════════
+applyLang();
 checkSession();
 </script>
 </body>

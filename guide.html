@@ -287,25 +287,67 @@ document.addEventListener('DOMContentLoaded', applyLang);
 <h2 id="tab5" class="ko">Tab 5: 부킹 패턴</h2>
 <h2 class="en" style="display:none">Tab 5: Booking Patterns</h2>
 <div class="card ko">
-  <h3>WOS 단계별 부킹 접수 분석</h3>
-  <p>부킹이 출항 대비 언제 접수되는지를 분석합니다.</p>
+  <h3>WOS (Week of Sailing) 단계별 부킹 접수 분석</h3>
+  <p>WOS는 <strong>Week of Sailing</strong>의 약자로, 선박 출항 주차를 기준으로 부킹이 얼마나 미리 접수되었는지를 나타냅니다.</p>
+
+  <h3>WOS 계산 방법</h3>
+  <p><code>Lead_time = week_start(BKG_Schedule) - Booking_date</code></p>
+  <p>Booking Schedule(예정 출항일)의 <strong>주 시작일(일요일)</strong>에서 <strong>부킹 접수일</strong>을 뺀 일수로 WOS 단계를 결정합니다.</p>
+
   <table>
-    <tr><th>WOS 단계</th><th>의미</th><th>기간</th></tr>
-    <tr><td><strong>WOS-3</strong></td><td>출항 3주+ 전 부킹</td><td>Booking Schedule 주시작 - Booking일 ≥ 15일</td></tr>
-    <tr><td><strong>WOS-2</strong></td><td>출항 2주 전 부킹</td><td>8~14일 전</td></tr>
-    <tr><td><strong>WOS-1</strong></td><td>출항 1주 전 부킹</td><td>1~7일 전</td></tr>
-    <tr><td><strong>WOS</strong></td><td>출항 주 부킹</td><td>0일 이하</td></tr>
+    <tr><th>WOS 단계</th><th>의미</th><th>Lead_time 기준</th><th>예시</th></tr>
+    <tr><td><strong style="color:#1a73e8">WOS-3</strong></td><td>출항 3주+ 전 부킹</td><td>≥ 15일</td><td>4/1 부킹 → 4/26 출항 (25일 전) → WOS-3</td></tr>
+    <tr><td><strong style="color:#f9ab00">WOS-2</strong></td><td>출항 2주 전 부킹</td><td>8 ~ 14일</td><td>4/15 부킹 → 4/26 출항 (11일 전) → WOS-2</td></tr>
+    <tr><td><strong style="color:#ea4335">WOS-1</strong></td><td>출항 1주 전 부킹</td><td>1 ~ 7일</td><td>4/20 부킹 → 4/26 출항 (6일 전) → WOS-1</td></tr>
+    <tr><td><strong style="color:#5f6368">WOS</strong></td><td>출항 주 부킹 (긴급)</td><td>< 1일</td><td>4/26 부킹 → 4/26 출항 (당일) → WOS</td></tr>
   </table>
 
+  <div class="tip">
+    <strong>WOS-3 비중이 높을수록 좋습니다.</strong> 조기 부킹은 선복 계획에 도움이 되고, 캔슬 위험이 낮으며, 일반적으로 수익성이 높습니다. WOS-1이나 WOS(긴급 부킹)는 운영 리스크가 높고 할인 운임이 적용되는 경우가 많습니다.
+  </div>
+
+  <h3>대시보드에서의 활용</h3>
+  <ul>
+    <li><strong>소석률 현황 (Tab1)</strong>: 3주전 BKG = WOS-3 부킹만 집계</li>
+    <li><strong>부킹 트렌드 (Tab2)</strong>: WOS-3 기준 지역별/화주별 실적</li>
+    <li><strong>부킹 패턴 (Tab5)</strong>: WOS-3 / WOS-2 / WOS-1 / WOS 비중 분석</li>
+  </ul>
+  <p>Tab5에서 <strong>지역별</strong>로는 어떤 구간이 조기 부킹 비율이 높은지, <strong>화주별</strong>로는 어떤 화주가 얼마나 미리 부킹하는지 파악할 수 있습니다.</p>
+
   <h3>지역별 부킹 시점 비중</h3>
-  <p>100% 스택 바 차트로 각 지역의 WOS-3 비중을 비교합니다. WOS-3 비중이 높을수록 조기 부킹 비율이 높습니다.</p>
+  <p>100% 스택 바 차트로 각 지역의 WOS-3 비중을 비교합니다.</p>
 
   <h3>화주별 부킹 접수 시점</h3>
-  <p>화주별 WOS 분포를 확인하여 부킹 패턴을 분석합니다.</p>
+  <p>화주별 WOS 분포 + 고수익태그 + 영업사원 정보를 함께 확인합니다.</p>
 </div>
 <div class="card en" style="display:none">
-  <h3>WOS Stage Analysis</h3>
-  <p>WOS-3(&ge;15d) | WOS-2(8-14d) | WOS-1(1-7d) | WOS(&le;0d)</p>
+  <h3>WOS (Week of Sailing) Stage Analysis</h3>
+  <p>WOS stands for <strong>Week of Sailing</strong>, measuring how far in advance bookings are placed relative to the vessel departure week.</p>
+
+  <h3>Calculation</h3>
+  <p><code>Lead_time = week_start(BKG_Schedule) - Booking_date</code></p>
+  <p>The Sunday of the Booking Schedule week minus the Booking date determines the WOS stage.</p>
+
+  <table>
+    <tr><th>WOS Stage</th><th>Meaning</th><th>Lead_time</th><th>Example</th></tr>
+    <tr><td><strong style="color:#1a73e8">WOS-3</strong></td><td>Booked 3+ weeks ahead</td><td>&ge; 15 days</td><td>Booked Apr 1 → Sails Apr 26 (25 days) → WOS-3</td></tr>
+    <tr><td><strong style="color:#f9ab00">WOS-2</strong></td><td>Booked 2 weeks ahead</td><td>8 ~ 14 days</td><td>Booked Apr 15 → Sails Apr 26 (11 days) → WOS-2</td></tr>
+    <tr><td><strong style="color:#ea4335">WOS-1</strong></td><td>Booked 1 week ahead</td><td>1 ~ 7 days</td><td>Booked Apr 20 → Sails Apr 26 (6 days) → WOS-1</td></tr>
+    <tr><td><strong style="color:#5f6368">WOS</strong></td><td>Booked in sailing week</td><td>&lt; 1 day</td><td>Booked Apr 26 → Sails Apr 26 (same day) → WOS</td></tr>
+  </table>
+
+  <div class="tip">
+    <strong>Higher WOS-3 ratio is better.</strong> Early bookings help with capacity planning, have lower cancel risk, and generally higher profitability. WOS-1 or WOS (last-minute) bookings carry operational risk and often receive discounted rates.
+  </div>
+
+  <h3>Dashboard Usage</h3>
+  <ul>
+    <li><strong>Occupancy (Tab1)</strong>: WOS-3 BKG = only WOS-3 bookings counted</li>
+    <li><strong>Trends (Tab2)</strong>: WOS-3 based regional/shipper performance</li>
+    <li><strong>Patterns (Tab5)</strong>: WOS-3 / WOS-2 / WOS-1 / WOS ratio analysis</li>
+  </ul>
+  <p>In Tab5, view <strong>by region</strong> to see which routes have higher early-booking ratios, and <strong>by shipper</strong> to understand individual booking behaviors.</p>
+
   <h3>Regional Booking Timing</h3>
   <p>100% stacked bar: higher WOS-3 ratio = earlier booking pattern.</p>
   <h3>Shipper Booking Timing</h3>
