@@ -83,6 +83,7 @@ table.summary td.lbl{text-align:left;font-weight:600;background:#fafafa}
   <label>월</label><select id="fMonth"></select>
   <label>주차</label><select id="fWeek"><option value="ALL">전체</option></select>
   <label>화주구분</label><select id="fProfit"><option value="ALL">전체</option><option value="hi">고수익화주</option><option value="lo">저수익화주</option></select>
+  <label>영업사원</label><select id="fSales"><option value="ALL">전체</option></select>
 </div>
 
 <div class="tabs">
@@ -205,7 +206,7 @@ function initFilters() {
   fillSelect('fMonth', DATA.months, DATA.months[DATA.months.length-2]);
   updateCascade();
   updateWeekOpts();
-  ['fTeam','fOri','fOriP','fDst','fDstP','fView','fProfit'].forEach(id =>
+  ['fTeam','fOri','fOriP','fDst','fDstP','fView','fProfit','fSales'].forEach(id =>
     document.getElementById(id).addEventListener('change', () => { updateCascade(); render(); }));
   document.getElementById('fMonth').addEventListener('change', () => { updateWeekOpts(); updateCascade(); render(); });
   document.getElementById('fWeek').addEventListener('change', () => { render(); });
@@ -238,6 +239,13 @@ function updateCascade() {
   fillSelect('fDst', [...new Set(d.map(r=>r.dest))].sort());
   if(dst!=='ALL') d=d.filter(r=>r.dest===dst);
   fillSelect('fDstP', [...new Set(d.map(r=>r.dst_port))].sort());
+  // 영업사원 옵션 (shipper 데이터에서)
+  if (DATA.shipper) {
+    let sd = DATA.shipper;
+    if(gv('fTeam')!=='ALL') sd=sd.filter(r=>r.team===gv('fTeam'));
+    const salesList = [...new Set(sd.map(r=>r.Salesman_POR).filter(s=>s&&s!==''))].sort();
+    fillSelect('fSales', salesList);
+  }
 }
 
 function updateWeekOpts() {
@@ -299,6 +307,8 @@ function filterShipper(month) {
   if (!DATA.shipper) return [];
   let d = applyGlobalFilter([...DATA.shipper], true);
   if(month) d=d.filter(r=>r.YYYYMM===month);
+  const sales = gv('fSales');
+  if(sales!=='ALL') d=d.filter(r=>r.Salesman_POR===sales);
   return d;
 }
 
@@ -570,26 +580,27 @@ function renderShipperTable(month) {
   const sd = filterShipper(month);
   const wk = DATA.wpm[month]||4;
 
-  // Aggregate by shipper
+  // Aggregate by shipper + salesman
   const byShpr = {};
   sd.forEach(r => {
     const k = r.BKG_SHPR_CST_ENM || r.BKG_SHPR_CST_NO;
-    if (!byShpr[k]) byShpr[k] = {bkg:0,ship:0,hi:0,hi_ship:0,cm1:0,cm1l:0};
+    if (!byShpr[k]) byShpr[k] = {bkg:0,ship:0,hi:0,hi_ship:0,cm1:0,cm1l:0,sales:new Set()};
     const s = byShpr[k];
     s.bkg += r.w3_fst||0; s.ship += r.w3_norm_fst||0;
     s.hi += r.w3_hi_fst||0; s.hi_ship += r.w3_hi_norm_fst||0;
     s.cm1 += r.cm1_norm||0; s.cm1l += r.lst_norm||0;
+    if (r.Salesman_POR) s.sales.add(r.Salesman_POR);
   });
 
-  let rows = Object.entries(byShpr).map(([k,s]) => ({name:k,...s}))
+  let rows = Object.entries(byShpr).map(([k,s]) => ({name:k,sales:[...s.sales].join(', '),...s}))
     .sort((a,b)=>b.bkg-a.bkg).slice(0,30);
 
   let h = `<div class="chart-card"><h3>화주별 3주전 BKG (${fmtMonth(month)}, 주간평균)</h3>
-  <table class="summary"><tr><th>화주</th><th>BKG</th><th>실선적</th><th>실선적률</th><th>고수익BKG</th><th>고수익%</th><th>CM1</th><th>CM1/TEU</th></tr>`;
+  <table class="summary"><tr><th>화주</th><th>영업사원</th><th>BKG</th><th>실선적</th><th>실선적률</th><th>고수익BKG</th><th>고수익%</th><th>CM1</th><th>CM1/TEU</th></tr>`;
 
   rows.forEach(r => {
     const b=r.bkg/wk, n=r.ship/wk, hb=r.hi/wk, c1=r.cm1/wk, ct=r.cm1l>0?r.cm1/r.cm1l:0;
-    h += `<tr><td class="lbl">${r.name}</td><td>${fmt(Math.round(b))}</td><td>${fmt(Math.round(n))}</td><td>${pct(n,b)}</td>`;
+    h += `<tr><td class="lbl">${r.name}</td><td>${r.sales}</td><td>${fmt(Math.round(b))}</td><td>${fmt(Math.round(n))}</td><td>${pct(n,b)}</td>`;
     h += `<td>${fmt(Math.round(hb))}</td><td>${pct(hb,b)}</td><td>${fmt(Math.round(c1))}</td><td>${fmt(Math.round(ct))}</td></tr>`;
   });
 
