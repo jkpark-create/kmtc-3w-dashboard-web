@@ -658,8 +658,7 @@ function renderSalesmanTable(month) {
     s.bkg += r.w3_fst||0; s.ship += r.w3_norm_fst||0;
     s.hi += r.w3_hi_fst||0;
     s.cm1 += r.cm1_norm||0; s.cm1l += r.lst_norm||0;
-    const cust = r.BKG_SHPR_CST_ENM || r.BKG_SHPR_CST_NO;
-    if (cust) s.custs.add(cust);
+    if (r.BKG_SHPR_CST_NO) s.custs.add(r.BKG_SHPR_CST_NO);
   });
 
   let rows = Object.entries(bySM).map(([k,s]) => ({
@@ -678,7 +677,7 @@ function renderSalesmanTable(month) {
   const tb=rows.reduce((s,r)=>s+r.bkg,0), ts=rows.reduce((s,r)=>s+r.ship,0);
   const th2=rows.reduce((s,r)=>s+r.hi,0), tc=rows.reduce((s,r)=>s+r.cm1,0);
   const tl=rows.reduce((s,r)=>s+r.cm1l,0), tct=tl>0?tc/tl:0;
-  const tcust = new Set(sd.map(r=>r.BKG_SHPR_CST_ENM||r.BKG_SHPR_CST_NO)).size;
+  const tcust = new Set(sd.map(r=>r.BKG_SHPR_CST_NO).filter(v=>v)).size;
   h += `<tr class="total"><td class="lbl">합계</td><td>${tcust}</td><td>${fmt(tb)}</td><td>${fmt(ts)}</td><td>${pct(ts,tb)}</td>`;
   h += `<td>${fmt(th2)}</td><td>${pct(th2,tb)}</td><td>${fmt(Math.round(tc))}</td><td>${fmt(Math.round(tct))}</td></tr>`;
   h += '</table></div>';
@@ -833,15 +832,17 @@ function renderTab5() {
 
   document.getElementById('tabContent').innerHTML = html;
 
-  // Render stacked bar
+  // Render 100% stacked bar (비중)
   const colors = ['#1a73e8','#f9ab00','#ea4335','#5f6368'];
   const top10 = destRows.slice(0,10);
   Plotly.newPlot('ch5wos', wosLabels.map((lbl,i) => ({
     x: top10.map(r=>r.name),
-    y: top10.map(r=>[r.w3,r.w2,r.w1,r.wos][i]),
-    type:'bar', name:lbl, marker:{color:colors[i]}
+    y: top10.map(r=> r.total>0 ? [r.w3,r.w2,r.w1,r.wos][i]/r.total*100 : 0),
+    type:'bar', name:lbl, marker:{color:colors[i]},
+    text: top10.map(r=> r.total>0 ? ([r.w3,r.w2,r.w1,r.wos][i]/r.total*100).toFixed(0)+'%' : ''),
+    textposition:'inside', textfont:{size:10,color:'#fff'}, hovertemplate:'%{x}: %{y:.1f}%<extra>'+lbl+'</extra>'
   })), {barmode:'stack',margin:{l:40,r:20,t:20,b:30},
-    yaxis:{title:'TEU',gridcolor:'#f0f0f0'},
+    yaxis:{title:'비중 %',gridcolor:'#f0f0f0',range:[0,100]},
     legend:{orientation:'h',y:1.1},plot_bgcolor:'#fff',paper_bgcolor:'#fff'}, {displayModeBar:false});
 }
 
