@@ -287,6 +287,22 @@ function applyGlobalFilter(d, isMonthly) {
   return d;
 }
 
+// 영업사원 필터: shipper에서 해당 영업사원의 화주 코드 추출 → monthly/weekly 필터
+function _getSalesShipperCodes() {
+  const sales = gv('fSales');
+  if (sales === 'ALL' || !DATA.shipper) return null;
+  const codes = new Set(DATA.shipper.filter(r => r.Salesman_POR === sales).map(r => r.BKG_SHPR_CST_NO));
+  return codes;
+}
+
+function filterMonthlyWithSales(month) {
+  let d = filterMonthly(month);
+  const codes = _getSalesShipperCodes();
+  // monthly 데이터에는 BKG_SHPR_CST_NO가 없으므로 영업사원 필터 불가
+  // → shipper 기반 뷰(Tab2 화주/영업사원)에서만 적용
+  return d;
+}
+
 function filterMonthly(month) {
   let d = applyGlobalFilter([...DATA.monthly], true);
   if(month) d=d.filter(r=>r.YYYYMM===month);
@@ -737,7 +753,7 @@ function renderTab3() {
   const month = gv('fMonth'), vk = viewKey(), vl = viewLabel();
   const week = gv('fWeek');
   const fd = week !== 'ALL' ? filterWeekly(month) : filterMonthly(month);
-  const w3b = sum(fd,'w3_fst'), w3c = sum(fd,'w3_canc_fst'), w3n = sum(fd,'w3_norm_fst');
+  const w3b = profitSum(fd,'w3_fst'), w3c = profitSum(fd,'w3_canc_fst'), w3n = profitSum(fd,'w3_norm_fst');
 
   let html = `<div class="chart-row">
     <div class="chart-card" style="flex:5"><h3>WOS-3 → 실선적(Normal)</h3><div id="ch3fn" style="height:300px"></div></div>
@@ -746,7 +762,7 @@ function renderTab3() {
 
   // 도착지별 캔슬률 랭킹
   const byDest = Object.entries(groupByKey(fd, vk)).map(([k,r]) => {
-    const b=sum(r,'w3_fst'), c=sum(r,'w3_canc_fst'), n=sum(r,'w3_norm_fst');
+    const b=profitSum(r,'w3_fst'), c=profitSum(r,'w3_canc_fst'), n=profitSum(r,'w3_norm_fst');
     return {name:k, bkg:b, cancel:c, ship:n, cancelRate:b>0?c/b*100:0, shipRate:b>0?n/b*100:0};
   }).filter(r=>r.bkg>0).sort((a,b)=>b.cancelRate-a.cancelRate);
 
@@ -789,7 +805,7 @@ function renderTab3() {
     x: DATA.months.map(fmtMonth),
     y: DATA.months.map(m => {
       const d = filterMonthly(m).filter(r=>r[vk]===it);
-      const b=sum(d,'w3_fst'), n=sum(d,'w3_norm_fst');
+      const b=profitSum(d,'w3_fst'), n=profitSum(d,'w3_norm_fst');
       return b>0 ? n/b*100 : null;
     }), mode:'lines+markers', name:it, connectgaps:true
   })), {margin:{l:40,r:20,t:20,b:30},yaxis:{title:'실선적률 %',gridcolor:'#f0f0f0'},
@@ -807,9 +823,9 @@ function renderTab3() {
   // 월별 캔슬률 추이
   Plotly.newPlot('ch3ctrend', [{
     x: DATA.months.map(fmtMonth),
-    y: DATA.months.map(m => { const d=filterMonthly(m); const b=sum(d,'w3_fst'),c=sum(d,'w3_canc_fst'); return b>0?c/b*100:null; }),
+    y: DATA.months.map(m => { const d=filterMonthly(m); const b=profitSum(d,'w3_fst'),c=profitSum(d,'w3_canc_fst'); return b>0?c/b*100:null; }),
     mode:'lines+markers+text', name:'전체 캔슬률', line:{color:'#ea4335',width:3}, marker:{size:8},
-    text: DATA.months.map(m => { const d=filterMonthly(m); const b=sum(d,'w3_fst'),c=sum(d,'w3_canc_fst'); return b>0?(c/b*100).toFixed(0)+'%':''; }),
+    text: DATA.months.map(m => { const d=filterMonthly(m); const b=profitSum(d,'w3_fst'),c=profitSum(d,'w3_canc_fst'); return b>0?(c/b*100).toFixed(0)+'%':''; }),
     textposition:'top center'
   }], {margin:{l:40,r:20,t:30,b:30},yaxis:{title:'캔슬률 %',gridcolor:'#f0f0f0'},
     plot_bgcolor:'#fff',paper_bgcolor:'#fff'}, {displayModeBar:false});
@@ -823,7 +839,7 @@ function renderTab4() {
   const week = gv('fWeek');
   const fd = week !== 'ALL' ? filterWeekly(month) : filterMonthly(month);
   const items = Object.entries(groupByKey(fd, vk)).map(([k,r]) => ({
-    name:k, bkg:sum(r,'w3_fst'), cm1:sum(r,'cm1_norm'), cm1l:sum(r,'lst_norm'), hi:sum(r,'w3_hi_fst')
+    name:k, bkg:profitSum(r,'w3_fst'), cm1:sum(r,'cm1_norm'), cm1l:sum(r,'lst_norm'), hi:sum(r,'w3_hi_fst')
   })).filter(r=>r.bkg>0).sort((a,b)=>b.bkg-a.bkg).slice(0,10);
 
   let html = `<div class="chart-row">
