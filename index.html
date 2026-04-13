@@ -65,11 +65,13 @@ table.summary td.lbl{text-align:left;font-weight:600;background:#fafafa}
 <!-- App -->
 <div id="app">
 <div class="header">
-  <h1>-3W Booking Dashboard</h1>
-  <div>
+  <div style="display:flex;align-items:center;gap:12px">
+    <h1>-3W Booking Dashboard</h1>
+    <button onclick="toggleLang()" id="langBtn" style="background:rgba(255,255,255,.25);color:#fff;border:1px solid rgba(255,255,255,.5);padding:4px 12px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600">EN</button>
+    <a href="guide.html" style="background:rgba(255,255,255,.15);color:#fff;font-size:12px;text-decoration:none;padding:4px 12px;border-radius:4px;border:1px solid rgba(255,255,255,.3)" target="_blank" id="guideLink">📖 Guide</a>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px">
     <span class="info" id="dataInfo"></span>
-    <button onclick="toggleLang()" id="langBtn" style="background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.4);padding:3px 10px;border-radius:4px;cursor:pointer;font-size:11px;margin-right:8px">EN</button>
-    <a href="guide.html" style="color:rgba(255,255,255,.8);font-size:12px;margin-right:12px;text-decoration:none" target="_blank" id="guideLink">사용가이드</a>
     <span class="user" id="userInfo" onclick="logout()"></span>
   </div>
 </div>
@@ -432,20 +434,20 @@ function renderTab1() {
   const cm1teu = cm1l>0 ? cm1/cm1l : 0;
 
   let html = `<div class="row">
-    ${kpi('전체 BKG', fmt(totalBkg), '#1a73e8')}
-    ${kpi('실선적(Normal)', fmt(shipped), '#34a853')}
-    ${kpi('3주전 BKG', fmt(w3Bkg), '#6c5ce7')}
-    ${kpi('3주전 실선적(Normal)', fmt(w3Ship), '#00b894')}
-    ${kpi('BSA', fmt(bsaTotal), '#5f6368')}
-    ${kpi('소석률', occ.toFixed(1)+'%', occ<=120?'#34a853':'#ea4335')}
-    ${kpi('실선적률', sr.toFixed(1)+'%', sr>=55?'#34a853':'#f9ab00')}
+    ${kpi(T[_lang].totalBkg, fmt(totalBkg), '#1a73e8')}
+    ${kpi(T[_lang].shipment, fmt(shipped), '#34a853')}
+    ${kpi(T[_lang].w3bkg, fmt(w3Bkg), '#6c5ce7')}
+    ${kpi(T[_lang].w3ship, fmt(w3Ship), '#00b894')}
+    ${kpi(T[_lang].bsa, fmt(bsaTotal), '#5f6368')}
+    ${kpi(T[_lang].occ, occ.toFixed(1)+'%', occ<=120?'#34a853':'#ea4335')}
+    ${kpi(T[_lang].shipRate, sr.toFixed(1)+'%', sr>=55?'#34a853':'#f9ab00')}
     ${kpi('CM1/TEU', fmt(Math.round(cm1teu)), '#202124')}
   </div>`;
 
   // Charts
   html += `<div class="chart-row">
-    <div class="chart-card" style="flex:7"><h3>월별 BKG vs BSA</h3><div id="ch1bar" style="height:450px"></div></div>
-    <div class="chart-card" style="flex:5"><h3>${vl}별 소석률 (실선적(Normal)/BSA)</h3><div class="sub">${fmtMonth(month)}</div><div id="ch1occ" style="height:450px"></div></div>
+    <div class="chart-card" style="flex:7"><h3>${T[_lang].monthlyChart}</h3><div id="ch1bar" style="height:450px"></div></div>
+    <div class="chart-card" style="flex:5"><h3>${vl} ${T[_lang].occChart} (Normal/BSA)</h3><div class="sub">${fmtMonth(month)}</div><div id="ch1occ" style="height:450px"></div></div>
   </div>`;
 
   // Summary table
@@ -593,7 +595,7 @@ function renderTab2() {
   // Sub-tabs
   let html = `<div style="display:flex;gap:0;margin-bottom:12px;border-bottom:2px solid #dadce0">
     ${['region','cust','sales'].map(t => {
-      const lbl = t==='region'?'지역별':t==='cust'?'화주별':'영업사원별';
+      const lbl = t==='region'?T[_lang].region:t==='cust'?T[_lang].byCust:T[_lang].bySales;
       const cls = t2sub===t ? 'color:#1a73e8;border-bottom:3px solid #1a73e8;font-weight:600' : 'color:#5f6368;border-bottom:3px solid transparent';
       return `<div style="padding:8px 16px;font-size:13px;cursor:pointer;${cls}" onclick="t2sub='${t}';renderTab2()">${lbl}</div>`;
     }).join('')}
@@ -1021,6 +1023,14 @@ const T = {
     totalBkg: '전체 BKG', shipment: '실선적(Normal)', w3bkg: '3주전 BKG', w3ship: '3주전 실선적(Normal)',
     bsa: 'BSA', occ: '소석률', shipRate: '실선적률', loading: '데이터 로딩 중...',
     login: '회사 Google 계정으로 로그인하세요', loginBtn: 'Google 계정으로 로그인',
+    monthlyChart: '월별 BKG vs BSA', occChart: '소석률', byRegion: '지역별',
+    monthlySummary: '월간 실적', bkgTrend: '부킹 트렌드', conversion: '전환 분석',
+    profitability: '수익성 분석', bkgPattern: '부킹 패턴',
+    shipper: '화주', salesperson: '영업사원', cancelRate: '캔슬률',
+    weeklyAvg: '주간 평균', monthlyTotal: '월 합계', total: '합계',
+    region: '지역별', byCust: '화주별', bySales: '영업사원별',
+    w3bkgStatus: '3주전 BKG 현황', weeklyW3: '주차별 3주전 BKG',
+    profitTag: '고수익태그', highProfit: '고수익', lowProfit: '저수익',
   },
   en: {
     title: '-3W Booking Dashboard',
@@ -1032,6 +1042,14 @@ const T = {
     totalBkg: 'Total BKG', shipment: 'Shipment(Normal)', w3bkg: 'WOS-3 BKG', w3ship: 'WOS-3 Shipment',
     bsa: 'BSA', occ: 'Occupancy', shipRate: 'Ship Rate', loading: 'Loading data...',
     login: 'Sign in with company Google account', loginBtn: 'Sign in with Google',
+    monthlyChart: 'Monthly BKG vs BSA', occChart: 'Occupancy', byRegion: 'By Region',
+    monthlySummary: 'Monthly Performance', bkgTrend: 'Booking Trends', conversion: 'Conversion Analysis',
+    profitability: 'Profitability', bkgPattern: 'Booking Patterns',
+    shipper: 'Shipper', salesperson: 'Salesperson', cancelRate: 'Cancel Rate',
+    weeklyAvg: 'Weekly Avg', monthlyTotal: 'Monthly Total', total: 'Total',
+    region: 'By Region', byCust: 'By Shipper', bySales: 'By Salesperson',
+    w3bkgStatus: 'WOS-3 BKG Status', weeklyW3: 'Weekly WOS-3 BKG',
+    profitTag: 'Profit Tag', highProfit: 'High', lowProfit: 'Low',
   }
 };
 
