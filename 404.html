@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<script>
+// GitHub Pages SPA redirect: forward hash/params to index
+var path = window.location.pathname;
+if (!path.endsWith('/')) path += '/';
+window.location.replace(path + window.location.hash);
+</script>
+</head>
+<body>Redirecting...</body>
+</html>
