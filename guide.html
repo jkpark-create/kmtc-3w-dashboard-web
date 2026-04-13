@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>-3W Booking Dashboard 사용 가이드</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',sans-serif;background:#f8f9fa;color:#202124;line-height:1.7}
+.header{background:linear-gradient(135deg,#1a73e8,#1557b0);padding:16px 24px;color:#fff;display:flex;justify-content:space-between;align-items:center}
+.header h1{font-size:20px;font-weight:700}
+.header a{color:rgba(255,255,255,.8);text-decoration:none;font-size:13px}
+.header a:hover{color:#fff}
+.container{max-width:960px;margin:0 auto;padding:24px}
+h2{color:#1a73e8;font-size:20px;margin:32px 0 12px;padding-bottom:8px;border-bottom:2px solid #e8f0fe}
+h3{color:#202124;font-size:16px;margin:20px 0 8px}
+p{margin:8px 0}
+.card{background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.1);padding:20px;margin:16px 0}
+.card h3{margin-top:0}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:14px}
+th{background:#e8f0fe;padding:8px 12px;text-align:left;border:1px solid #dadce0;font-weight:600}
+td{padding:8px 12px;border:1px solid #dadce0}
+tr:nth-child(even){background:#f8f9fa}
+code{background:#f1f3f4;padding:2px 6px;border-radius:3px;font-size:13px;color:#d93025}
+.tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:600}
+.tag-hi{background:#e6f4ea;color:#137333}
+.tag-lo{background:#fce8e6;color:#c5221f}
+.tip{background:#e8f0fe;border-left:4px solid #1a73e8;padding:12px 16px;margin:12px 0;border-radius:0 4px 4px 0}
+.tip strong{color:#1a73e8}
+ul{margin:8px 0 8px 24px}
+li{margin:4px 0}
+.toc{background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.1);padding:16px 20px;margin:16px 0}
+.toc a{color:#1a73e8;text-decoration:none}
+.toc a:hover{text-decoration:underline}
+.toc ul{list-style:none;margin:0;padding:0}
+.toc li{padding:4px 0}
+.toc li::before{content:'>';color:#1a73e8;margin-right:8px}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>-3W Booking Dashboard 사용 가이드</h1>
+  <a href="index.html">대시보드로 돌아가기</a>
+</div>
+
+<div class="container">
+
+<div class="toc">
+<h3>목차</h3>
+<ul>
+  <li><a href="#overview">개요</a></li>
+  <li><a href="#filters">필터 사용법</a></li>
+  <li><a href="#tab1">Tab 1: 소석률 현황</a></li>
+  <li><a href="#tab2">Tab 2: 부킹 트렌드</a></li>
+  <li><a href="#tab3">Tab 3: 전환 분석</a></li>
+  <li><a href="#tab4">Tab 4: 수익성 분석</a></li>
+  <li><a href="#tab5">Tab 5: 부킹 패턴</a></li>
+  <li><a href="#data">데이터 기준 정의</a></li>
+  <li><a href="#update">데이터 업데이트</a></li>
+</ul>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2 id="overview">개요</h2>
+<div class="card">
+  <p><strong>-3W Booking Dashboard</strong>는 출항 3주 전(WOS-3) 부킹 현황을 모니터링하는 대시보드입니다.</p>
+  <p>부킹 접수부터 실선적까지의 전환 과정을 추적하고, 고수익 화주 관리 및 수익성 분석을 지원합니다.</p>
+  <h3>주요 기능</h3>
+  <ul>
+    <li><strong>소석률 현황</strong> — BSA 대비 실선적 비율 모니터링</li>
+    <li><strong>부킹 트렌드</strong> — 도착지/선적지/화주/영업사원별 부킹 현황</li>
+    <li><strong>전환 분석</strong> — 캔슬률 분석 및 실선적 전환 추적</li>
+    <li><strong>수익성 분석</strong> — CM1/TEU 분석 및 수익 집중도</li>
+    <li><strong>부킹 패턴</strong> — WOS 단계별 부킹 접수 시점 분석</li>
+  </ul>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2 id="filters">필터 사용법</h2>
+<div class="card">
+  <h3>글로벌 필터</h3>
+  <p>화면 상단의 필터는 모든 탭에 공통 적용됩니다.</p>
+  <table>
+    <tr><th>필터</th><th>설명</th><th>기본값</th></tr>
+    <tr><td><strong>팀</strong></td><td>OBT / EST / IST / JBT 선택</td><td>전체</td></tr>
+    <tr><td><strong>선적지</strong></td><td>출발 국가 (POR Country)</td><td>전체</td></tr>
+    <tr><td><strong>선적포트</strong></td><td>출발 포트 (POR Port)</td><td>전체</td></tr>
+    <tr><td><strong>도착지</strong></td><td>도착 국가 (DLY Country)</td><td>전체</td></tr>
+    <tr><td><strong>도착포트</strong></td><td>도착 포트 (DLY Port)</td><td>전체</td></tr>
+    <tr><td><strong>보기</strong></td><td>도착지별 / 선적지별 뷰 전환</td><td>도착지별</td></tr>
+    <tr><td><strong>월</strong></td><td>조회 월 선택 (445 캘린더)</td><td>현재 주 +3주 후의 월</td></tr>
+    <tr><td><strong>주차</strong></td><td>특정 주차 선택</td><td>전체</td></tr>
+    <tr><td><strong>화주구분</strong></td><td>고수익 / 저수익 화주 필터</td><td>전체</td></tr>
+    <tr><td><strong>영업사원</strong></td><td>특정 영업사원 필터</td><td>전체</td></tr>
+  </table>
+
+  <div class="tip">
+    <strong>주차 선택 시:</strong> 해당 주의 실적이 표시되고, 전월 데이터는 주평균(월 합계 / 주 수)으로 변환됩니다. BSA도 동일하게 주평균으로 표시됩니다.
+  </div>
+
+  <h3>캐스케이딩 필터</h3>
+  <p>상위 필터 선택 시 하위 필터 옵션이 자동으로 조정됩니다.</p>
+  <p>예: <code>팀=OBT</code> 선택 → 선적지 옵션이 OBT 해당 국가만 표시</p>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2 id="tab1">Tab 1: 소석률 현황</h2>
+<div class="card">
+  <h3>KPI 카드</h3>
+  <table>
+    <tr><th>카드</th><th>계산 기준</th></tr>
+    <tr><td><strong>전체 BKG</strong></td><td>선택 월의 전체 부킹 TEU (FST_TEU 합계)</td></tr>
+    <tr><td><strong>실선적(Normal)</strong></td><td>LST_Status = Normal인 부킹의 FST_TEU 합계</td></tr>
+    <tr><td><strong>3주전 BKG</strong></td><td>Lead_time(BKG_Sche) = WOS-3인 부킹의 FST_TEU</td></tr>
+    <tr><td><strong>3주전 실선적(Normal)</strong></td><td>WOS-3이면서 Normal인 부킹의 FST_TEU</td></tr>
+    <tr><td><strong>BSA</strong></td><td>Tableau BSA raw 데이터의 TEU_BSA(Actual) 합계</td></tr>
+    <tr><td><strong>소석률</strong></td><td>실선적(Normal) / BSA × 100%</td></tr>
+    <tr><td><strong>실선적률</strong></td><td>3주전 실선적 / 3주전 BKG × 100%</td></tr>
+    <tr><td><strong>CM1/TEU</strong></td><td>Normal + CM1>0인 건의 CM1 합계 / LST_TEU 합계</td></tr>
+  </table>
+
+  <h3>월별 BKG vs BSA 차트</h3>
+  <p>파란 바 = 실선적(Normal), 회색 바 = BSA, 빨간 선 = 소석률, 보라 점선 = 3주전 실선적/BSA</p>
+
+  <h3>소석률 바 차트</h3>
+  <p>도착지(또는 선적지)별 소석률을 수평 바 차트로 표시합니다.</p>
+  <ul>
+    <li><span style="color:#34a853">초록</span>: 65% 이상</li>
+    <li><span style="color:#f9ab00">노랑</span>: 50~65%</li>
+    <li><span style="color:#ea4335">빨강</span>: 50% 미만</li>
+  </ul>
+
+  <h3>도착지별 월간 실적 (Image-8 포맷)</h3>
+  <p>최근 3개월의 주간 평균 실적을 도착지별로 비교합니다.</p>
+  <table>
+    <tr><th>항목</th><th>설명</th></tr>
+    <tr><td>BKG</td><td>3주전 BKG 주간 평균</td></tr>
+    <tr><td>BSA</td><td>BSA 주간 평균</td></tr>
+    <tr><td>비중</td><td>BKG / BSA %</td></tr>
+    <tr><td>실선적</td><td>3주전 실선적(Normal) 주간 평균</td></tr>
+    <tr><td>실선적률</td><td>실선적 / BKG %</td></tr>
+    <tr><td>고수익 BKG/비중/실선적/실선적률</td><td>고수익태그 화주만의 실적</td></tr>
+    <tr><td>CM1 / CM1/TEU</td><td>수익 지표</td></tr>
+  </table>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2 id="tab2">Tab 2: 부킹 트렌드</h2>
+<div class="card">
+  <h3>서브탭</h3>
+  <table>
+    <tr><th>서브탭</th><th>내용</th></tr>
+    <tr><td><strong>도착지별</strong></td><td>도착 국가별 3주전 BKG, 실선적, 고수익 비중</td></tr>
+    <tr><td><strong>선적지별</strong></td><td>출발 국가별 동일 지표</td></tr>
+    <tr><td><strong>화주별</strong></td><td>화주명, 고수익태그, 영업사원, BKG, 실선적, CM1/TEU</td></tr>
+    <tr><td><strong>영업사원별</strong></td><td>영업사원별 화주수, BKG, 실선적, 고수익 비중</td></tr>
+  </table>
+
+  <h3>주차별 3주전 BKG 차트</h3>
+  <p>선택 월의 주차별 BKG를 도착지 스택 바 차트로 표시합니다.</p>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2 id="tab3">Tab 3: 전환 분석</h2>
+<div class="card">
+  <h3>WOS-3 → 실선적 퍼널</h3>
+  <p>3주전 부킹이 실선적까지 전환되는 과정을 퍼널 차트로 시각화합니다.</p>
+  <p><code>3주전 BKG → 캔슬 제외 → 실선적(Normal)</code></p>
+
+  <h3>실선적률 추이</h3>
+  <p>도착지별 월간 실선적률 추이를 라인 차트로 표시합니다.</p>
+
+  <h3>캔슬률 분석</h3>
+  <ul>
+    <li><strong>도착지별 캔슬률</strong> — 어떤 구간에서 캔슬이 많은지 파악</li>
+    <li><strong>월별 캔슬률 추이</strong> — 캔슬률이 개선/악화되는지 추적</li>
+    <li><strong>화주별 캔슬 Top 15</strong> — 캔슬이 많은 화주 식별</li>
+  </ul>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2 id="tab4">Tab 4: 수익성 분석</h2>
+<div class="card">
+  <h3>CM1/TEU 분석</h3>
+  <ul>
+    <li><strong>도착지별 CM1/TEU</strong> — 구간별 수익성 비교</li>
+    <li><strong>CM1/TEU 월별 추이</strong> — 수익성 변화 트렌드</li>
+  </ul>
+
+  <h3>화주 수익성 랭킹</h3>
+  <ul>
+    <li><strong>CM1/TEU Top 10</strong> — 가장 수익성 높은 화주 (초록 표시)</li>
+    <li><strong>CM1/TEU Bottom 10</strong> — 가장 수익성 낮은 화주 (빨강 표시)</li>
+  </ul>
+
+  <h3>수익 집중도</h3>
+  <p>Top 10/20 화주가 전체 CM1의 몇 %를 차지하는지, 누적 커브로 표시합니다.</p>
+  <p>집중도가 높을수록 소수 화주 의존도가 높음을 의미합니다.</p>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2 id="tab5">Tab 5: 부킹 패턴</h2>
+<div class="card">
+  <h3>WOS 단계별 부킹 접수 분석</h3>
+  <p>부킹이 출항 대비 언제 접수되는지를 분석합니다.</p>
+  <table>
+    <tr><th>WOS 단계</th><th>의미</th><th>기간</th></tr>
+    <tr><td><strong>WOS-3</strong></td><td>출항 3주+ 전 부킹</td><td>Booking Schedule 주시작 - Booking일 ≥ 15일</td></tr>
+    <tr><td><strong>WOS-2</strong></td><td>출항 2주 전 부킹</td><td>8~14일 전</td></tr>
+    <tr><td><strong>WOS-1</strong></td><td>출항 1주 전 부킹</td><td>1~7일 전</td></tr>
+    <tr><td><strong>WOS</strong></td><td>출항 주 부킹</td><td>0일 이하</td></tr>
+  </table>
+
+  <h3>지역별 부킹 시점 비중</h3>
+  <p>100% 스택 바 차트로 각 지역의 WOS-3 비중을 비교합니다. WOS-3 비중이 높을수록 조기 부킹 비율이 높습니다.</p>
+
+  <h3>화주별 부킹 접수 시점</h3>
+  <p>화주별 WOS 분포를 확인하여 부킹 패턴을 분석합니다.</p>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2 id="data">데이터 기준 정의</h2>
+<div class="card">
+  <h3>주차/월 기준 (445 캘린더)</h3>
+  <p>4-4-5 주차 패턴을 사용합니다. 2026년 기준:</p>
+  <table>
+    <tr><th>월</th><th>주 수</th><th>기간</th></tr>
+    <tr><td>1월</td><td>4주</td><td>01/04 ~ 01/25</td></tr>
+    <tr><td>2월</td><td>4주</td><td>02/01 ~ 02/22</td></tr>
+    <tr><td>3월</td><td>5주</td><td>03/01 ~ 03/29</td></tr>
+    <tr><td>4월</td><td>4주</td><td>04/05 ~ 04/26</td></tr>
+    <tr><td>5월</td><td>4주</td><td>05/03 ~ 05/24</td></tr>
+    <tr><td>6월</td><td>5주</td><td>05/31 ~ 06/28</td></tr>
+  </table>
+  <p>패턴: <code>4주-4주-5주</code> 반복 (분기별)</p>
+
+  <h3>실선적 기준</h3>
+  <table>
+    <tr><th>항목</th><th>기준</th></tr>
+    <tr><td><strong>실선적(Normal)</strong></td><td>LST_Status = 'Normal'인 부킹만 카운트</td></tr>
+    <tr><td><strong>week_start_date</strong></td><td>Date_vsl(실제 출항일)의 일요일 기준 주 시작일</td></tr>
+    <tr><td><strong>Lead_time(BKG_Sche)</strong></td><td>Booking_schedule 주시작일 - Booking_date 기준 WOS 분류</td></tr>
+  </table>
+
+  <h3>3주전 BKG 필터 (제외 조건)</h3>
+  <table>
+    <tr><th>조건</th><th>설명</th></tr>
+    <tr><td>조건1</td><td>Cancel이면서 부킹 후 3일 이내 캔슬 → 제외</td></tr>
+    <tr><td>조건2</td><td>Cancel이면서 출항 21일+ 전 부킹 & 7일 이내 캔슬 → 제외</td></tr>
+  </table>
+
+  <h3>고수익 화주 분류</h3>
+  <p>선적지(POR Port)별 화주의 CM1/TEU를 선적지 평균과 비교하여 분류합니다.</p>
+  <table>
+    <tr><th>분류</th><th>기준</th><th>표시</th></tr>
+    <tr><td><span class="tag tag-hi">고수익</span></td><td>화주 CM1/TEU ≥ 선적지 평균</td><td>초록색</td></tr>
+    <tr><td><span class="tag tag-lo">저수익</span></td><td>화주 CM1/TEU < 선적지 평균</td><td>빨간색</td></tr>
+  </table>
+
+  <h3>고수익태그 산정 우선순위</h3>
+  <table>
+    <tr><th>순위</th><th>기준</th></tr>
+    <tr><td>1순위</td><td>전월 + 동일 선적지에서의 CM1/TEU vs 선적지 평균</td></tr>
+    <tr><td>2순위</td><td>전월 + 전체 선적지에서의 CM1/TEU vs 전체 평균</td></tr>
+    <tr><td>3순위</td><td>당월 + 동일 선적지 데이터</td></tr>
+    <tr><td>4순위</td><td>Grade C+D → 고수익, A+B → 저수익</td></tr>
+  </table>
+  <p>동일 선적지+화주 조합은 하나의 태그만 부여됩니다 (최신월 기준).</p>
+
+  <h3>BSA</h3>
+  <table>
+    <tr><th>항목</th><th>설명</th></tr>
+    <tr><td>출처</td><td>Tableau BSA raw (월간회의3주전) 뷰</td></tr>
+    <tr><td>필터</td><td>YYYY = 2025,2026,2027 / YYYYMM = 전체 / Proforma/Revised</td></tr>
+    <tr><td>팀별</td><td>OBT, EST, IST, JBT 각각 다운로드</td></tr>
+    <tr><td>주차별</td><td>WW 컬럼으로 주차 필터 가능</td></tr>
+  </table>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<h2 id="update">데이터 업데이트</h2>
+<div class="card">
+  <h3>일일 업데이트 프로세스</h3>
+  <p><code>daily_3w_dashboard.py</code>를 실행하면 다음 순서로 진행됩니다:</p>
+  <ol>
+    <li><strong>Tableau 다운로드</strong> — 1.csv (부킹 원본), 2.csv (add-on), BSA raw</li>
+    <li><strong>Booking Snapshot 처리</strong> — 수식 계산, 필터 적용, 고수익태그 산정</li>
+    <li><strong>JSON 생성 + 업로드</strong> — 집계 데이터를 Google Drive에 업로드, dist/data.json에 복사</li>
+  </ol>
+
+  <h3>데이터 범위</h3>
+  <table>
+    <tr><th>파일</th><th>범위</th></tr>
+    <tr><td>1.csv (Booking_schedule)</td><td>2025-12-28 ~ 현재 주 +4주</td></tr>
+    <tr><td>2.csv (Date_vsl)</td><td>전체 (Tableau 뷰 기준)</td></tr>
+    <tr><td>BSA</td><td>YYYY 2025~2027, YYYYMM 전체</td></tr>
+  </table>
+
+  <h3>웹 배포</h3>
+  <p>dist/data.json을 GitHub Pages에 push하면 웹 대시보드에 자동 반영됩니다.</p>
+  <p>URL: <a href="https://jkpark-create.github.io/kmtc-3w-dashboard-web/">https://jkpark-create.github.io/kmtc-3w-dashboard-web/</a></p>
+</div>
+
+<div style="text-align:center;padding:40px;color:#5f6368;font-size:12px">
+  -3W Booking Dashboard Guide | Last updated: 2026-04-13
+</div>
+
+</div>
+</body>
+</html>
