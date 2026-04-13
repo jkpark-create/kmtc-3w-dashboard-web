@@ -415,9 +415,9 @@ function renderTab1() {
 
   let html = `<div class="row">
     ${kpi('전체 BKG', fmt(totalBkg), '#1a73e8')}
-    ${kpi('실선적', fmt(shipped), '#34a853')}
+    ${kpi('실선적(Normal)', fmt(shipped), '#34a853')}
     ${kpi('3주전 BKG', fmt(w3Bkg), '#6c5ce7')}
-    ${kpi('3주전 실선적', fmt(w3Ship), '#00b894')}
+    ${kpi('3주전 실선적(Normal)', fmt(w3Ship), '#00b894')}
     ${kpi('BSA', fmt(bsaTotal), '#5f6368')}
     ${kpi('소석률', occ.toFixed(1)+'%', occ<=120?'#34a853':'#ea4335')}
     ${kpi('실선적률', sr.toFixed(1)+'%', sr>=55?'#34a853':'#f9ab00')}
@@ -427,7 +427,7 @@ function renderTab1() {
   // Charts
   html += `<div class="chart-row">
     <div class="chart-card" style="flex:7"><h3>월별 BKG vs BSA</h3><div id="ch1bar" style="height:450px"></div></div>
-    <div class="chart-card" style="flex:5"><h3>${vl}별 소석률 (실선적/BSA)</h3><div class="sub">${fmtMonth(month)}</div><div id="ch1occ" style="height:450px"></div></div>
+    <div class="chart-card" style="flex:5"><h3>${vl}별 소석률 (실선적(Normal)/BSA)</h3><div class="sub">${fmtMonth(month)}</div><div id="ch1occ" style="height:450px"></div></div>
   </div>`;
 
   // Summary table
@@ -455,9 +455,9 @@ function renderTab1() {
   const xl = ms.map(fmtMonth);
 
   Plotly.newPlot('ch1bar', [
-    {x:xl, y:shipM, type:'bar', name:'실선적', marker:{color:'#1a73e8',opacity:.85}, text:shipM.map(fmt), textposition:'outside', textfont:{size:10}},
+    {x:xl, y:shipM, type:'bar', name:'실선적(Normal)', marker:{color:'#1a73e8',opacity:.85}, text:shipM.map(fmt), textposition:'outside', textfont:{size:10}},
     {x:xl, y:bsaM, type:'bar', name:'BSA', marker:{color:'#dadce0',opacity:.5}, text:bsaM.map(fmt), textposition:'outside', textfont:{size:10}},
-    {x:xl, y:occM, type:'scatter', mode:'lines+markers+text', name:'소석률(실선적/BSA)', yaxis:'y2',
+    {x:xl, y:occM, type:'scatter', mode:'lines+markers+text', name:'소석률(Normal/BSA)', yaxis:'y2',
      text:occM.map(v=>v?v.toFixed(0)+'%':''), textposition:'top center', line:{color:'#ea4335',width:2}, marker:{size:8}},
     {x:xl, y:w3occM, type:'scatter', mode:'lines+markers+text', name:'3주전실선적/BSA', yaxis:'y2',
      text:w3occM.map(v=>v?v.toFixed(0)+'%':''), textposition:'bottom center', line:{color:'#6c5ce7',width:2,dash:'dash'}, marker:{size:6,symbol:'diamond'}},
@@ -598,7 +598,7 @@ function renderTab2() {
     if (document.getElementById('ch2sm')) {
       Plotly.newPlot('ch2sm', [
         {y:smRows.map(r=>r.name).reverse(), x:smRows.map(r=>r.bkg).reverse(), type:'bar', orientation:'h', name:'BKG', marker:{color:'#1a73e8',opacity:.7}},
-        {y:smRows.map(r=>r.name).reverse(), x:smRows.map(r=>r.ship).reverse(), type:'bar', orientation:'h', name:'실선적', marker:{color:'#34a853',opacity:.7}},
+        {y:smRows.map(r=>r.name).reverse(), x:smRows.map(r=>r.ship).reverse(), type:'bar', orientation:'h', name:'실선적(Normal)', marker:{color:'#34a853',opacity:.7}},
       ], {barmode:'group',margin:{l:80,r:30,t:20,b:30},xaxis:{title:'TEU (주간평균)',gridcolor:'#f0f0f0'},
           legend:{orientation:'h',y:1.1},plot_bgcolor:'#fff',paper_bgcolor:'#fff'}, {displayModeBar:false});
     }
