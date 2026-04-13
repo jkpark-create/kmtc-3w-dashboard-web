@@ -625,7 +625,7 @@ function renderShipperTable(month) {
   let rows = Object.entries(byShpr).map(([k,s]) => {
     const sales = [...s._sales].join(', ');
     return {name:k, sales, bkg:s.bkg, ship:s.ship, hi:s.hi, hi_ship:s.hi_ship, cm1:s.cm1, cm1l:s.cm1l};
-  }).sort((a,b)=>b.bkg-a.bkg).slice(0,30);
+  }).sort((a,b)=>b.bkg-a.bkg);
 
   let h = `<div class="chart-card"><h3>화주별 3주전 BKG (${fmtMonth(month)})</h3>
   <table class="summary"><tr><th>화주</th><th>영업사원</th><th>BKG</th><th>실선적</th><th>실선적률</th><th>고수익BKG</th><th>고수익%</th><th>CM1</th><th>CM1/TEU</th></tr>`;
@@ -818,7 +818,7 @@ function renderTab5() {
   let custRows = Object.entries(byShpr).map(([k,s]) => {
     const total = s.w3+s.w2+s.w1+s.wos;
     return {name:k, sales:[...s.sm].join(', '), total, w3:s.w3, w2:s.w2, w1:s.w1, wos:s.wos};
-  }).sort((a,b)=>b.total-a.total).slice(0,30);
+  }).sort((a,b)=>b.total-a.total);
 
   html += `<div class="chart-card"><h3>화주별 부킹 접수 시점 (${fmtMonth(month)})</h3>
   <table class="summary"><tr><th>화주</th><th>영업사원</th><th>전체BKG</th><th>WOS-3</th><th>비중</th><th>WOS-2</th><th>비중</th><th>WOS-1</th><th>비중</th><th>WOS</th><th>비중</th></tr>`;
