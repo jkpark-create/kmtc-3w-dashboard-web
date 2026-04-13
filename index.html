@@ -291,7 +291,19 @@ function filterMonthly(month) {
   return d;
 }
 
-function filterBSA(month) {
+// week_start_date → WW 변환 (445 calendar)
+function weekToWW(weekStr) {
+  const m = weekStr.match(/(\d{1,2})\D+(\d{1,2})\D*$/);
+  if (!m) return null;
+  const mon = parseInt(m[1]), day = parseInt(m[2]);
+  // 445: WW1=01/04, each +7 days
+  const start = new Date(2026, 0, 4); // 2026-01-04
+  const target = new Date(2026, mon-1, day);
+  const diff = Math.round((target - start) / (7*86400000));
+  return diff >= 0 ? String(diff + 1) : null;
+}
+
+function filterBSA(month, week) {
   let b = DATA.bsa;
   const team=gv('fTeam'),ori=gv('fOri'),oriP=gv('fOriP'),dst=gv('fDst'),dstP=gv('fDstP');
   if(team!=='ALL') b=b.filter(r=>r.team===team);
@@ -300,6 +312,12 @@ function filterBSA(month) {
   if(dst!=='ALL') b=b.filter(r=>r.DLY_Country===dst);
   if(dstP!=='ALL') b=b.filter(r=>r.DLY_PORT===dstP);
   if(month) b=b.filter(r=>r.YYYYMM===month);
+  // 주차 필터
+  const wk = week || gv('fWeek');
+  if(wk && wk!=='ALL') {
+    const ww = weekToWW(wk);
+    if(ww) b=b.filter(r=>r.WW===ww);
+  }
   return b;
 }
 
