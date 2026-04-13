@@ -433,12 +433,22 @@ function renderTab1() {
 
   document.getElementById('tabContent').innerHTML = html;
 
-  // Bar chart
+  // Bar chart (주차 선택 시 전월은 주평균, 해당월은 해당주 실적)
   const ms = DATA.months.filter(m => m <= month);
-  const shipM = ms.map(m => profitSum(filterMonthly(m), 'norm_fst'));
-  const bsaM = ms.map(m => sum(filterBSA(m), 'teu_bsa'));
+  const isWeekSelected = gv('fWeek') !== 'ALL';
+  const shipM = ms.map(m => {
+    const v = profitSum(filterMonthly(m), 'norm_fst');
+    return (isWeekSelected && m !== month) ? v / (DATA.wpm[m]||4) : v;
+  });
+  const bsaM = ms.map(m => {
+    const v = sum(filterBSA(m, isWeekSelected && m !== month ? null : undefined), 'teu_bsa');
+    return (isWeekSelected && m !== month) ? v / (DATA.wpm[m]||4) : v;
+  });
   const occM = ms.map((m,i) => bsaM[i]>0 ? shipM[i]/bsaM[i]*100 : null);
-  const w3shipM = ms.map(m => profitSum(filterMonthly(m), 'w3_norm_fst'));
+  const w3shipM = ms.map(m => {
+    const v = profitSum(filterMonthly(m), 'w3_norm_fst');
+    return (isWeekSelected && m !== month) ? v / (DATA.wpm[m]||4) : v;
+  });
   const w3occM = ms.map((m,i) => bsaM[i]>0 ? w3shipM[i]/bsaM[i]*100 : null);
   const xl = ms.map(fmtMonth);
 
@@ -719,85 +729,180 @@ function renderSalesmanTable(month) {
 }
 
 // ═══════════════════════════════════════════════
-// Tab 3: 전환 퍼널
+// Tab 3: 전환 분석
 // ═══════════════════════════════════════════════
 function renderTab3() {
-  const month = gv('fMonth');
+  const month = gv('fMonth'), vk = viewKey(), vl = viewLabel();
   const fd = filterMonthly(month);
   const w3b = sum(fd,'w3_fst'), w3c = sum(fd,'w3_canc_fst'), w3n = sum(fd,'w3_norm_fst');
 
   let html = `<div class="chart-row">
-    <div class="chart-card" style="flex:5"><h3>WOS-3 → 실선적</h3><div id="ch3fn" style="height:330px"></div></div>
-    <div class="chart-card" style="flex:7"><h3>실선적률 추이</h3><div id="ch3tr" style="height:330px"></div></div>
+    <div class="chart-card" style="flex:5"><h3>WOS-3 → 실선적(Normal)</h3><div id="ch3fn" style="height:300px"></div></div>
+    <div class="chart-card" style="flex:7"><h3>${vl}별 실선적률 추이</h3><div id="ch3tr" style="height:300px"></div></div>
   </div>`;
+
+  // 도착지별 캔슬률 랭킹
+  const byDest = Object.entries(groupByKey(fd, vk)).map(([k,r]) => {
+    const b=sum(r,'w3_fst'), c=sum(r,'w3_canc_fst'), n=sum(r,'w3_norm_fst');
+    return {name:k, bkg:b, cancel:c, ship:n, cancelRate:b>0?c/b*100:0, shipRate:b>0?n/b*100:0};
+  }).filter(r=>r.bkg>0).sort((a,b)=>b.cancelRate-a.cancelRate);
+
+  html += `<div class="chart-row">
+    <div class="chart-card" style="flex:1"><h3>${vl}별 캔슬률 (${fmtMonth(month)})</h3><div id="ch3cancel" style="height:350px"></div></div>
+    <div class="chart-card" style="flex:1"><h3>월별 캔슬률 추이</h3><div id="ch3ctrend" style="height:350px"></div></div>
+  </div>`;
+
+  // 화주별 캔슬 Top 15
+  const sd = filterShipper(month);
+  const byShpr = {};
+  sd.forEach(r => {
+    const k = r.BKG_SHPR_CST_ENM || r.BKG_SHPR_CST_NO;
+    if (!byShpr[k]) byShpr[k] = {bkg:0,cancel:0,ship:0};
+    byShpr[k].bkg += r.w3_fst||0; byShpr[k].cancel += r.w3_canc_fst||0; byShpr[k].ship += r.w3_norm_fst||0;
+  });
+  let cancelRows = Object.entries(byShpr).map(([k,s]) => ({
+    name:k, bkg:s.bkg, cancel:s.cancel, ship:s.ship, rate:s.bkg>0?s.cancel/s.bkg*100:0
+  })).filter(r=>r.cancel>0).sort((a,b)=>b.cancel-a.cancel).slice(0,15);
+
+  html += `<div class="chart-card"><h3>화주별 캔슬 Top 15 (${fmtMonth(month)})</h3>
+  <table class="summary"><tr><th>화주</th><th>3주전BKG</th><th>캔슬</th><th>캔슬률</th><th>실선적(Normal)</th><th>실선적률</th></tr>`;
+  cancelRows.forEach(r => {
+    html += `<tr><td class="lbl">${r.name}</td><td>${fmt(r.bkg)}</td><td style="color:#ea4335">${fmt(r.cancel)}</td><td>${r.rate.toFixed(0)}%</td><td>${fmt(r.ship)}</td><td>${pct(r.ship,r.bkg)}</td></tr>`;
+  });
+  html += '</table></div>';
+
   document.getElementById('tabContent').innerHTML = html;
 
+  // Funnel
   Plotly.newPlot('ch3fn', [{type:'funnel', y:['3주전 BKG','캔슬 제외','실선적(Normal)'],
     x:[w3b, w3b-w3c, w3n], textinfo:'value+percent initial',
     marker:{color:['#1a73e8','#f9ab00','#34a853']}}],
     {margin:{l:20,r:20,t:20,b:20},plot_bgcolor:'#fff',paper_bgcolor:'#fff'}, {displayModeBar:false});
 
-  // Trend
-  const vk = viewKey();
-  const allFd = filterMonthly(null);
-  const topItems = Object.entries(groupByKey(filterMonthly(month), vk))
+  // 실선적률 추이
+  const topItems = Object.entries(groupByKey(fd, vk))
     .sort((a,b)=>sum(b[1],'w3_fst')-sum(a[1],'w3_fst')).slice(0,8).map(e=>e[0]);
-
-  const traces = topItems.map(it => ({
+  Plotly.newPlot('ch3tr', topItems.map(it => ({
     x: DATA.months.map(fmtMonth),
     y: DATA.months.map(m => {
       const d = filterMonthly(m).filter(r=>r[vk]===it);
       const b=sum(d,'w3_fst'), n=sum(d,'w3_norm_fst');
       return b>0 ? n/b*100 : null;
-    }),
-    mode:'lines+markers', name:it, connectgaps:true
-  }));
-  Plotly.newPlot('ch3tr', traces, {margin:{l:40,r:20,t:20,b:30},
-    yaxis:{title:'3주전 실선적률 %',gridcolor:'#f0f0f0'},
+    }), mode:'lines+markers', name:it, connectgaps:true
+  })), {margin:{l:40,r:20,t:20,b:30},yaxis:{title:'실선적률 %',gridcolor:'#f0f0f0'},
     legend:{orientation:'h',y:1.12},plot_bgcolor:'#fff',paper_bgcolor:'#fff'}, {displayModeBar:false});
+
+  // 캔슬률 바 차트
+  const top12 = byDest.slice(0,12);
+  Plotly.newPlot('ch3cancel', [
+    {y:top12.map(r=>r.name).reverse(), x:top12.map(r=>r.cancelRate).reverse(), type:'bar', orientation:'h', name:'캔슬률',
+     marker:{color:top12.map(r=>r.cancelRate>30?'#ea4335':r.cancelRate>20?'#f9ab00':'#34a853').reverse()},
+     text:top12.map(r=>r.cancelRate.toFixed(0)+'%').reverse(), textposition:'outside', textfont:{size:11}}
+  ], {margin:{l:80,r:60,t:20,b:30},xaxis:{title:'캔슬률 %',gridcolor:'#f0f0f0'},
+      plot_bgcolor:'#fff',paper_bgcolor:'#fff',showlegend:false}, {displayModeBar:false});
+
+  // 월별 캔슬률 추이
+  Plotly.newPlot('ch3ctrend', [{
+    x: DATA.months.map(fmtMonth),
+    y: DATA.months.map(m => { const d=filterMonthly(m); const b=sum(d,'w3_fst'),c=sum(d,'w3_canc_fst'); return b>0?c/b*100:null; }),
+    mode:'lines+markers+text', name:'전체 캔슬률', line:{color:'#ea4335',width:3}, marker:{size:8},
+    text: DATA.months.map(m => { const d=filterMonthly(m); const b=sum(d,'w3_fst'),c=sum(d,'w3_canc_fst'); return b>0?(c/b*100).toFixed(0)+'%':''; }),
+    textposition:'top center'
+  }], {margin:{l:40,r:20,t:30,b:30},yaxis:{title:'캔슬률 %',gridcolor:'#f0f0f0'},
+    plot_bgcolor:'#fff',paper_bgcolor:'#fff'}, {displayModeBar:false});
 }
 
 // ═══════════════════════════════════════════════
-// Tab 4: 수익성
+// Tab 4: 수익성 분석
 // ═══════════════════════════════════════════════
 function renderTab4() {
-  const month = gv('fMonth'), vk = viewKey();
+  const month = gv('fMonth'), vk = viewKey(), vl = viewLabel();
   const fd = filterMonthly(month);
   const items = Object.entries(groupByKey(fd, vk)).map(([k,r]) => ({
-    name:k, bkg:sum(r,'w3_fst'), cm1:sum(r,'cm1_norm'), cm1l:sum(r,'lst_norm'),
-    hi:sum(r,'w3_hi_fst')
+    name:k, bkg:sum(r,'w3_fst'), cm1:sum(r,'cm1_norm'), cm1l:sum(r,'lst_norm'), hi:sum(r,'w3_hi_fst')
   })).filter(r=>r.bkg>0).sort((a,b)=>b.bkg-a.bkg).slice(0,10);
 
   let html = `<div class="chart-row">
-    <div class="chart-card" style="flex:1"><h3>CM1/TEU (${fmtMonth(month)})</h3><div id="ch4cm" style="height:330px"></div></div>
-    <div class="chart-card" style="flex:1"><h3>고수익화주 비중</h3><div id="ch4hi" style="height:330px"></div></div>
+    <div class="chart-card" style="flex:1"><h3>${vl}별 CM1/TEU (${fmtMonth(month)})</h3><div id="ch4cm" style="height:330px"></div></div>
+    <div class="chart-card" style="flex:1"><h3>CM1/TEU 월별 추이</h3><div id="ch4trend" style="height:330px"></div></div>
   </div>`;
+
+  // 화주 Top/Bottom CM1/TEU
+  const sd = filterShipper(month);
+  const byShpr = {};
+  sd.forEach(r => {
+    const k = r.BKG_SHPR_CST_ENM || r.BKG_SHPR_CST_NO;
+    if (!byShpr[k]) byShpr[k] = {bkg:0,cm1:0,cm1l:0,_sales:new Set()};
+    const s = byShpr[k];
+    s.bkg += r.w3_fst||0; s.cm1 += r.cm1_norm||0; s.cm1l += r.lst_norm||0;
+    if (r.Salesman_POR) s._sales.add(r.Salesman_POR);
+  });
+  let shprRows = Object.entries(byShpr).map(([k,s]) => ({
+    name:k, sales:[...s._sales].join(', '), bkg:s.bkg, cm1:s.cm1, cm1l:s.cm1l, ct:s.cm1l>0?s.cm1/s.cm1l:0
+  })).filter(r=>r.cm1l>0);
+
+  const top10 = [...shprRows].sort((a,b)=>b.ct-a.ct).slice(0,10);
+  const bot10 = [...shprRows].sort((a,b)=>a.ct-b.ct).slice(0,10);
+
+  html += `<div class="chart-row">
+    <div class="chart-card" style="flex:1"><h3>CM1/TEU Top 10 화주</h3>
+    <table class="summary"><tr><th>화주</th><th>영업사원</th><th>BKG</th><th>CM1/TEU</th><th>CM1</th></tr>`;
+  top10.forEach(r => {
+    html += `<tr><td class="lbl">${r.name}</td><td>${r.sales}</td><td>${fmt(r.bkg)}</td><td style="color:#34a853;font-weight:600">${fmt(Math.round(r.ct))}</td><td>${fmt(Math.round(r.cm1))}</td></tr>`;
+  });
+  html += `</table></div>
+    <div class="chart-card" style="flex:1"><h3>CM1/TEU Bottom 10 화주</h3>
+    <table class="summary"><tr><th>화주</th><th>영업사원</th><th>BKG</th><th>CM1/TEU</th><th>CM1</th></tr>`;
+  bot10.forEach(r => {
+    html += `<tr><td class="lbl">${r.name}</td><td>${r.sales}</td><td>${fmt(r.bkg)}</td><td style="color:#ea4335">${fmt(Math.round(r.ct))}</td><td>${fmt(Math.round(r.cm1))}</td></tr>`;
+  });
+  html += '</table></div></div>';
+
+  // 수익 집중도
+  const sorted = [...shprRows].sort((a,b)=>b.cm1-a.cm1);
+  const totalCM1 = sorted.reduce((s,r)=>s+r.cm1,0);
+  const top10cm1 = sorted.slice(0,10).reduce((s,r)=>s+r.cm1,0);
+  const top20cm1 = sorted.slice(0,20).reduce((s,r)=>s+r.cm1,0);
+  html += `<div class="chart-card"><h3>수익 집중도 (${fmtMonth(month)})</h3>
+    <p style="font-size:14px;color:#202124">Top 10 화주: 전체 CM1의 <b style="color:#1a73e8">${(top10cm1/totalCM1*100).toFixed(1)}%</b> |
+    Top 20 화주: <b style="color:#1a73e8">${(top20cm1/totalCM1*100).toFixed(1)}%</b> |
+    전체 화주수: <b>${sorted.length}</b></p>
+    <div id="ch4conc" style="height:250px"></div></div>`;
+
   document.getElementById('tabContent').innerHTML = html;
 
-  const sorted = [...items].sort((a,b) => (a.cm1l>0?a.cm1/a.cm1l:0) - (b.cm1l>0?b.cm1/b.cm1l:0));
+  // CM1/TEU bar by dest
+  const sortedDest = [...items].sort((a,b) => (a.cm1l>0?a.cm1/a.cm1l:0) - (b.cm1l>0?b.cm1/b.cm1l:0));
   Plotly.newPlot('ch4cm', [{
-    y:sorted.map(r=>r.name), x:sorted.map(r=>r.cm1l>0?Math.round(r.cm1/r.cm1l):0),
+    y:sortedDest.map(r=>r.name), x:sortedDest.map(r=>r.cm1l>0?Math.round(r.cm1/r.cm1l):0),
     type:'bar', orientation:'h', marker:{color:'#1a73e8',opacity:.85},
-    text:sorted.map(r=>r.cm1l>0?fmt(Math.round(r.cm1/r.cm1l)):'0'), textposition:'auto', textfont:{color:'#fff'}
+    text:sortedDest.map(r=>r.cm1l>0?fmt(Math.round(r.cm1/r.cm1l)):'0'), textposition:'auto', textfont:{color:'#fff'}
   }], {margin:{l:60,r:30,t:20,b:30},xaxis:{title:'CM1/TEU',gridcolor:'#f0f0f0'},
        plot_bgcolor:'#fff',paper_bgcolor:'#fff'}, {displayModeBar:false});
 
-  const show = items.map(r=>r.name);
-  const traces = DATA.months.map(m => {
-    const mfd = filterMonthly(m);
-    return {x:show, y:show.map(it => {
-      const d = mfd.filter(r=>r[vk]===it);
-      const b=sum(d,'w3_fst'), h=sum(d,'w3_hi_fst');
-      return b>0?h/b*100:0;
-    }), type:'bar', name:fmtMonth(m), text:show.map(it => {
-      const d = mfd.filter(r=>r[vk]===it);
-      const b=sum(d,'w3_fst'), h=sum(d,'w3_hi_fst');
-      return b>0?(h/b*100).toFixed(0)+'%':'';
-    }), textposition:'auto', textfont:{size:9}};
-  });
-  Plotly.newPlot('ch4hi', traces, {barmode:'group',margin:{l:40,r:20,t:20,b:30},
-    yaxis:{title:'%',gridcolor:'#f0f0f0',range:[0,60]},
+  // CM1/TEU 월별 추이
+  const trendItems = items.slice(0,6).map(r=>r.name);
+  Plotly.newPlot('ch4trend', trendItems.map(it => ({
+    x: DATA.months.map(fmtMonth),
+    y: DATA.months.map(m => {
+      const d = filterMonthly(m).filter(r=>r[vk]===it);
+      const c=sum(d,'cm1_norm'), l=sum(d,'lst_norm');
+      return l>0 ? Math.round(c/l) : null;
+    }), mode:'lines+markers', name:it, connectgaps:true
+  })), {margin:{l:50,r:20,t:20,b:30},yaxis:{title:'CM1/TEU',gridcolor:'#f0f0f0'},
     legend:{orientation:'h',y:1.12},plot_bgcolor:'#fff',paper_bgcolor:'#fff'}, {displayModeBar:false});
+
+  // 수익 집중도 (누적 %)
+  let cumPct = 0;
+  const concData = sorted.slice(0,30).map((r,i) => { cumPct += r.cm1/totalCM1*100; return {x:i+1, y:cumPct}; });
+  Plotly.newPlot('ch4conc', [{
+    x:concData.map(r=>r.x), y:concData.map(r=>r.y), mode:'lines+markers',
+    line:{color:'#1a73e8',width:2}, marker:{size:5},
+    text:concData.map(r=>r.y.toFixed(0)+'%'), textposition:'top center'
+  }], {margin:{l:40,r:20,t:20,b:30},
+    xaxis:{title:'화주 순위 (CM1 기준)',gridcolor:'#f0f0f0'},
+    yaxis:{title:'누적 CM1 %',gridcolor:'#f0f0f0',range:[0,100]},
+    plot_bgcolor:'#fff',paper_bgcolor:'#fff',showlegend:false}, {displayModeBar:false});
 }
 
 // ═══════════════════════════════════════════════
