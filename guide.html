@@ -7,11 +7,12 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Segoe UI',sans-serif;background:#f8f9fa;color:#202124;line-height:1.7}
-.header{background:linear-gradient(135deg,#1a73e8,#1557b0);padding:16px 24px;color:#fff;display:flex;justify-content:space-between;align-items:center}
-.header h1{font-size:20px;font-weight:700}
+.header{background:linear-gradient(135deg,#1a73e8,#1557b0);padding:12px 24px;color:#fff;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.header h1{font-size:18px;font-weight:700}
 .header a{color:rgba(255,255,255,.8);text-decoration:none;font-size:13px}
 .header a:hover{color:#fff}
-.container{max-width:1000px;margin:0 auto;padding:24px}
+.container{max-width:900px;margin:0 auto;padding:24px 24px 24px 24px}
+@media(min-width:1200px){.container{margin-right:260px}}
 h2{color:#1a73e8;font-size:20px;margin:32px 0 12px;padding-bottom:8px;border-bottom:2px solid #e8f0fe}
 h3{color:#202124;font-size:16px;margin:20px 0 8px}
 p{margin:8px 0}
@@ -34,6 +35,17 @@ li{margin:4px 0}
 .tag-hi{background:#e6f4ea;color:#137333}
 .tag-lo{background:#fce8e6;color:#c5221f}
 .anchor{display:block}
+
+/* Side TOC */
+.side-toc{position:fixed;top:60px;right:16px;width:210px;max-height:calc(100vh - 76px);overflow-y:auto;background:#fff;border-radius:8px;box-shadow:0 1px 6px rgba(0,0,0,.12);padding:14px 16px;font-size:12.5px;z-index:50;opacity:0;pointer-events:none;transition:opacity .25s}
+.side-toc.visible{opacity:1;pointer-events:auto}
+.side-toc h4{font-size:11px;color:#5f6368;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;font-weight:700}
+.side-toc ul{list-style:none;margin:0;padding:0}
+.side-toc li{padding:0;margin:0}
+.side-toc a{display:block;padding:4px 0 4px 10px;color:#5f6368;text-decoration:none;border-left:2px solid transparent;transition:all .15s}
+.side-toc a:hover{color:#1a73e8}
+.side-toc a.active{color:#1a73e8;border-left-color:#1a73e8;font-weight:600}
+@media(max-width:1199px){.side-toc{display:none}}
 </style>
 </head>
 <body>
@@ -44,10 +56,46 @@ li{margin:4px 0}
   </div>
   <div>
     <button onclick="toggleLang()" id="langBtn" style="background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.4);padding:4px 12px;border-radius:4px;cursor:pointer;font-size:12px;margin-right:12px">EN</button>
-    <a href="index.html" class="ko">← 돌아가기</a>
-    <a href="index.html" class="en" style="display:none">← Back</a>
+    <a href="index.html" class="ko">&larr; 돌아가기</a>
+    <a href="index.html" class="en" style="display:none">&larr; Back</a>
   </div>
 </div>
+
+<!-- Side TOC (right sidebar) -->
+<nav class="side-toc" id="sideToc">
+  <h4 class="ko">목차</h4><h4 class="en" style="display:none">Contents</h4>
+  <ul class="ko">
+    <li><a href="#overview" data-id="overview">개요</a></li>
+    <li><a href="#filters" data-id="filters">필터 사용법</a></li>
+    <li><a href="#history" data-id="history">과거 데이터</a></li>
+    <li><a href="#week-rule" data-id="week-rule">주차 선택 규칙</a></li>
+    <li><a href="#tab1" data-id="tab1">① 소석률</a></li>
+    <li><a href="#tab2" data-id="tab2">② 트렌드</a></li>
+    <li><a href="#tab3" data-id="tab3">③ 전환 분석</a></li>
+    <li><a href="#tab4" data-id="tab4">④ 수익성</a></li>
+    <li><a href="#tab5" data-id="tab5">⑤ 부킹 패턴</a></li>
+    <li><a href="#wos" data-id="wos">WOS 상세</a></li>
+    <li><a href="#profit" data-id="profit">고수익 분류</a></li>
+    <li><a href="#data" data-id="data">데이터 기준</a></li>
+    <li><a href="#update" data-id="update">자동 업데이트</a></li>
+  </ul>
+  <ul class="en" style="display:none">
+    <li><a href="#overview" data-id="overview">Overview</a></li>
+    <li><a href="#filters" data-id="filters">Filters</a></li>
+    <li><a href="#history" data-id="history">Historical Data</a></li>
+    <li><a href="#week-rule" data-id="week-rule">Week Rules</a></li>
+    <li><a href="#tab1" data-id="tab1">① Occupancy</a></li>
+    <li><a href="#tab2" data-id="tab2">② Trends</a></li>
+    <li><a href="#tab3" data-id="tab3">③ Conversion</a></li>
+    <li><a href="#tab4" data-id="tab4">④ Profitability</a></li>
+    <li><a href="#tab5" data-id="tab5">⑤ Patterns</a></li>
+    <li><a href="#wos" data-id="wos">WOS Details</a></li>
+    <li><a href="#profit" data-id="profit">Profit Class</a></li>
+    <li><a href="#data" data-id="data">Data Defs</a></li>
+    <li><a href="#update" data-id="update">Auto Updates</a></li>
+  </ul>
+</nav>
+
 <script>
 let lang = localStorage.getItem('lang') || 'ko';
 function toggleLang() { lang = lang==='ko'?'en':'ko'; localStorage.setItem('lang',lang); applyLang(); }
@@ -56,23 +104,57 @@ function applyLang() {
   document.querySelectorAll('.en').forEach(el=>el.style.display=lang==='en'?'':'none');
   document.getElementById('langBtn').textContent=lang==='ko'?'EN':'KO';
 }
+
+function scrollToAnchor(id) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  var target = el.nextElementSibling;
+  while (target && getComputedStyle(target).display === 'none') target = target.nextElementSibling;
+  if (target) {
+    var y = target.getBoundingClientRect().top + window.pageYOffset - 56;
+    window.scrollTo({top: y, behavior: 'smooth'});
+  }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
   applyLang();
-  document.querySelectorAll('.toc a[href^="#"]').forEach(function(a) {
+
+  // All TOC link clicks (inline + sidebar)
+  document.querySelectorAll('a[href^="#"]').forEach(function(a) {
     a.addEventListener('click', function(e) {
       e.preventDefault();
-      var id = this.getAttribute('href').substring(1);
-      var el = document.getElementById(id);
-      if (!el) return;
-      // Find the visible h2 (lang class matching current mode)
-      var target = el.nextElementSibling;
-      while (target && getComputedStyle(target).display === 'none') target = target.nextElementSibling;
-      if (target) {
-        var y = target.getBoundingClientRect().top + window.pageYOffset - 10;
-        window.scrollTo({top: y, behavior: 'smooth'});
-      }
+      scrollToAnchor(this.getAttribute('href').substring(1));
     });
   });
+
+  // Section IDs for scroll spy
+  var sectionIds = ['overview','filters','history','week-rule','tab1','tab2','tab3','tab4','tab5','wos','profit','data','update'];
+  var sideToc = document.getElementById('sideToc');
+  var mainTocs = document.querySelectorAll('.container > .toc');
+
+  function updateSideToc() {
+    // Show sidebar when any inline TOC is scrolled past
+    var showSide = false;
+    mainTocs.forEach(function(t) {
+      if (t.getBoundingClientRect().bottom < 60) showSide = true;
+    });
+    if (showSide) sideToc.classList.add('visible');
+    else sideToc.classList.remove('visible');
+
+    // Highlight active section
+    var current = '';
+    for (var i = 0; i < sectionIds.length; i++) {
+      var el = document.getElementById(sectionIds[i]);
+      if (el && el.getBoundingClientRect().top <= 70) current = sectionIds[i];
+    }
+    sideToc.querySelectorAll('a[data-id]').forEach(function(a) {
+      if (a.dataset.id === current) a.classList.add('active');
+      else a.classList.remove('active');
+    });
+  }
+
+  window.addEventListener('scroll', updateSideToc, {passive: true});
+  updateSideToc();
 });
 </script>
 
@@ -105,7 +187,7 @@ document.addEventListener('DOMContentLoaded', function() {
   <li><a href="#tab4">④ Profitability</a></li>
   <li><a href="#tab5">⑤ Booking Patterns</a></li>
   <li><a href="#wos">WOS Details</a></li>
-  <li><a href="#profit">Shipper & Route Profit Classification</a></li>
+  <li><a href="#profit">Shipper &amp; Route Profit Classification</a></li>
   <li><a href="#data">Data Definitions</a></li>
   <li><a href="#update">Auto Updates</a></li>
 </ul></div>
