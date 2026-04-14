@@ -198,7 +198,7 @@ document.addEventListener('DOMContentLoaded', function() {
   <p><strong>-3W Booking Dashboard</strong>는 출항 3주 전(WOS-3) 부킹 현황을 모니터링하는 대시보드입니다.</p>
   <ul>
     <li><strong>① 소석률 현황</strong> — BSA 대비 실선적(Normal) 비율, 3주전BKG/BSA 비중</li>
-    <li><strong>② 부킹 트렌드</strong> — 지역별/화주별/영업사원별 실적 + 고수익 리드타임 분석</li>
+    <li><strong>② 부킹 트렌드</strong> — 지역별/화주별/영업사원별 실적 + AB vs CD 등급 분석</li>
     <li><strong>③ 전환 분석</strong> — 캔슬률 분석, 화주별 캔슬 Top 15</li>
     <li><strong>④ 수익성</strong> — CM1/TEU Top/Bottom, 수익 집중도</li>
     <li><strong>⑤ 부킹 패턴</strong> — WOS 단계별 부킹 접수 시점 분석</li>
@@ -209,7 +209,7 @@ document.addEventListener('DOMContentLoaded', function() {
   <p><strong>-3W Booking Dashboard</strong> monitors booking status 3 weeks before sailing (WOS-3).</p>
   <ul>
     <li><strong>① Occupancy</strong> — LFT(Normal)/BSA ratio, WOS-3 BKG/BSA ratio</li>
-    <li><strong>② Trends</strong> — By region/shipper/salesperson + high-profit lead time analysis</li>
+    <li><strong>② Trends</strong> — By region/shipper/salesperson + AB vs CD grade analysis</li>
     <li><strong>③ Conversion</strong> — Cancel rate analysis, Top 15 cancel shippers</li>
     <li><strong>④ Profitability</strong> — CM1/TEU Top/Bottom, revenue concentration</li>
     <li><strong>⑤ Patterns</strong> — WOS stage booking timing analysis</li>
@@ -230,6 +230,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <tr><td>월</td><td>조회 월 (445 캘린더)</td><td>현재 주 +3주 후</td></tr>
     <tr><td>주차</td><td>특정 주차 선택</td><td>+3주 후 해당 주차</td></tr>
     <tr><td>화주구분</td><td>고수익 / 저수익 (고수익태그 기준)</td><td>전체</td></tr>
+    <tr><td>등급</td><td>A+B(대형화주) / C+D(중소화주)</td><td>전체</td></tr>
     <tr><td>영업사원</td><td>특정 영업사원 필터</td><td>전체</td></tr>
   </table>
   <p>EN/KO 토글: 헤더의 <code>EN</code> 버튼으로 한/영 전환 가능</p>
@@ -244,6 +245,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <tr><td>Month</td><td>445 calendar month</td><td>Current +3 weeks</td></tr>
     <tr><td>Week</td><td>Specific week selection</td><td>+3 weeks target week</td></tr>
     <tr><td>Profit</td><td>High / Low (by profit tag)</td><td>All</td></tr>
+    <tr><td>Grade</td><td>A+B (large shippers) / C+D (SME)</td><td>All</td></tr>
     <tr><td>Salesperson</td><td>Filter by salesperson</td><td>All</td></tr>
   </table>
   <p>EN/KO toggle available in header</p>
@@ -345,9 +347,17 @@ document.addEventListener('DOMContentLoaded', function() {
   <table>
     <tr><th>서브탭</th><th>내용</th></tr>
     <tr><td><strong>지역별</strong></td><td>도착지/선적지별(보기 필터 연동) BKG, 실선적, 고수익 비중 + 주차별 차트</td></tr>
-    <tr><td><strong>화주별</strong></td><td>화주명, <span class="tag tag-hi">고수익태그</span>, 영업사원, BKG, 실선적, CM1/TEU</td></tr>
+    <tr><td><strong>화주별</strong></td><td>화주명, <strong>등급(A+B/C+D)</strong>, <span class="tag tag-hi">고수익태그</span>, 영업사원, BKG, 실선적, CM1/TEU</td></tr>
     <tr><td><strong>영업사원별</strong></td><td>화주수(코드 기준 중복제거), BKG, 실선적, 고수익 비중</td></tr>
+    <tr><td><strong>AB vs CD</strong></td><td>지역별 A+B / C+D 등급 BKG 비교 + 실선적률 + 스택 바 차트 + 분석 가이드</td></tr>
   </table>
+  <h3>AB vs CD 분석 가이드</h3>
+  <p>AB vs CD 탭 하단에 데이터 기반 자동 진단이 표시됩니다:</p>
+  <ul>
+    <li><strong>A+B 의존도</strong> — A+B(대형화주) 비중 60% 이상 시 집중 리스크 경고</li>
+    <li><strong>실선적률 격차</strong> — A+B vs C+D 실선적률 차이 10%p 이상이면 C+D 캔슬 관리 필요</li>
+    <li><strong>지역별 편차</strong> — 등급 비중 차이가 30%p 이상인 지역 식별, 차별 전략 제안</li>
+  </ul>
   <h3>지역별 추가 차트</h3>
   <ul>
     <li><strong>고수익 vs 저수익 리드타임 비중</strong> — WOS 단계별 고수익(초록)/저수익(빨강) 비교</li>
@@ -359,9 +369,17 @@ document.addEventListener('DOMContentLoaded', function() {
   <table>
     <tr><th>Sub-tab</th><th>Content</th></tr>
     <tr><td><strong>By Region</strong></td><td>BKG, LFT, High-profit ratio (follows View filter) + weekly chart</td></tr>
-    <tr><td><strong>By Shipper</strong></td><td>Shipper, <span class="tag tag-hi">Profit Tag</span>, Salesperson, BKG, LFT, CM1/TEU</td></tr>
+    <tr><td><strong>By Shipper</strong></td><td>Shipper, <strong>Grade(A+B/C+D)</strong>, <span class="tag tag-hi">Profit Tag</span>, Salesperson, BKG, LFT, CM1/TEU</td></tr>
     <tr><td><strong>By Salesperson</strong></td><td>Shipper count, BKG, LFT, High-profit ratio</td></tr>
+    <tr><td><strong>AB vs CD</strong></td><td>A+B vs C+D BKG comparison by region + LFT rate + stacked bar chart + analysis guide</td></tr>
   </table>
+  <h3>AB vs CD Analysis Guide</h3>
+  <p>Auto-diagnosis displayed at the bottom of AB vs CD tab:</p>
+  <ul>
+    <li><strong>A+B Dependency</strong> — Warning when A+B (large shippers) exceed 60% of total BKG</li>
+    <li><strong>LFT Rate Gap</strong> — Alert when A+B vs C+D LFT rate gap exceeds 10%p</li>
+    <li><strong>Regional Skew</strong> — Identifies regions with 30%p+ grade ratio difference</li>
+  </ul>
   <h3>Additional Charts (Region view)</h3>
   <ul>
     <li><strong>High vs Low Profit Lead Time</strong> — WOS stage comparison</li>
