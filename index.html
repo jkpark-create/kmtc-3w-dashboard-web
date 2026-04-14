@@ -447,7 +447,16 @@ function renderTab1() {
   // Charts
   html += `<div class="chart-row">
     <div class="chart-card" style="flex:7"><h3>${T[_lang].monthlyChart}</h3><div id="ch1bar" style="height:450px"></div></div>
-    <div class="chart-card" style="flex:5"><h3>${vl} ${T[_lang].occChart} (Normal/BSA)</h3><div class="sub">${fmtMonth(month)}</div><div id="ch1occ" style="height:450px"></div></div>
+    <div class="chart-card" style="flex:5">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <h3 id="occTitle">${vl} ${L('3주전BKG/BSA','WOS-3 BKG/BSA')}</h3>
+        <div style="display:flex;gap:4px">
+          <button onclick="setOccMode('w3')" id="occBtnW3" style="padding:3px 8px;font-size:11px;border-radius:3px;cursor:pointer;border:1px solid #1a73e8;background:#1a73e8;color:#fff">${L('3주전BKG/BSA','WOS-3/BSA')}</button>
+          <button onclick="setOccMode('normal')" id="occBtnN" style="padding:3px 8px;font-size:11px;border-radius:3px;cursor:pointer;border:1px solid #dadce0;background:#fff;color:#5f6368">Normal/BSA</button>
+        </div>
+      </div>
+      <div class="sub">${fmtMonth(month)}</div><div id="ch1occ" style="height:430px"></div>
+    </div>
   </div>`;
 
   // Summary table
@@ -508,31 +517,55 @@ function renderTab1() {
   const bsaByKey = {};
   _bsaAll.forEach(r => { const k = r[bk]; bsaByKey[k] = (bsaByKey[k]||0) + r.teu_bsa; });
   if (_weekSel) { const _wk = DATA.wpm[month]||4; Object.keys(bsaByKey).forEach(k => bsaByKey[k] = Math.round(bsaByKey[k] / _wk)); }
-  let orows = Object.entries(items).map(([k,rows]) => {
+  // Occ data for mode switching (w3=3주전BKG/BSA, normal=Normal/BSA)
+  window._occRows = Object.entries(items).map(([k,rows]) => {
     const s = profitSum(rows,'norm_fst'), b = bsaByKey[k]||0;
     const w3b = profitSum(rows,'w3_fst');
     return {name:k, ship:s, w3bkg:w3b, bsa:b, occ: b>0?s/b*100:0, w3ratio: b>0?w3b/b*100:0};
-  }).filter(r=>r.ship>0||r.bsa>0).sort((a,b)=>a.occ-b.occ);
-
-  const yLabels = orows.map(r=>`(${fmt(r.ship)} / ${fmt(r.bsa)})  ${r.name}`);
-  Plotly.newPlot('ch1occ', [
-    {y: yLabels, x: orows.map(r=>r.occ), type:'bar', orientation:'h',
-     name:L('소석률(Normal/BSA)','Occ(Normal/BSA)'),
-     marker:{color:orows.map(r=>r.occ>=65?'#34a853':r.occ>=50?'#f9ab00':'#ea4335')},
-     text:orows.map(r=>r.occ.toFixed(0)+'%'), textposition:'outside', textfont:{size:11}, cliponaxis:false},
-    {y: yLabels, x: orows.map(r=>r.w3ratio), type:'scatter', mode:'markers',
-     name:L('3주전BKG/BSA','WOS-3 BKG/BSA'),
-     marker:{color:'#6c5ce7',size:10,symbol:'diamond',line:{color:'#fff',width:1}},
-     hovertemplate:'%{y}: %{x:.0f}%<extra>WOS-3/BSA</extra>'}
-  ], {margin:{l:200,r:60,t:20,b:30}, xaxis:{title:L('비율 %','Ratio %')},
-       yaxis:{tickfont:{family:'Consolas,monospace',size:11}},
-       plot_bgcolor:'#fff',paper_bgcolor:'#fff',
-       legend:{orientation:'h',y:1.05,font:{size:10}},
-       shapes:[{type:'line',x0:50,x1:50,y0:-0.5,y1:orows.length-0.5,line:{dash:'dot',color:'#5f6368',width:1}}]
-  }, {displayModeBar:false});
+  }).filter(r=>r.ship>0||r.bsa>0);
+  if (!window._occMode) window._occMode = 'w3';
+  drawOccChart();
 
   // Summary table
   buildSummaryTable(ms.slice(-3));
+}
+
+function setOccMode(mode) {
+  window._occMode = mode;
+  // Update button styles
+  const w3btn = document.getElementById('occBtnW3'), nbtn = document.getElementById('occBtnN');
+  if (mode === 'w3') {
+    w3btn.style.background='#1a73e8'; w3btn.style.color='#fff'; w3btn.style.borderColor='#1a73e8';
+    nbtn.style.background='#fff'; nbtn.style.color='#5f6368'; nbtn.style.borderColor='#dadce0';
+  } else {
+    nbtn.style.background='#1a73e8'; nbtn.style.color='#fff'; nbtn.style.borderColor='#1a73e8';
+    w3btn.style.background='#fff'; w3btn.style.color='#5f6368'; w3btn.style.borderColor='#dadce0';
+  }
+  const title = document.getElementById('occTitle');
+  if (title) title.textContent = mode === 'w3' ? L('3주전BKG/BSA','WOS-3 BKG/BSA') : L('소석률(Normal/BSA)','Occ(Normal/BSA)');
+  drawOccChart();
+}
+
+function drawOccChart() {
+  const rows = window._occRows;
+  if (!rows || !rows.length) return;
+  const mode = window._occMode || 'w3';
+  const sorted = [...rows].sort((a,b) => mode==='w3' ? a.w3ratio-b.w3ratio : a.occ-b.occ);
+  const vals = sorted.map(r => mode==='w3' ? r.w3ratio : r.occ);
+  const labels = sorted.map(r => {
+    const num = mode==='w3' ? r.w3bkg : r.ship;
+    return `(${fmt(num)} / ${fmt(r.bsa)})  ${r.name}`;
+  });
+  Plotly.newPlot('ch1occ', [{
+    y: labels, x: vals, type:'bar', orientation:'h',
+    marker:{color:vals.map(v => v>=65?'#34a853':v>=50?'#f9ab00':'#ea4335')},
+    text:vals.map(v=>v.toFixed(0)+'%'), textposition:'outside', textfont:{size:11}, cliponaxis:false
+  }], {margin:{l:200,r:60,t:10,b:30},
+    xaxis:{title:mode==='w3' ? L('3주전BKG/BSA %','WOS-3/BSA %') : L('소석률 %','Occ %')},
+    yaxis:{tickfont:{family:'Consolas,monospace',size:11}},
+    plot_bgcolor:'#fff',paper_bgcolor:'#fff',showlegend:false,
+    shapes:[{type:'line',x0:50,x1:50,y0:-0.5,y1:sorted.length-0.5,line:{dash:'dot',color:'#5f6368',width:1}}]
+  }, {displayModeBar:false});
 }
 
 function kpi(label, value, color) {
