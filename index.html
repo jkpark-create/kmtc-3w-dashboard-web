@@ -88,7 +88,8 @@ table.summary td.lbl{text-align:left;font-weight:600;background:#fafafa}
   <label>보기</label><select id="fView"><option value="dest">도착지별</option><option value="origin">선적지별</option></select>
   <label>월</label><select id="fMonth"></select>
   <label>주차</label><select id="fWeek"><option value="ALL">전체</option></select>
-  <label>화주구분</label><select id="fProfit"><option value="ALL">전체</option><option value="hi">고수익</option><option value="lo">저수익</option><option value="ab">A+B</option><option value="cd">C+D</option></select>
+  <label>화주구분</label><select id="fProfit"><option value="ALL">전체</option><option value="hi">고수익</option><option value="lo">저수익</option></select>
+  <label>등급</label><select id="fGrade"><option value="ALL">전체</option><option value="ab">A+B</option><option value="cd">C+D</option></select>
   <label>영업사원</label><select id="fSales"><option value="ALL">전체</option></select>
 </div>
 
@@ -277,7 +278,7 @@ function initFilters() {
   updateCascade();
   updateWeekOpts();
   // 기본 주차: 전체 (월 전체 실적 표시)
-  ['fTeam','fOri','fOriP','fDst','fDstP','fView','fProfit','fSales'].forEach(id =>
+  ['fTeam','fOri','fOriP','fDst','fDstP','fView','fProfit','fGrade','fSales'].forEach(id =>
     document.getElementById(id).addEventListener('change', () => { updateCascade(); render(); }));
   document.getElementById('fMonth').addEventListener('change', () => { updateWeekOpts(); updateCascade(); render(); });
   document.getElementById('fWeek').addEventListener('change', () => { render(); });
@@ -423,8 +424,9 @@ function filterShipper(month) {
   const profit = gv('fProfit');
   if(profit==='hi') d=d.filter(r=>r['\uace0\uc218\uc775\ud0dc\uadf8']==='고수익');
   if(profit==='lo') d=d.filter(r=>r['\uace0\uc218\uc775\ud0dc\uadf8']==='저수익');
-  if(profit==='ab') d=d.filter(r=>r.grade==='A+B');
-  if(profit==='cd') d=d.filter(r=>r.grade==='C+D');
+  const grade = gv('fGrade');
+  if(grade==='ab') d=d.filter(r=>r.grade==='A+B');
+  if(grade==='cd') d=d.filter(r=>r.grade==='C+D');
   return d;
 }
 
@@ -1341,7 +1343,7 @@ const T = {
     title: '-3W Booking Dashboard',
     guide: '사용가이드',
     team: '팀', origin: '선적지', oriPort: '선적포트', dest: '도착지', dstPort: '도착포트',
-    view: '보기', month: '월', week: '주차', profitType: '화주구분', sales: '영업사원',
+    view: '보기', month: '월', week: '주차', profitType: '화주구분', grade: '등급', sales: '영업사원',
     viewDest: '도착지별', viewOri: '선적지별', all: '전체', hi: '고수익', lo: '저수익',
     tab1: '① 소석률 현황', tab2: '② 부킹 트렌드', tab3: '③ 전환 분석', tab4: '④ 수익성', tab5: '⑤ 부킹 패턴',
     totalBkg: '전체 BKG', shipment: '실선적(Normal)', w3bkg: '3주전 BKG', w3ship: '3주전 실선적(Normal)',
@@ -1360,7 +1362,7 @@ const T = {
     title: '-3W Booking Dashboard',
     guide: 'Guide',
     team: 'Team', origin: 'Origin', oriPort: 'Ori Port', dest: 'Dest', dstPort: 'Dst Port',
-    view: 'View', month: 'Month', week: 'Week', profitType: 'Profit', sales: 'Salesperson',
+    view: 'View', month: 'Month', week: 'Week', profitType: 'Profit', grade: 'Grade', sales: 'Salesperson',
     viewDest: 'By Dest', viewOri: 'By Origin', all: 'All', hi: 'High', lo: 'Low',
     tab1: '① Occupancy', tab2: '② Trends', tab3: '③ Conversion', tab4: '④ Profitability', tab5: '⑤ Patterns',
     totalBkg: 'Total BKG', shipment: 'LFT(Normal)', w3bkg: 'WOS-3 BKG', w3ship: 'WOS-3 LFT(Normal)',
@@ -1393,7 +1395,7 @@ function applyLang() {
   document.getElementById('guideLink').textContent = t.guide;
   // Filter labels
   document.querySelectorAll('.filters label').forEach((el, i) => {
-    const keys = ['team','origin','oriPort','dest','dstPort','view','month','week','profitType','sales'];
+    const keys = ['team','origin','oriPort','dest','dstPort','view','month','week','profitType','grade','sales'];
     if (keys[i]) el.textContent = t[keys[i]];
   });
   // Tab labels
