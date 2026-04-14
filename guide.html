@@ -64,6 +64,7 @@ document.addEventListener('DOMContentLoaded', applyLang);
 <div class="toc ko"><h3>목차</h3><ul>
   <li><a href="#overview">개요</a></li>
   <li><a href="#filters">필터 사용법</a></li>
+  <li><a href="#history">과거 데이터 조회</a></li>
   <li><a href="#week-rule">주차 선택 규칙</a></li>
   <li><a href="#tab1">① 소석률 현황</a></li>
   <li><a href="#tab2">② 부킹 트렌드</a></li>
@@ -78,6 +79,7 @@ document.addEventListener('DOMContentLoaded', applyLang);
 <div class="toc en" style="display:none"><h3>Contents</h3><ul>
   <li><a href="#overview">Overview</a></li>
   <li><a href="#filters">Filters</a></li>
+  <li><a href="#history">Historical Data</a></li>
   <li><a href="#week-rule">Week Selection Rules</a></li>
   <li><a href="#tab1">① Occupancy</a></li>
   <li><a href="#tab2">② Booking Trends</a></li>
@@ -144,6 +146,43 @@ document.addEventListener('DOMContentLoaded', applyLang);
     <tr><td>Salesperson</td><td>Filter by salesperson</td><td>All</td></tr>
   </table>
   <p>EN/KO toggle available in header</p>
+</div>
+
+<!-- HISTORY -->
+<h2 id="history" class="ko">과거 데이터 조회</h2><h2 class="en" style="display:none">Historical Data</h2>
+<div class="card ko">
+  <p>헤더 우측의 <strong>날짜 드롭다운</strong>을 사용하여 과거 시점의 대시보드 데이터를 조회할 수 있습니다.</p>
+  <h3>사용법</h3>
+  <ol>
+    <li>로그인 후 우측 상단에 날짜 선택 드롭다운이 표시됩니다</li>
+    <li>기본값은 <strong>최신 데이터</strong> (오늘 생성된 스냅샷)</li>
+    <li>드롭다운을 열면 Google Drive에 저장된 <strong>과거 날짜 목록</strong>이 자동으로 로드됩니다</li>
+    <li>원하는 날짜를 선택하면 해당 시점의 데이터로 대시보드가 갱신됩니다</li>
+  </ol>
+  <h3>동작 방식</h3>
+  <table>
+    <tr><th>선택</th><th>데이터 소스</th><th>설명</th></tr>
+    <tr><td>최신 (기본)</td><td>GitHub Pages <code>data.json</code></td><td>매일 09:03 자동 업데이트된 최신 스냅샷</td></tr>
+    <tr><td>과거 날짜</td><td>Google Drive</td><td>해당 날짜에 생성된 <code>dashboard_summary_YYYYMMDD.json</code> 파일</td></tr>
+  </table>
+  <div class="tip"><strong>활용 예시:</strong> 지난주와 이번주의 소석률 변화를 비교하거나, 특정 시점의 부킹 현황을 확인할 때 유용합니다. 최대 30개의 과거 날짜가 표시됩니다.</div>
+</div>
+<div class="card en" style="display:none">
+  <p>Use the <strong>date dropdown</strong> in the top-right header to view dashboard data from past dates.</p>
+  <h3>How to Use</h3>
+  <ol>
+    <li>After login, a date selector dropdown appears in the top-right corner</li>
+    <li>Default is <strong>Latest data</strong> (today's snapshot)</li>
+    <li>Open the dropdown to see <strong>past dates</strong> automatically loaded from Google Drive</li>
+    <li>Select a date to reload the dashboard with that day's data</li>
+  </ol>
+  <h3>How It Works</h3>
+  <table>
+    <tr><th>Selection</th><th>Data Source</th><th>Description</th></tr>
+    <tr><td>Latest (default)</td><td>GitHub Pages <code>data.json</code></td><td>Latest snapshot, auto-updated daily at 09:03</td></tr>
+    <tr><td>Past date</td><td>Google Drive</td><td><code>dashboard_summary_YYYYMMDD.json</code> from that date</td></tr>
+  </table>
+  <div class="tip"><strong>Use case:</strong> Compare this week's occupancy vs last week, or review booking status at a specific point in time. Up to 30 past dates are shown.</div>
 </div>
 
 <!-- WEEK RULE -->
