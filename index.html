@@ -464,30 +464,19 @@ function renderTab1() {
 
   document.getElementById('tabContent').innerHTML = html;
 
-  // Bar chart (주차 선택 시 모든 월 주평균으로 표시)
+  // Bar chart (주차 선택: 해당월=해당주 실적, 과거월=주평균)
   const ms = DATA.months.filter(m => m <= month);
   const isWeekSelected = gv('fWeek') !== 'ALL';
-  const shipM = ms.map(m => {
-    const v = profitSum(filterMonthly(m), 'norm_fst');
-    return isWeekSelected ? v / (DATA.wpm[m]||4) : v;
-  });
-  const bsaM = ms.map(m => {
-    const v = sum(filterBSA(m, null), 'teu_bsa');  // BSA는 항상 월 전체에서 가져옴
-    return isWeekSelected ? v / (DATA.wpm[m]||4) : v;
-  });
+  const _avg = (m, v) => (isWeekSelected && m !== month) ? v / (DATA.wpm[m]||4) : v;
+  const shipM = ms.map(m => _avg(m, profitSum(filterMonthly(m), 'norm_fst')));
+  const bsaM = ms.map(m => _avg(m, sum(filterBSA(m, null), 'teu_bsa')));
   const occM = ms.map((m,i) => bsaM[i]>0 ? shipM[i]/bsaM[i]*100 : null);
-  const w3shipM = ms.map(m => {
-    const v = profitSum(filterMonthly(m), 'w3_norm_fst');
-    return isWeekSelected ? v / (DATA.wpm[m]||4) : v;
-  });
+  const w3shipM = ms.map(m => _avg(m, profitSum(filterMonthly(m), 'w3_norm_fst')));
   const w3occM = ms.map((m,i) => bsaM[i]>0 ? w3shipM[i]/bsaM[i]*100 : null);
   const xl = ms.map(fmtMonth);
 
   // 3주전 BKG 바 + (3주전BKG)/BSA 라인
-  const w3bkgM = ms.map(m => {
-    const v = profitSum(filterMonthly(m), 'w3_fst');
-    return isWeekSelected ? v / (DATA.wpm[m]||4) : v;
-  });
+  const w3bkgM = ms.map(m => _avg(m, profitSum(filterMonthly(m), 'w3_fst')));
   const w3bkgBsaM = ms.map((m,i) => bsaM[i]>0 ? w3bkgM[i]/bsaM[i]*100 : null);
 
   Plotly.newPlot('ch1bar', [
