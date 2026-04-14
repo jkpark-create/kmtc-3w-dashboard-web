@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>-3W Booking Dashboard 사용 가이드</title>
+<title>-3W Booking Dashboard Guide</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Segoe UI',sans-serif;background:#f8f9fa;color:#202124;line-height:1.7}
@@ -11,36 +11,36 @@ body{font-family:'Segoe UI',sans-serif;background:#f8f9fa;color:#202124;line-hei
 .header h1{font-size:20px;font-weight:700}
 .header a{color:rgba(255,255,255,.8);text-decoration:none;font-size:13px}
 .header a:hover{color:#fff}
-.container{max-width:960px;margin:0 auto;padding:24px}
+.container{max-width:1000px;margin:0 auto;padding:24px}
 h2{color:#1a73e8;font-size:20px;margin:32px 0 12px;padding-bottom:8px;border-bottom:2px solid #e8f0fe}
 h3{color:#202124;font-size:16px;margin:20px 0 8px}
 p{margin:8px 0}
 .card{background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.1);padding:20px;margin:16px 0}
-.card h3{margin-top:0}
 table{width:100%;border-collapse:collapse;margin:12px 0;font-size:14px}
 th{background:#e8f0fe;padding:8px 12px;text-align:left;border:1px solid #dadce0;font-weight:600}
 td{padding:8px 12px;border:1px solid #dadce0}
 tr:nth-child(even){background:#f8f9fa}
 code{background:#f1f3f4;padding:2px 6px;border-radius:3px;font-size:13px;color:#d93025}
-.tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:600}
-.tag-hi{background:#e6f4ea;color:#137333}
-.tag-lo{background:#fce8e6;color:#c5221f}
 .tip{background:#e8f0fe;border-left:4px solid #1a73e8;padding:12px 16px;margin:12px 0;border-radius:0 4px 4px 0}
 .tip strong{color:#1a73e8}
-ul{margin:8px 0 8px 24px}
+ul,ol{margin:8px 0 8px 24px}
 li{margin:4px 0}
 .toc{background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.1);padding:16px 20px;margin:16px 0}
 .toc a{color:#1a73e8;text-decoration:none}
-.toc a:hover{text-decoration:underline}
 .toc ul{list-style:none;margin:0;padding:0}
 .toc li{padding:4px 0}
 .toc li::before{content:'>';color:#1a73e8;margin-right:8px}
+.tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:600}
+.tag-hi{background:#e6f4ea;color:#137333}
+.tag-lo{background:#fce8e6;color:#c5221f}
 </style>
 </head>
 <body>
 <div class="header">
-  <h1 class="ko">-3W Booking Dashboard 사용 가이드</h1>
-  <h1 class="en" style="display:none">-3W Booking Dashboard User Guide</h1>
+  <div>
+    <h1 class="ko">-3W Booking Dashboard 사용 가이드</h1>
+    <h1 class="en" style="display:none">-3W Booking Dashboard User Guide</h1>
+  </div>
   <div>
     <button onclick="toggleLang()" id="langBtn" style="background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.4);padding:4px 12px;border-radius:4px;cursor:pointer;font-size:12px;margin-right:12px">EN</button>
     <a href="index.html" class="ko">대시보드로 돌아가기</a>
@@ -49,416 +49,363 @@ li{margin:4px 0}
 </div>
 <script>
 let lang = localStorage.getItem('lang') || 'ko';
-function toggleLang() {
-  lang = lang === 'ko' ? 'en' : 'ko';
-  localStorage.setItem('lang', lang);
-  applyLang();
-}
+function toggleLang() { lang = lang==='ko'?'en':'ko'; localStorage.setItem('lang',lang); applyLang(); }
 function applyLang() {
-  document.querySelectorAll('.ko').forEach(el => el.style.display = lang==='ko' ? '' : 'none');
-  document.querySelectorAll('.en').forEach(el => el.style.display = lang==='en' ? '' : 'none');
-  document.getElementById('langBtn').textContent = lang==='ko' ? 'EN' : 'KO';
+  document.querySelectorAll('.ko').forEach(el=>el.style.display=lang==='ko'?'':'none');
+  document.querySelectorAll('.en').forEach(el=>el.style.display=lang==='en'?'':'none');
+  document.getElementById('langBtn').textContent=lang==='ko'?'EN':'KO';
 }
 document.addEventListener('DOMContentLoaded', applyLang);
 </script>
 
 <div class="container">
 
-<div class="toc ko">
-<h3>목차</h3>
-<ul>
+<!-- TOC -->
+<div class="toc ko"><h3>목차</h3><ul>
   <li><a href="#overview">개요</a></li>
   <li><a href="#filters">필터 사용법</a></li>
-  <li><a href="#tab1">Tab 1: 소석률 현황</a></li>
-  <li><a href="#tab2">Tab 2: 부킹 트렌드</a></li>
-  <li><a href="#tab3">Tab 3: 전환 분석</a></li>
-  <li><a href="#tab4">Tab 4: 수익성 분석</a></li>
-  <li><a href="#tab5">Tab 5: 부킹 패턴</a></li>
-  <li><a href="#data">데이터 기준 정의</a></li>
-  <li><a href="#update">데이터 업데이트</a></li>
-</ul>
-</div>
-<div class="toc en" style="display:none">
-<h3>Table of Contents</h3>
-<ul>
+  <li><a href="#week-rule">주차 선택 규칙</a></li>
+  <li><a href="#tab1">① 소석률 현황</a></li>
+  <li><a href="#tab2">② 부킹 트렌드</a></li>
+  <li><a href="#tab3">③ 전환 분석</a></li>
+  <li><a href="#tab4">④ 수익성 분석</a></li>
+  <li><a href="#tab5">⑤ 부킹 패턴</a></li>
+  <li><a href="#wos">WOS 상세 설명</a></li>
+  <li><a href="#profit">고수익화주 분류</a></li>
+  <li><a href="#data">데이터 기준</a></li>
+  <li><a href="#update">자동 업데이트</a></li>
+</ul></div>
+<div class="toc en" style="display:none"><h3>Contents</h3><ul>
   <li><a href="#overview">Overview</a></li>
-  <li><a href="#filters">Filter Usage</a></li>
-  <li><a href="#tab1">Tab 1: Occupancy Status</a></li>
-  <li><a href="#tab2">Tab 2: Booking Trends</a></li>
-  <li><a href="#tab3">Tab 3: Conversion Analysis</a></li>
-  <li><a href="#tab4">Tab 4: Profitability Analysis</a></li>
-  <li><a href="#tab5">Tab 5: Booking Patterns</a></li>
+  <li><a href="#filters">Filters</a></li>
+  <li><a href="#week-rule">Week Selection Rules</a></li>
+  <li><a href="#tab1">① Occupancy</a></li>
+  <li><a href="#tab2">② Booking Trends</a></li>
+  <li><a href="#tab3">③ Conversion Analysis</a></li>
+  <li><a href="#tab4">④ Profitability</a></li>
+  <li><a href="#tab5">⑤ Booking Patterns</a></li>
+  <li><a href="#wos">WOS Details</a></li>
+  <li><a href="#profit">Profit Classification</a></li>
   <li><a href="#data">Data Definitions</a></li>
-  <li><a href="#update">Data Updates</a></li>
-</ul>
-</div>
+  <li><a href="#update">Auto Updates</a></li>
+</ul></div>
 
-<!-- ═══════════════════════════════════════ -->
-<h2 id="overview" class="ko">개요</h2>
-<h2 id="overview" class="en" style="display:none">Overview</h2>
+<!-- OVERVIEW -->
+<h2 id="overview" class="ko">개요</h2><h2 class="en" style="display:none">Overview</h2>
 <div class="card ko">
   <p><strong>-3W Booking Dashboard</strong>는 출항 3주 전(WOS-3) 부킹 현황을 모니터링하는 대시보드입니다.</p>
-  <p>부킹 접수부터 실선적까지의 전환 과정을 추적하고, 고수익 화주 관리 및 수익성 분석을 지원합니다.</p>
-  <h3>주요 기능</h3>
   <ul>
-    <li><strong>소석률 현황</strong> — BSA 대비 실선적 비율 모니터링</li>
-    <li><strong>부킹 트렌드</strong> — 도착지/선적지/화주/영업사원별 부킹 현황</li>
-    <li><strong>전환 분석</strong> — 캔슬률 분석 및 실선적 전환 추적</li>
-    <li><strong>수익성 분석</strong> — CM1/TEU 분석 및 수익 집중도</li>
-    <li><strong>부킹 패턴</strong> — WOS 단계별 부킹 접수 시점 분석</li>
+    <li><strong>① 소석률 현황</strong> — BSA 대비 실선적(Normal) 비율, 3주전BKG/BSA 비중</li>
+    <li><strong>② 부킹 트렌드</strong> — 지역별/화주별/영업사원별 실적 + 고수익 리드타임 분석</li>
+    <li><strong>③ 전환 분석</strong> — 캔슬률 분석, 화주별 캔슬 Top 15</li>
+    <li><strong>④ 수익성</strong> — CM1/TEU Top/Bottom, 수익 집중도</li>
+    <li><strong>⑤ 부킹 패턴</strong> — WOS 단계별 부킹 접수 시점 분석</li>
   </ul>
+  <p>기본 월 필터: <strong>현재 주 +3주 후의 월</strong>로 자동 설정됩니다.</p>
 </div>
 <div class="card en" style="display:none">
   <p><strong>-3W Booking Dashboard</strong> monitors booking status 3 weeks before sailing (WOS-3).</p>
-  <p>It tracks the conversion from booking to actual shipment, manages high-profit shippers, and provides profitability analysis.</p>
-  <h3>Key Features</h3>
   <ul>
-    <li><strong>Occupancy Status</strong> — Monitor shipment/BSA ratio</li>
-    <li><strong>Booking Trends</strong> — Booking status by destination/origin/shipper/salesperson</li>
-    <li><strong>Conversion Analysis</strong> — Cancel rate analysis and shipment conversion tracking</li>
-    <li><strong>Profitability</strong> — CM1/TEU analysis and revenue concentration</li>
-    <li><strong>Booking Patterns</strong> — WOS stage-based booking timing analysis</li>
+    <li><strong>① Occupancy</strong> — LFT(Normal)/BSA ratio, WOS-3 BKG/BSA ratio</li>
+    <li><strong>② Trends</strong> — By region/shipper/salesperson + high-profit lead time analysis</li>
+    <li><strong>③ Conversion</strong> — Cancel rate analysis, Top 15 cancel shippers</li>
+    <li><strong>④ Profitability</strong> — CM1/TEU Top/Bottom, revenue concentration</li>
+    <li><strong>⑤ Patterns</strong> — WOS stage booking timing analysis</li>
   </ul>
+  <p>Default month: automatically set to <strong>current week + 3 weeks ahead</strong>.</p>
 </div>
 
-<!-- ═══════════════════════════════════════ -->
-<h2 id="filters" class="ko">필터 사용법</h2>
-<h2 class="en" style="display:none">Filter Usage</h2>
+<!-- FILTERS -->
+<h2 id="filters" class="ko">필터 사용법</h2><h2 class="en" style="display:none">Filters</h2>
 <div class="card ko">
-  <h3>글로벌 필터</h3>
-  <p>화면 상단의 필터는 모든 탭에 공통 적용됩니다.</p>
   <table>
     <tr><th>필터</th><th>설명</th><th>기본값</th></tr>
-    <tr><td><strong>팀</strong></td><td>OBT / EST / IST / JBT 선택</td><td>전체</td></tr>
-    <tr><td><strong>선적지</strong></td><td>출발 국가 (POR Country)</td><td>전체</td></tr>
-    <tr><td><strong>선적포트</strong></td><td>출발 포트 (POR Port)</td><td>전체</td></tr>
-    <tr><td><strong>도착지</strong></td><td>도착 국가 (DLY Country)</td><td>전체</td></tr>
-    <tr><td><strong>도착포트</strong></td><td>도착 포트 (DLY Port)</td><td>전체</td></tr>
-    <tr><td><strong>보기</strong></td><td>도착지별 / 선적지별 뷰 전환</td><td>도착지별</td></tr>
-    <tr><td><strong>월</strong></td><td>조회 월 선택 (445 캘린더)</td><td>현재 주 +3주 후의 월</td></tr>
-    <tr><td><strong>주차</strong></td><td>특정 주차 선택</td><td>전체</td></tr>
-    <tr><td><strong>화주구분</strong></td><td>고수익 / 저수익 화주 필터</td><td>전체</td></tr>
-    <tr><td><strong>영업사원</strong></td><td>특정 영업사원 필터</td><td>전체</td></tr>
+    <tr><td>팀</td><td>OBT / EST / IST / JBT</td><td>전체</td></tr>
+    <tr><td>선적지 / 선적포트</td><td>출발 국가 + 포트 (POR)</td><td>전체</td></tr>
+    <tr><td>도착지 / 도착포트</td><td>도착 국가 + 포트 (DLY)</td><td>전체</td></tr>
+    <tr><td>보기</td><td>도착지별 / 선적지별 뷰 전환</td><td>도착지별</td></tr>
+    <tr><td>월</td><td>조회 월 (445 캘린더)</td><td>현재 주 +3주 후</td></tr>
+    <tr><td>주차</td><td>특정 주차 선택</td><td>전체</td></tr>
+    <tr><td>화주구분</td><td>고수익 / 저수익 (고수익태그 기준)</td><td>전체</td></tr>
+    <tr><td>영업사원</td><td>특정 영업사원 필터</td><td>전체</td></tr>
   </table>
-
-  <div class="tip">
-    <strong>주차 선택 시:</strong> 해당 주의 실적이 표시되고, 전월 데이터는 주평균(월 합계 / 주 수)으로 변환됩니다. BSA도 동일하게 주평균으로 표시됩니다.
-  </div>
-
-  <h3>캐스케이딩 필터</h3>
-  <p>상위 필터 선택 시 하위 필터 옵션이 자동으로 조정됩니다.</p>
-  <p>예: <code>팀=OBT</code> 선택 → 선적지 옵션이 OBT 해당 국가만 표시</p>
+  <p>EN/KO 토글: 헤더의 <code>EN</code> 버튼으로 한/영 전환 가능</p>
+</div>
+<div class="card en" style="display:none">
+  <table>
+    <tr><th>Filter</th><th>Description</th><th>Default</th></tr>
+    <tr><td>Team</td><td>OBT / EST / IST / JBT</td><td>All</td></tr>
+    <tr><td>Origin / Port</td><td>POR country + port</td><td>All</td></tr>
+    <tr><td>Dest / Port</td><td>DLY country + port</td><td>All</td></tr>
+    <tr><td>View</td><td>By Destination / By Origin</td><td>By Dest</td></tr>
+    <tr><td>Month</td><td>445 calendar month</td><td>Current +3 weeks</td></tr>
+    <tr><td>Week</td><td>Specific week selection</td><td>All</td></tr>
+    <tr><td>Profit</td><td>High / Low (by profit tag)</td><td>All</td></tr>
+    <tr><td>Salesperson</td><td>Filter by salesperson</td><td>All</td></tr>
+  </table>
+  <p>EN/KO toggle available in header</p>
 </div>
 
-<!-- ═══════════════════════════════════════ -->
-<h2 id="tab1" class="ko">Tab 1: 소석률 현황</h2>
-<h2 class="en" style="display:none">Tab 1: Occupancy Status</h2>
+<!-- WEEK RULE -->
+<h2 id="week-rule" class="ko">주차 선택 규칙</h2><h2 class="en" style="display:none">Week Selection Rules</h2>
 <div class="card ko">
-  <h3>KPI 카드</h3>
   <table>
-    <tr><th>카드</th><th>계산 기준</th></tr>
-    <tr><td><strong>전체 BKG</strong></td><td>선택 월의 전체 부킹 TEU (FST_TEU 합계)</td></tr>
-    <tr><td><strong>실선적(Normal)</strong></td><td>LST_Status = Normal인 부킹의 FST_TEU 합계</td></tr>
-    <tr><td><strong>3주전 BKG</strong></td><td>Lead_time(BKG_Sche) = WOS-3인 부킹의 FST_TEU</td></tr>
-    <tr><td><strong>3주전 실선적(Normal)</strong></td><td>WOS-3이면서 Normal인 부킹의 FST_TEU</td></tr>
-    <tr><td><strong>BSA</strong></td><td>Tableau BSA raw 데이터의 TEU_BSA(Actual) 합계</td></tr>
-    <tr><td><strong>소석률</strong></td><td>실선적(Normal) / BSA × 100%</td></tr>
-    <tr><td><strong>실선적률</strong></td><td>3주전 실선적 / 3주전 BKG × 100%</td></tr>
-    <tr><td><strong>CM1/TEU</strong></td><td>Normal + CM1>0인 건의 CM1 합계 / LST_TEU 합계</td></tr>
-  </table>
-
-  <h3>월별 BKG vs BSA 차트</h3>
-  <p>파란 바 = 실선적(Normal), 회색 바 = BSA, 빨간 선 = 소석률, 보라 점선 = 3주전 실선적/BSA</p>
-
-  <h3>소석률 바 차트</h3>
-  <p>도착지(또는 선적지)별 소석률을 수평 바 차트로 표시합니다.</p>
-  <ul>
-    <li><span style="color:#34a853">초록</span>: 65% 이상</li>
-    <li><span style="color:#f9ab00">노랑</span>: 50~65%</li>
-    <li><span style="color:#ea4335">빨강</span>: 50% 미만</li>
-  </ul>
-
-  <h3>도착지별 월간 실적 (Image-8 포맷)</h3>
-  <p>최근 3개월의 주간 평균 실적을 도착지별로 비교합니다.</p>
-  <table>
-    <tr><th>항목</th><th>설명</th></tr>
-    <tr><td>BKG</td><td>3주전 BKG 주간 평균</td></tr>
-    <tr><td>BSA</td><td>BSA 주간 평균</td></tr>
-    <tr><td>비중</td><td>BKG / BSA %</td></tr>
-    <tr><td>실선적</td><td>3주전 실선적(Normal) 주간 평균</td></tr>
-    <tr><td>실선적률</td><td>실선적 / BKG %</td></tr>
-    <tr><td>고수익 BKG/비중/실선적/실선적률</td><td>고수익태그 화주만의 실적</td></tr>
-    <tr><td>CM1 / CM1/TEU</td><td>수익 지표</td></tr>
+    <tr><th>항목</th><th>주차=전체</th><th>주차 선택 (예: 5월 1주)</th></tr>
+    <tr><td>해당월 BKG/실선적</td><td>월 합계</td><td><strong>해당 주 실적</strong></td></tr>
+    <tr><td>해당월 BSA</td><td>월 합계</td><td><strong>해당 주 BSA</strong> (WW 필터)</td></tr>
+    <tr><td>과거월 BKG/실선적</td><td>월 합계</td><td><strong>주평균</strong> (월합/주수)</td></tr>
+    <tr><td>과거월 BSA</td><td>월 합계</td><td><strong>주평균</strong> (월BSA/주수)</td></tr>
+    <tr><td>하단 테이블 헤더</td><td>3월 실적 (5주)</td><td>3월 실적 (주평균) | 5월 실적 (1주차)</td></tr>
+    <tr><td>합계행</td><td>합계(주) / 합계(월)</td><td><strong>합계 1행만</strong> (주/월 동일)</td></tr>
   </table>
 </div>
 <div class="card en" style="display:none">
-  <h3>KPI Cards</h3>
-  <p>Total BKG | Shipment(Normal) | WOS-3 BKG | WOS-3 Shipment | BSA | Occupancy | Shipment Rate | CM1/TEU</p>
-  <h3>Monthly BKG vs BSA Chart</h3>
-  <p>Blue bar=Shipment(Normal), Gray bar=BSA, Red line=Occupancy(Normal/BSA), Purple dashed=WOS-3 Shipment/BSA</p>
-  <h3>Occupancy Bar (by Region)</h3>
-  <p>Green(&ge;65%) | Yellow(50-65%) | Red(&lt;50%)</p>
-  <h3>Monthly Performance Table</h3>
-  <p>Weekly average for last 3 months: BKG, BSA, Ratio, Shipment, Rate, High-profit metrics, CM1/TEU</p>
+  <table>
+    <tr><th>Item</th><th>Week=All</th><th>Week Selected (e.g. May Wk1)</th></tr>
+    <tr><td>Current Month BKG/LFT</td><td>Monthly total</td><td><strong>Selected week actual</strong></td></tr>
+    <tr><td>Current Month BSA</td><td>Monthly total</td><td><strong>Selected week BSA</strong> (WW filter)</td></tr>
+    <tr><td>Past Months BKG/LFT</td><td>Monthly total</td><td><strong>Weekly avg</strong> (monthly/weeks)</td></tr>
+    <tr><td>Past Months BSA</td><td>Monthly total</td><td><strong>Weekly avg</strong> (monthly BSA/weeks)</td></tr>
+    <tr><td>Table Header</td><td>Mar Perf (5wk)</td><td>Mar Perf (Wk Avg) | May Perf (1wk)</td></tr>
+    <tr><td>Total Row</td><td>Total(Wk) / Total(Mo)</td><td><strong>Single total row</strong></td></tr>
+  </table>
 </div>
 
-<!-- ═══════════════════════════════════════ -->
-<h2 id="tab2" class="ko">Tab 2: 부킹 트렌드</h2>
-<h2 class="en" style="display:none">Tab 2: Booking Trends</h2>
+<!-- TAB1 -->
+<h2 id="tab1" class="ko">① 소석률 현황</h2><h2 class="en" style="display:none">① Occupancy Status</h2>
+<div class="card ko">
+  <h3>KPI 카드</h3>
+  <p>전체BKG | 실선적(Normal) | 3주전BKG | 3주전실선적(Normal) | BSA | 소석률 | 실선적률 | CM1/TEU</p>
+  <h3>월별 BKG vs BSA 차트</h3>
+  <p>보라 바=3주전BKG, 파란 바=실선적(Normal), 회색 바=BSA</p>
+  <p>빨간 실선=소석률(Normal/BSA), 노란 점선=3주전BKG/BSA, 보라 점선=3주전실선적/BSA</p>
+  <h3>소석률 바 차트 (토글)</h3>
+  <p><strong>3주전BKG/BSA</strong>와 <strong>Normal/BSA</strong> 두 모드를 버튼으로 전환하여 볼 수 있습니다.</p>
+  <p>기본: 3주전BKG/BSA | 색상: 초록(≥65%), 노랑(50-65%), 빨강(&lt;50%)</p>
+</div>
+<div class="card en" style="display:none">
+  <h3>KPI Cards</h3>
+  <p>Total BKG | LFT(Normal) | WOS-3 BKG | WOS-3 LFT | BSA | Occupancy | LFT Rate | CM1/TEU</p>
+  <h3>Monthly BKG vs BSA Chart</h3>
+  <p>Purple bar=WOS-3 BKG, Blue bar=LFT(Normal), Gray bar=BSA</p>
+  <p>Red line=Occ(Normal/BSA), Yellow dotted=WOS-3 BKG/BSA, Purple dashed=WOS-3 LFT/BSA</p>
+  <h3>Occupancy Bar (Toggle)</h3>
+  <p>Switch between <strong>WOS-3 BKG/BSA</strong> and <strong>Normal/BSA</strong> with buttons.</p>
+  <p>Default: WOS-3 BKG/BSA | Green(≥65%), Yellow(50-65%), Red(&lt;50%)</p>
+</div>
+
+<!-- TAB2 -->
+<h2 id="tab2" class="ko">② 부킹 트렌드</h2><h2 class="en" style="display:none">② Booking Trends</h2>
 <div class="card ko">
   <h3>서브탭</h3>
   <table>
     <tr><th>서브탭</th><th>내용</th></tr>
-    <tr><td><strong>도착지별</strong></td><td>도착 국가별 3주전 BKG, 실선적, 고수익 비중</td></tr>
-    <tr><td><strong>선적지별</strong></td><td>출발 국가별 동일 지표</td></tr>
-    <tr><td><strong>화주별</strong></td><td>화주명, 고수익태그, 영업사원, BKG, 실선적, CM1/TEU</td></tr>
-    <tr><td><strong>영업사원별</strong></td><td>영업사원별 화주수, BKG, 실선적, 고수익 비중</td></tr>
+    <tr><td><strong>지역별</strong></td><td>도착지/선적지별(보기 필터 연동) BKG, 실선적, 고수익 비중 + 주차별 차트</td></tr>
+    <tr><td><strong>화주별</strong></td><td>화주명, <span class="tag tag-hi">고수익태그</span>, 영업사원, BKG, 실선적, CM1/TEU</td></tr>
+    <tr><td><strong>영업사원별</strong></td><td>화주수(코드 기준 중복제거), BKG, 실선적, 고수익 비중</td></tr>
   </table>
-
-  <h3>주차별 3주전 BKG 차트</h3>
-  <p>선택 월의 주차별 BKG를 도착지 스택 바 차트로 표시합니다.</p>
+  <h3>지역별 추가 차트</h3>
+  <ul>
+    <li><strong>고수익 vs 저수익 리드타임 비중</strong> — WOS 단계별 고수익(초록)/저수익(빨강) 비교</li>
+    <li><strong>고수익화주 비중 추이</strong> — 월별 WOS-3 BKG 중 고수익 비율 트렌드</li>
+  </ul>
 </div>
 <div class="card en" style="display:none">
   <h3>Sub-tabs</h3>
-  <p><strong>By Region</strong>: WOS-3 BKG by dest/origin (follows global View filter) |
-  <strong>By Shipper</strong>: Profit tag, salesperson, BKG, Shipment, CM1/TEU |
-  <strong>By Salesperson</strong>: Shipper count, BKG, Shipment, High-profit ratio</p>
-  <h3>Weekly WOS-3 BKG Chart</h3>
-  <p>Stacked bar by destination for the selected month.</p>
+  <table>
+    <tr><th>Sub-tab</th><th>Content</th></tr>
+    <tr><td><strong>By Region</strong></td><td>BKG, LFT, High-profit ratio (follows View filter) + weekly chart</td></tr>
+    <tr><td><strong>By Shipper</strong></td><td>Shipper, <span class="tag tag-hi">Profit Tag</span>, Salesperson, BKG, LFT, CM1/TEU</td></tr>
+    <tr><td><strong>By Salesperson</strong></td><td>Shipper count, BKG, LFT, High-profit ratio</td></tr>
+  </table>
+  <h3>Additional Charts (Region view)</h3>
+  <ul>
+    <li><strong>High vs Low Profit Lead Time</strong> — WOS stage comparison</li>
+    <li><strong>High-Profit Ratio Trend</strong> — Monthly WOS-3 BKG high-profit %</li>
+  </ul>
 </div>
 
-<!-- ═══════════════════════════════════════ -->
-<h2 id="tab3" class="ko">Tab 3: 전환 분석</h2>
-<h2 class="en" style="display:none">Tab 3: Conversion Analysis</h2>
+<!-- TAB3 -->
+<h2 id="tab3" class="ko">③ 전환 분석</h2><h2 class="en" style="display:none">③ Conversion Analysis</h2>
 <div class="card ko">
-  <h3>WOS-3 → 실선적 퍼널</h3>
-  <p>3주전 부킹이 실선적까지 전환되는 과정을 퍼널 차트로 시각화합니다.</p>
-  <p><code>3주전 BKG → 캔슬 제외 → 실선적(Normal)</code></p>
-
-  <h3>실선적률 추이</h3>
-  <p>도착지별 월간 실선적률 추이를 라인 차트로 표시합니다.</p>
-
-  <h3>캔슬률 분석</h3>
   <ul>
-    <li><strong>도착지별 캔슬률</strong> — 어떤 구간에서 캔슬이 많은지 파악</li>
-    <li><strong>월별 캔슬률 추이</strong> — 캔슬률이 개선/악화되는지 추적</li>
+    <li><strong>WOS-3 → 실선적 퍼널</strong> — 3주전BKG → 캔슬제외 → 실선적(Normal)</li>
+    <li><strong>실선적률 추이</strong> — 지역별 월간 실선적률 라인 차트</li>
+    <li><strong>캔슬률 바 차트</strong> — 지역별 캔슬률 (빨강>30%, 노랑>20%, 초록)</li>
+    <li><strong>월별 캔슬률 추이</strong> — 전체 캔슬률 트렌드</li>
     <li><strong>화주별 캔슬 Top 15</strong> — 캔슬이 많은 화주 식별</li>
   </ul>
 </div>
 <div class="card en" style="display:none">
-  <h3>Funnel: WOS-3 &rarr; Shipment</h3>
-  <p>WOS-3 BKG &rarr; Cancel removed &rarr; Shipment(Normal)</p>
-  <h3>Shipment Rate Trend</h3>
-  <p>Monthly shipment rate by destination (line chart).</p>
-  <h3>Cancel Analysis</h3>
-  <p>Cancel rate by region | Monthly cancel trend | Top 15 cancel shippers</p>
+  <ul>
+    <li><strong>Funnel</strong> — WOS-3 BKG → Cancel Removed → LFT(Normal)</li>
+    <li><strong>LFT Rate Trend</strong> — Monthly by region</li>
+    <li><strong>Cancel Rate Bar</strong> — By region (Red>30%, Yellow>20%, Green)</li>
+    <li><strong>Monthly Cancel Trend</strong> — Overall cancel rate</li>
+    <li><strong>Top 15 Cancel Shippers</strong></li>
+  </ul>
 </div>
 
-<!-- ═══════════════════════════════════════ -->
-<h2 id="tab4" class="ko">Tab 4: 수익성 분석</h2>
-<h2 class="en" style="display:none">Tab 4: Profitability Analysis</h2>
+<!-- TAB4 -->
+<h2 id="tab4" class="ko">④ 수익성 분석</h2><h2 class="en" style="display:none">④ Profitability</h2>
 <div class="card ko">
-  <h3>CM1/TEU 분석</h3>
   <ul>
-    <li><strong>도착지별 CM1/TEU</strong> — 구간별 수익성 비교</li>
-    <li><strong>CM1/TEU 월별 추이</strong> — 수익성 변화 트렌드</li>
+    <li><strong>지역별 CM1/TEU</strong> + <strong>CM1/TEU 월별 추이</strong></li>
+    <li><strong>CM1/TEU Top 10 / Bottom 10 화주</strong> — 영업사원 포함</li>
+    <li><strong>수익 집중도</strong> — Top 10/20 화주의 CM1 비중 + 누적 커브</li>
   </ul>
-
-  <h3>화주 수익성 랭킹</h3>
-  <ul>
-    <li><strong>CM1/TEU Top 10</strong> — 가장 수익성 높은 화주 (초록 표시)</li>
-    <li><strong>CM1/TEU Bottom 10</strong> — 가장 수익성 낮은 화주 (빨강 표시)</li>
-  </ul>
-
-  <h3>수익 집중도</h3>
-  <p>Top 10/20 화주가 전체 CM1의 몇 %를 차지하는지, 누적 커브로 표시합니다.</p>
-  <p>집중도가 높을수록 소수 화주 의존도가 높음을 의미합니다.</p>
 </div>
 <div class="card en" style="display:none">
-  <h3>CM1/TEU Analysis</h3>
-  <p>By destination | Monthly trend</p>
-  <h3>Shipper Ranking</h3>
-  <p>Top 10 (green) / Bottom 10 (red) by CM1/TEU</p>
-  <h3>Revenue Concentration</h3>
-  <p>Top 10/20 shippers share of total CM1 + cumulative curve. Higher = more dependency.</p>
+  <ul>
+    <li><strong>CM1/TEU by Region</strong> + <strong>Monthly Trend</strong></li>
+    <li><strong>CM1/TEU Top 10 / Bottom 10 Shippers</strong> — with Salesperson</li>
+    <li><strong>Revenue Concentration</strong> — Top 10/20 share + cumulative curve</li>
+  </ul>
 </div>
 
-<!-- ═══════════════════════════════════════ -->
-<h2 id="tab5" class="ko">Tab 5: 부킹 패턴</h2>
-<h2 class="en" style="display:none">Tab 5: Booking Patterns</h2>
+<!-- TAB5 -->
+<h2 id="tab5" class="ko">⑤ 부킹 패턴</h2><h2 class="en" style="display:none">⑤ Booking Patterns</h2>
 <div class="card ko">
-  <h3>WOS (Week of Sailing) 단계별 부킹 접수 분석</h3>
-  <p>WOS는 <strong>Week of Sailing</strong>의 약자로, 선박 출항 주차를 기준으로 부킹이 얼마나 미리 접수되었는지를 나타냅니다.</p>
-
-  <h3>WOS 계산 방법</h3>
-  <p><code>Lead_time = week_start(BKG_Schedule) - Booking_date</code></p>
-  <p>Booking Schedule(예정 출항일)의 <strong>주 시작일(일요일)</strong>에서 <strong>부킹 접수일</strong>을 뺀 일수로 WOS 단계를 결정합니다.</p>
-
-  <table>
-    <tr><th>WOS 단계</th><th>의미</th><th>Lead_time 기준</th><th>예시</th></tr>
-    <tr><td><strong style="color:#1a73e8">WOS-3</strong></td><td>출항 3주+ 전 부킹</td><td>≥ 15일</td><td>4/1 부킹 → 4/26 출항 (25일 전) → WOS-3</td></tr>
-    <tr><td><strong style="color:#f9ab00">WOS-2</strong></td><td>출항 2주 전 부킹</td><td>8 ~ 14일</td><td>4/15 부킹 → 4/26 출항 (11일 전) → WOS-2</td></tr>
-    <tr><td><strong style="color:#ea4335">WOS-1</strong></td><td>출항 1주 전 부킹</td><td>1 ~ 7일</td><td>4/20 부킹 → 4/26 출항 (6일 전) → WOS-1</td></tr>
-    <tr><td><strong style="color:#5f6368">WOS</strong></td><td>출항 주 부킹 (긴급)</td><td>< 1일</td><td>4/26 부킹 → 4/26 출항 (당일) → WOS</td></tr>
-  </table>
-
-  <div class="tip">
-    <strong>WOS-3 비중이 높을수록 좋습니다.</strong> 조기 부킹은 선복 계획에 도움이 되고, 캔슬 위험이 낮으며, 일반적으로 수익성이 높습니다. WOS-1이나 WOS(긴급 부킹)는 운영 리스크가 높고 할인 운임이 적용되는 경우가 많습니다.
-  </div>
-
-  <h3>대시보드에서의 활용</h3>
   <ul>
-    <li><strong>소석률 현황 (Tab1)</strong>: 3주전 BKG = WOS-3 부킹만 집계</li>
-    <li><strong>부킹 트렌드 (Tab2)</strong>: WOS-3 기준 지역별/화주별 실적</li>
-    <li><strong>부킹 패턴 (Tab5)</strong>: WOS-3 / WOS-2 / WOS-1 / WOS 비중 분석</li>
+    <li><strong>지역별 WOS 분포 테이블</strong> — 전체BKG 중 WOS-3/2/1/WOS 비중</li>
+    <li><strong>100% 스택 바 차트</strong> — 지역별 부킹 시점 비중</li>
+    <li><strong>화주별 WOS 분포</strong> — 고수익태그 + 영업사원 포함</li>
+    <li><strong>고수익 vs 저수익 리드타임</strong> + <strong>고수익 WOS-3 비중 추이</strong></li>
   </ul>
-  <p>Tab5에서 <strong>지역별</strong>로는 어떤 구간이 조기 부킹 비율이 높은지, <strong>화주별</strong>로는 어떤 화주가 얼마나 미리 부킹하는지 파악할 수 있습니다.</p>
-
-  <h3>지역별 부킹 시점 비중</h3>
-  <p>100% 스택 바 차트로 각 지역의 WOS-3 비중을 비교합니다.</p>
-
-  <h3>화주별 부킹 접수 시점</h3>
-  <p>화주별 WOS 분포 + 고수익태그 + 영업사원 정보를 함께 확인합니다.</p>
 </div>
 <div class="card en" style="display:none">
-  <h3>WOS (Week of Sailing) Stage Analysis</h3>
-  <p>WOS stands for <strong>Week of Sailing</strong>, measuring how far in advance bookings are placed relative to the vessel departure week.</p>
-
-  <h3>Calculation</h3>
-  <p><code>Lead_time = week_start(BKG_Schedule) - Booking_date</code></p>
-  <p>The Sunday of the Booking Schedule week minus the Booking date determines the WOS stage.</p>
-
-  <table>
-    <tr><th>WOS Stage</th><th>Meaning</th><th>Lead_time</th><th>Example</th></tr>
-    <tr><td><strong style="color:#1a73e8">WOS-3</strong></td><td>Booked 3+ weeks ahead</td><td>&ge; 15 days</td><td>Booked Apr 1 → Sails Apr 26 (25 days) → WOS-3</td></tr>
-    <tr><td><strong style="color:#f9ab00">WOS-2</strong></td><td>Booked 2 weeks ahead</td><td>8 ~ 14 days</td><td>Booked Apr 15 → Sails Apr 26 (11 days) → WOS-2</td></tr>
-    <tr><td><strong style="color:#ea4335">WOS-1</strong></td><td>Booked 1 week ahead</td><td>1 ~ 7 days</td><td>Booked Apr 20 → Sails Apr 26 (6 days) → WOS-1</td></tr>
-    <tr><td><strong style="color:#5f6368">WOS</strong></td><td>Booked in sailing week</td><td>&lt; 1 day</td><td>Booked Apr 26 → Sails Apr 26 (same day) → WOS</td></tr>
-  </table>
-
-  <div class="tip">
-    <strong>Higher WOS-3 ratio is better.</strong> Early bookings help with capacity planning, have lower cancel risk, and generally higher profitability. WOS-1 or WOS (last-minute) bookings carry operational risk and often receive discounted rates.
-  </div>
-
-  <h3>Dashboard Usage</h3>
   <ul>
-    <li><strong>Occupancy (Tab1)</strong>: WOS-3 BKG = only WOS-3 bookings counted</li>
-    <li><strong>Trends (Tab2)</strong>: WOS-3 based regional/shipper performance</li>
-    <li><strong>Patterns (Tab5)</strong>: WOS-3 / WOS-2 / WOS-1 / WOS ratio analysis</li>
+    <li><strong>Regional WOS Distribution</strong> — WOS-3/2/1/WOS ratio</li>
+    <li><strong>100% Stacked Bar</strong> — Booking timing by region</li>
+    <li><strong>Shipper WOS Distribution</strong> — with Profit Tag + Salesperson</li>
+    <li><strong>High vs Low Profit Lead Time</strong> + <strong>Profit WOS-3 Trend</strong></li>
   </ul>
-  <p>In Tab5, view <strong>by region</strong> to see which routes have higher early-booking ratios, and <strong>by shipper</strong> to understand individual booking behaviors.</p>
-
-  <h3>Regional Booking Timing</h3>
-  <p>100% stacked bar: higher WOS-3 ratio = earlier booking pattern.</p>
-  <h3>Shipper Booking Timing</h3>
-  <p>Per-shipper WOS distribution with profit tag and salesperson.</p>
 </div>
 
-<!-- ═══════════════════════════════════════ -->
-<h2 id="data" class="ko">데이터 기준 정의</h2>
-<h2 class="en" style="display:none">Data Definitions</h2>
+<!-- WOS -->
+<h2 id="wos" class="ko">WOS (Week of Sailing) 상세</h2><h2 class="en" style="display:none">WOS Details</h2>
 <div class="card ko">
-  <h3>주차/월 기준 (445 캘린더)</h3>
-  <p>4-4-5 주차 패턴을 사용합니다. 2026년 기준:</p>
+  <p>WOS = <strong>Week of Sailing</strong>. Booking Schedule의 주 시작일(일요일) - 부킹 접수일로 계산합니다.</p>
   <table>
-    <tr><th>월</th><th>주 수</th><th>기간</th></tr>
-    <tr><td>1월</td><td>4주</td><td>01/04 ~ 01/25</td></tr>
-    <tr><td>2월</td><td>4주</td><td>02/01 ~ 02/22</td></tr>
-    <tr><td>3월</td><td>5주</td><td>03/01 ~ 03/29</td></tr>
-    <tr><td>4월</td><td>4주</td><td>04/05 ~ 04/26</td></tr>
-    <tr><td>5월</td><td>4주</td><td>05/03 ~ 05/24</td></tr>
-    <tr><td>6월</td><td>5주</td><td>05/31 ~ 06/28</td></tr>
+    <tr><th>단계</th><th>기준</th><th>의미</th><th>예시</th></tr>
+    <tr><td style="color:#1a73e8;font-weight:700">WOS-3</td><td>≥ 15일</td><td>3주+ 전 부킹</td><td>4/1 부킹 → 4/26 출항 (25일)</td></tr>
+    <tr><td style="color:#f9ab00;font-weight:700">WOS-2</td><td>8~14일</td><td>2주 전 부킹</td><td>4/15 부킹 → 4/26 출항 (11일)</td></tr>
+    <tr><td style="color:#ea4335;font-weight:700">WOS-1</td><td>1~7일</td><td>1주 전 부킹</td><td>4/20 부킹 → 4/26 출항 (6일)</td></tr>
+    <tr><td style="color:#5f6368;font-weight:700">WOS</td><td>&lt; 1일</td><td>출항 주 부킹</td><td>4/26 부킹 → 4/26 출항 (당일)</td></tr>
   </table>
-  <p>패턴: <code>4주-4주-5주</code> 반복 (분기별)</p>
-
-  <h3>실선적 기준</h3>
+  <div class="tip"><strong>WOS-3 비중이 높을수록 좋습니다.</strong> 조기 부킹 = 선복 계획 안정 + 캔슬 위험 감소 + 높은 수익성</div>
+</div>
+<div class="card en" style="display:none">
+  <p>WOS = <strong>Week of Sailing</strong>. Calculated as BKG Schedule week start (Sunday) minus Booking date.</p>
   <table>
-    <tr><th>항목</th><th>기준</th></tr>
-    <tr><td><strong>실선적(Normal)</strong></td><td>LST_Status = 'Normal'인 부킹만 카운트</td></tr>
-    <tr><td><strong>week_start_date</strong></td><td>Date_vsl(실제 출항일)의 일요일 기준 주 시작일</td></tr>
-    <tr><td><strong>Lead_time(BKG_Sche)</strong></td><td>Booking_schedule 주시작일 - Booking_date 기준 WOS 분류</td></tr>
+    <tr><th>Stage</th><th>Lead Time</th><th>Meaning</th><th>Example</th></tr>
+    <tr><td style="color:#1a73e8;font-weight:700">WOS-3</td><td>≥ 15 days</td><td>3+ weeks ahead</td><td>Booked Apr 1 → Sails Apr 26</td></tr>
+    <tr><td style="color:#f9ab00;font-weight:700">WOS-2</td><td>8~14 days</td><td>2 weeks ahead</td><td>Booked Apr 15 → Sails Apr 26</td></tr>
+    <tr><td style="color:#ea4335;font-weight:700">WOS-1</td><td>1~7 days</td><td>1 week ahead</td><td>Booked Apr 20 → Sails Apr 26</td></tr>
+    <tr><td style="color:#5f6368;font-weight:700">WOS</td><td>&lt; 1 day</td><td>Sailing week</td><td>Booked Apr 26 → Sails Apr 26</td></tr>
   </table>
+  <div class="tip"><strong>Higher WOS-3 = better.</strong> Early bookings → stable capacity + lower cancel risk + higher profitability</div>
+</div>
 
-  <h3>3주전 BKG 필터 (제외 조건)</h3>
+<!-- PROFIT -->
+<h2 id="profit" class="ko">고수익화주 분류</h2><h2 class="en" style="display:none">Profit Classification</h2>
+<div class="card ko">
+  <p>선적지(POR Port)별 화주 CM1/TEU를 평균과 비교하여 분류합니다.</p>
+  <table>
+    <tr><th>태그</th><th>기준</th></tr>
+    <tr><td><span class="tag tag-hi">고수익</span></td><td>화주 CM1/TEU ≥ 선적지 평균</td></tr>
+    <tr><td><span class="tag tag-lo">저수익</span></td><td>화주 CM1/TEU &lt; 선적지 평균</td></tr>
+  </table>
+  <h3>태그 산정 우선순위</h3>
+  <ol>
+    <li>전월 + 동일 선적지 CM1/TEU vs 평균</li>
+    <li>전월 + 전체 선적지 CM1/TEU vs 전체 평균</li>
+    <li>당월 + 동일 선적지</li>
+    <li>Grade C+D → 고수익, A+B → 저수익</li>
+  </ol>
+  <p>동일 선적지+화주 조합에 <strong>하나의 태그만</strong> 부여됩니다 (최신월 기준).</p>
+</div>
+<div class="card en" style="display:none">
+  <p>Compares shipper CM1/TEU against POR port average.</p>
+  <table>
+    <tr><th>Tag</th><th>Criteria</th></tr>
+    <tr><td><span class="tag tag-hi">High-Profit</span></td><td>Shipper CM1/TEU ≥ Port average</td></tr>
+    <tr><td><span class="tag tag-lo">Low-Profit</span></td><td>Shipper CM1/TEU &lt; Port average</td></tr>
+  </table>
+  <h3>Tag Priority</h3>
+  <ol>
+    <li>Prev month + same POR port vs average</li>
+    <li>Prev month + all ports vs overall average</li>
+    <li>Current month + same POR</li>
+    <li>Grade C+D → High, A+B → Low</li>
+  </ol>
+  <p>One tag per POR+shipper combination (latest month basis).</p>
+</div>
+
+<!-- DATA -->
+<h2 id="data" class="ko">데이터 기준</h2><h2 class="en" style="display:none">Data Definitions</h2>
+<div class="card ko">
+  <h3>445 캘린더</h3>
+  <p>4-4-5 주차 패턴. 2026년: 1월 1주=1/4(일)</p>
+  <table>
+    <tr><th>월</th><th>주수</th><th>기간</th></tr>
+    <tr><td>1월</td><td>4</td><td>01/04~01/25</td></tr><tr><td>2월</td><td>4</td><td>02/01~02/22</td></tr>
+    <tr><td>3월</td><td>5</td><td>03/01~03/29</td></tr><tr><td>4월</td><td>4</td><td>04/05~04/26</td></tr>
+    <tr><td>5월</td><td>4</td><td>05/03~05/24</td></tr><tr><td>6월</td><td>5</td><td>05/31~06/28</td></tr>
+  </table>
+  <h3>실선적 = Normal</h3>
+  <p>LST_Status = 'Normal'인 부킹만 실선적으로 집계합니다.</p>
+  <h3>제외 조건 (-3W 필터)</h3>
   <table>
     <tr><th>조건</th><th>설명</th></tr>
-    <tr><td>조건1</td><td>Cancel이면서 부킹 후 3일 이내 캔슬 → 제외</td></tr>
-    <tr><td>조건2</td><td>Cancel이면서 출항 21일+ 전 부킹 & 7일 이내 캔슬 → 제외</td></tr>
+    <tr><td>조건1</td><td>Cancel + 부킹 후 3일 이내 캔슬 → 제외</td></tr>
+    <tr><td>조건2</td><td>Cancel + 출항 21일+ 전 부킹 + 7일 이내 캔슬 → 제외</td></tr>
   </table>
-
-  <h3>고수익 화주 분류</h3>
-  <p>선적지(POR Port)별 화주의 CM1/TEU를 선적지 평균과 비교하여 분류합니다.</p>
-  <table>
-    <tr><th>분류</th><th>기준</th><th>표시</th></tr>
-    <tr><td><span class="tag tag-hi">고수익</span></td><td>화주 CM1/TEU ≥ 선적지 평균</td><td>초록색</td></tr>
-    <tr><td><span class="tag tag-lo">저수익</span></td><td>화주 CM1/TEU < 선적지 평균</td><td>빨간색</td></tr>
-  </table>
-
-  <h3>고수익태그 산정 우선순위</h3>
-  <table>
-    <tr><th>순위</th><th>기준</th></tr>
-    <tr><td>1순위</td><td>전월 + 동일 선적지에서의 CM1/TEU vs 선적지 평균</td></tr>
-    <tr><td>2순위</td><td>전월 + 전체 선적지에서의 CM1/TEU vs 전체 평균</td></tr>
-    <tr><td>3순위</td><td>당월 + 동일 선적지 데이터</td></tr>
-    <tr><td>4순위</td><td>Grade C+D → 고수익, A+B → 저수익</td></tr>
-  </table>
-  <p>동일 선적지+화주 조합은 하나의 태그만 부여됩니다 (최신월 기준).</p>
-
   <h3>BSA</h3>
-  <table>
-    <tr><th>항목</th><th>설명</th></tr>
-    <tr><td>출처</td><td>Tableau BSA raw (월간회의3주전) 뷰</td></tr>
-    <tr><td>필터</td><td>YYYY = 2025,2026,2027 / YYYYMM = 전체 / Proforma/Revised</td></tr>
-    <tr><td>팀별</td><td>OBT, EST, IST, JBT 각각 다운로드</td></tr>
-    <tr><td>주차별</td><td>WW 컬럼으로 주차 필터 가능</td></tr>
-  </table>
+  <p>Tableau BSA raw 뷰 | 팀별(OBT/EST/IST/JBT) | WW 주차별 필터 가능</p>
 </div>
 <div class="card en" style="display:none">
   <h3>445 Calendar</h3>
-  <p>4-4-5 week pattern: Jan(4wk) Feb(4wk) Mar(5wk) Apr(4wk) May(4wk) Jun(5wk)...</p>
-  <h3>Shipment: LST_Status=Normal only</h3>
-  <h3>WOS Classification: Based on BKG Schedule week start - Booking date</h3>
-  <h3>Exclusion: Cancel within 3 days | Cancel within 7 days + 21+ days before departure</h3>
-  <h3>Profit Tag Priority</h3>
-  <p>1. Prev month + same POR | 2. Prev month + all POR | 3. Current month | 4. Grade C+D=High, A+B=Low</p>
-  <h3>BSA: Tableau BSA raw view, by team (OBT/EST/IST/JBT), WW weekly filter available</h3>
+  <p>4-4-5 week pattern. 2026: Jan Week1 = 01/04 (Sun)</p>
+  <h3>LFT = Normal status only</h3>
+  <h3>Exclusion Rules</h3>
+  <p>1) Cancel within 3 days of booking → exclude</p>
+  <p>2) Cancel + booked 21+ days before + cancelled within 7 days → exclude</p>
+  <h3>BSA: Tableau BSA raw view, per team, WW weekly filter available</h3>
 </div>
 
-<!-- ═══════════════════════════════════════ -->
-<h2 id="update" class="ko">데이터 업데이트</h2>
-<h2 class="en" style="display:none">Data Updates</h2>
+<!-- UPDATE -->
+<h2 id="update" class="ko">자동 업데이트</h2><h2 class="en" style="display:none">Auto Updates</h2>
 <div class="card ko">
-  <h3>일일 업데이트 프로세스</h3>
-  <p><code>daily_3w_dashboard.py</code>를 실행하면 다음 순서로 진행됩니다:</p>
+  <h3>매일 09:03 자동 실행</h3>
   <ol>
-    <li><strong>Tableau 다운로드</strong> — 1.csv (부킹 원본), 2.csv (add-on), BSA raw</li>
-    <li><strong>Booking Snapshot 처리</strong> — 수식 계산, 필터 적용, 고수익태그 산정</li>
-    <li><strong>JSON 생성 + 업로드</strong> — 집계 데이터를 Google Drive에 업로드, dist/data.json에 복사</li>
+    <li>Tableau에서 1.csv + 2.csv + BSA 다운로드</li>
+    <li>Booking Snapshot 처리 (수식, 필터, 고수익태그)</li>
+    <li>JSON 생성 → Google Drive 업로드 + dist/data.json 복사</li>
+    <li><strong>GitHub Pages 자동 push</strong> → 웹 배포 완료</li>
   </ol>
-
   <h3>데이터 범위</h3>
   <table>
     <tr><th>파일</th><th>범위</th></tr>
     <tr><td>1.csv (Booking_schedule)</td><td>2025-12-28 ~ 현재 주 +4주</td></tr>
-    <tr><td>2.csv (Date_vsl)</td><td>전체 (Tableau 뷰 기준)</td></tr>
+    <tr><td>2.csv (Date_vsl)</td><td>전체</td></tr>
     <tr><td>BSA</td><td>YYYY 2025~2027, YYYYMM 전체</td></tr>
   </table>
-
-  <h3>웹 배포</h3>
-  <p>dist/data.json을 GitHub Pages에 push하면 웹 대시보드에 자동 반영됩니다.</p>
-  <p>URL: <a href="https://jkpark-create.github.io/kmtc-3w-dashboard-web/">https://jkpark-create.github.io/kmtc-3w-dashboard-web/</a></p>
 </div>
 <div class="card en" style="display:none">
-  <h3>Daily Update</h3>
-  <p>Run <code>daily_3w_dashboard.py</code>: 1) Tableau download 2) Snapshot processing 3) JSON upload</p>
+  <h3>Daily at 09:03 (auto)</h3>
+  <ol>
+    <li>Download from Tableau (1.csv + 2.csv + BSA)</li>
+    <li>Process booking snapshot (formulas, filters, profit tags)</li>
+    <li>Generate JSON → Google Drive + dist/data.json</li>
+    <li><strong>Auto push to GitHub Pages</strong></li>
+  </ol>
   <h3>Data Range</h3>
   <p>1.csv: 2025-12-28 ~ current week +4 weeks | 2.csv: Full | BSA: 2025-2027 all months</p>
-  <h3>Web: Push dist/data.json to GitHub Pages</h3>
-  <p><a href="https://jkpark-create.github.io/kmtc-3w-dashboard-web/">https://jkpark-create.github.io/kmtc-3w-dashboard-web/</a></p>
 </div>
 
 <div style="text-align:center;padding:40px;color:#5f6368;font-size:12px">
-  -3W Booking Dashboard Guide | Last updated: 2026-04-13
+  -3W Booking Dashboard Guide | Last updated: 2026-04-14
 </div>
 
 </div>
