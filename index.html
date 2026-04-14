@@ -730,7 +730,7 @@ function renderTab2() {
     })).sort((a,b)=>b.bkg-a.bkg).slice(0,15);
 
     html += `<div class="chart-card"><h3>${L('3주전 BKG 현황','WOS-3 BKG Status')} - ${useVl} (${fmtMonth(month)})</h3>
-    <table class="summary"><tr><th>${useVl}</th><th>BKG</th><th>${L('실선적(Normal)','LFT(Normal)')}</th><th>${L('실선적률','LFT Rate')}</th><th>${L('고수익BKG','Hi BKG')}</th><th>${L('고수익%','Hi%')}</th></tr>`;
+    <table class="summary"><tr><th>${useVl}</th><th>BKG</th><th>${L('실선적(Normal)','LFT(Normal)')}</th><th>${L('실선적률','LFT Rate')}</th><th>${L('구간별고수익','Route Hi')}</th><th>${L('구간별고수익%','Route Hi%')}</th></tr>`;
     rows.forEach(r => {
       html += `<tr><td class="lbl">${r.name}</td><td>${fmt(r.bkg)}</td><td>${fmt(r.ship)}</td><td>${pct(r.ship,r.bkg)}</td><td>${fmt(r.hi)}</td><td>${pct(r.hi,r.bkg)}</td></tr>`;
     });
@@ -746,7 +746,7 @@ function renderTab2() {
 
     // 고수익 vs 저수익 리드타임 비교 + 고수익 비중 추이
     html += `<div class="chart-row">
-      <div class="chart-card" style="flex:1"><h3>${L('고수익 vs 저수익 리드타임 비중','High vs Low Profit Lead Time Ratio')}</h3><div id="ch2lt" style="height:320px"></div></div>
+      <div class="chart-card" style="flex:1"><h3>${L('고수익화주 vs 저수익화주 리드타임','Hi vs Lo Shipper Lead Time')}</h3><div id="ch2lt" style="height:320px"></div></div>
       <div class="chart-card" style="flex:1"><h3>${L('고수익화주 비중 추이','High-Profit Shipper Ratio Trend')}</h3><div id="ch2hi" style="height:320px"></div></div>
     </div>`;
 
@@ -776,9 +776,9 @@ function renderTab2() {
     const loPcts = wosKeys.map(k => loTotal > 0 ? sum(loSD,k)/loTotal*100 : 0);
 
     Plotly.newPlot('ch2lt', [
-      {x: wosLabels, y: hiPcts, type:'bar', name: L('고수익','High-Profit'), marker:{color:'#34a853'},
+      {x: wosLabels, y: hiPcts, type:'bar', name: L('고수익화주','Hi-Shipper'), marker:{color:'#34a853'},
        text: hiPcts.map(v=>v.toFixed(0)+'%'), textposition:'auto', textfont:{size:12}},
-      {x: wosLabels, y: loPcts, type:'bar', name: L('저수익','Low-Profit'), marker:{color:'#ea4335'},
+      {x: wosLabels, y: loPcts, type:'bar', name: L('저수익화주','Lo-Shipper'), marker:{color:'#ea4335'},
        text: loPcts.map(v=>v.toFixed(0)+'%'), textposition:'auto', textfont:{size:12}},
     ], {barmode:'group', margin:{l:40,r:20,t:20,b:30},
       yaxis:{title:'%',gridcolor:'#f0f0f0',range:[0,100]},
@@ -832,7 +832,7 @@ function renderShipperTable(month) {
   }).sort((a,b)=>b.bkg-a.bkg);
 
   let h = `<div class="chart-card"><h3>${L('화주별 3주전 BKG','WOS-3 BKG by Shipper')} (${fmtMonth(month)})</h3>
-  <table class="summary"><tr><th>${L('화주','Shipper')}</th><th>${L('고수익태그','Profit Tag')}</th><th>${L('영업사원','Salesperson')}</th><th>BKG</th><th>${L('실선적','LFT')}</th><th>${L('실선적률','Rate')}</th><th>${L('고수익BKG','Hi BKG')}</th><th>${L('고수익%','Hi%')}</th><th>CM1</th><th>CM1/TEU</th></tr>`;
+  <table class="summary"><tr><th>${L('화주','Shipper')}</th><th>${L('고수익화주','Hi-Shipper')}</th><th>${L('영업사원','Salesperson')}</th><th>BKG</th><th>${L('실선적','LFT')}</th><th>${L('실선적률','Rate')}</th><th>${L('구간별고수익','Route Hi')}</th><th>${L('구간별고수익%','Route Hi%')}</th><th>CM1</th><th>CM1/TEU</th></tr>`;
 
   rows.forEach(r => {
     const ct = r.cm1l>0 ? r.cm1/r.cm1l : 0;
@@ -871,7 +871,7 @@ function renderSalesmanTable(month) {
   })).sort((a,b)=>b.bkg-a.bkg);
 
   let h = `<div class="chart-card"><h3>${L('영업사원별 실적','Salesperson Performance')} (${fmtMonth(month)})</h3>
-  <table class="summary"><tr><th>${L('영업사원','Salesperson')}</th><th>${L('화주수','Shippers')}</th><th>BKG</th><th>${L('실선적','LFT')}</th><th>${L('실선적률','Rate')}</th><th>${L('고수익BKG','Hi BKG')}</th><th>${L('고수익%','Hi%')}</th><th>CM1</th><th>CM1/TEU</th></tr>`;
+  <table class="summary"><tr><th>${L('영업사원','Salesperson')}</th><th>${L('화주수','Shippers')}</th><th>BKG</th><th>${L('실선적','LFT')}</th><th>${L('실선적률','Rate')}</th><th>${L('구간별고수익','Route Hi')}</th><th>${L('구간별고수익%','Route Hi%')}</th><th>CM1</th><th>CM1/TEU</th></tr>`;
 
   rows.forEach(r => {
     const ct = r.cm1l>0?r.cm1/r.cm1l:0;
@@ -1125,7 +1125,7 @@ function renderTab5() {
   }).sort((a,b)=>b.total-a.total);
 
   html += `<div class="chart-card"><h3>${L('화주별 부킹 접수 시점','Shipper Booking Timing')} (${fmtMonth(month)})</h3>
-  <table class="summary"><tr><th>${L('화주','Shipper')}</th><th>${L('고수익태그','Tag')}</th><th>${L('영업사원','Sales')}</th><th>${L('전체BKG','Total')}</th><th>WOS-3</th><th>비중</th><th>WOS-2</th><th>비중</th><th>WOS-1</th><th>비중</th><th>WOS</th><th>비중</th></tr>`;
+  <table class="summary"><tr><th>${L('화주','Shipper')}</th><th>${L('고수익화주','Hi-Shipper')}</th><th>${L('영업사원','Sales')}</th><th>${L('전체BKG','Total')}</th><th>WOS-3</th><th>비중</th><th>WOS-2</th><th>비중</th><th>WOS-1</th><th>비중</th><th>WOS</th><th>비중</th></tr>`;
   custRows.forEach(r => {
     const tagStyle = r.tag==='고수익' ? 'color:#34a853;font-weight:600' : r.tag==='저수익' ? 'color:#ea4335' : '';
     html += `<tr><td class="lbl">${r.name}</td><td style="${tagStyle}">${r.tag}</td><td>${r.sales}</td><td>${fmt(r.total)}</td>`;
@@ -1138,7 +1138,7 @@ function renderTab5() {
 
   // 4. 고수익 vs 저수익 리드타임 + 비중 추이
   html += `<div class="chart-row">
-    <div class="chart-card" style="flex:1"><h3>${L('고수익 vs 저수익 리드타임 비중','High vs Low Profit Lead Time')}</h3><div id="ch5lt" style="height:320px"></div></div>
+    <div class="chart-card" style="flex:1"><h3>${L('고수익화주 vs 저수익화주 리드타임','Hi vs Lo Shipper Lead Time')}</h3><div id="ch5lt" style="height:320px"></div></div>
     <div class="chart-card" style="flex:1"><h3>${L('고수익화주 WOS-3 비중 추이','High-Profit WOS-3 Ratio Trend')}</h3><div id="ch5hi" style="height:320px"></div></div>
   </div>`;
 
@@ -1164,10 +1164,10 @@ function renderTab5() {
   const loT5 = wosKeys.reduce((s,k) => s + sum(loSD5,k), 0);
   Plotly.newPlot('ch5lt', [
     {x:wosLabels, y:wosKeys.map(k => hiT5>0 ? sum(hiSD5,k)/hiT5*100 : 0), type:'bar',
-     name:L('고수익','High-Profit'), marker:{color:'#34a853'},
+     name:L('고수익화주','Hi-Shipper'), marker:{color:'#34a853'},
      text:wosKeys.map(k => hiT5>0 ? (sum(hiSD5,k)/hiT5*100).toFixed(0)+'%' : ''), textposition:'auto', textfont:{size:12}},
     {x:wosLabels, y:wosKeys.map(k => loT5>0 ? sum(loSD5,k)/loT5*100 : 0), type:'bar',
-     name:L('저수익','Low-Profit'), marker:{color:'#ea4335'},
+     name:L('저수익화주','Lo-Shipper'), marker:{color:'#ea4335'},
      text:wosKeys.map(k => loT5>0 ? (sum(loSD5,k)/loT5*100).toFixed(0)+'%' : ''), textposition:'auto', textfont:{size:12}},
   ], {barmode:'group',margin:{l:40,r:20,t:20,b:30},
     yaxis:{title:'%',gridcolor:'#f0f0f0',range:[0,100]},
@@ -1212,7 +1212,7 @@ const T = {
     weeklyAvg: '주간 평균', monthlyTotal: '월 합계', total: '합계',
     region: '지역별', byCust: '화주별', bySales: '영업사원별',
     w3bkgStatus: '3주전 BKG 현황', weeklyW3: '주차별 3주전 BKG',
-    profitTag: '고수익태그', highProfit: '고수익', lowProfit: '저수익',
+    profitTag: '고수익화주', highProfit: '고수익', lowProfit: '저수익',
   },
   en: {
     title: '-3W Booking Dashboard',
@@ -1231,7 +1231,7 @@ const T = {
     weeklyAvg: 'Weekly Avg', monthlyTotal: 'Monthly Total', total: 'Total',
     region: 'By Region', byCust: 'By Shipper', bySales: 'By Salesperson',
     w3bkgStatus: 'WOS-3 BKG Status', weeklyW3: 'Weekly WOS-3 BKG',
-    profitTag: 'Profit Tag', highProfit: 'High', lowProfit: 'Low',
+    profitTag: 'Hi-Shipper', highProfit: 'High', lowProfit: 'Low',
   }
 };
 
