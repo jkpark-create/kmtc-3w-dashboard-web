@@ -601,8 +601,10 @@ function buildSummaryTable(months) {
   months.forEach(m => {
     const wk = DATA.wpm[m]||4;
     if (_ws && m === _curMonth) {
-      const wkLabel = fmtWeekLabel(_selWeek);
-      h += `<th colspan="11">${fmtMonth(m)} ${L('실적','Perf')} (${wkLabel})</th>`;
+      // 선택된 주차의 월 내 순번 찾기
+      const mWeeks = [...new Set(DATA.weekly.filter(r=>r.YYYYMM===m).map(r=>r.week_start_date))].sort();
+      const wkIdx = mWeeks.indexOf(_selWeek) + 1;
+      h += `<th colspan="11">${fmtMonth(m)} ${L('실적','Perf')} (${wkIdx}${L('주차','wk')})</th>`;
     } else if (_ws) {
       h += `<th colspan="11">${fmtMonth(m)} ${L('실적','Perf')} (${L('주평균','Wk Avg')})</th>`;
     } else {
