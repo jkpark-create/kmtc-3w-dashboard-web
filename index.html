@@ -190,7 +190,7 @@ function showApp() {
 // ═══════════════════════════════════════════════
 async function loadData() {
   try {
-    const resp = await fetch('data.json');
+    const resp = await fetch('data.json?t=' + Date.now());
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     DATA = await resp.json();
     document.getElementById('dataInfo').textContent = `Data: ${DATA.data_date} | `;
