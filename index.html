@@ -561,7 +561,7 @@ function drawOccChart() {
     marker:{color:vals.map(v => v>=65?'#34a853':v>=50?'#f9ab00':'#ea4335')},
     text:vals.map(v=>v.toFixed(0)+'%'), textposition:'outside', textfont:{size:11}, cliponaxis:false
   }], {margin:{l:200,r:60,t:10,b:30},
-    xaxis:{title:mode==='w3' ? L('3주전BKG/BSA %','WOS-3/BSA %') : L('소석률 %','Occ %')},
+    xaxis:{gridcolor:'#f0f0f0'},
     yaxis:{tickfont:{family:'Consolas,monospace',size:11}},
     plot_bgcolor:'#fff',paper_bgcolor:'#fff',showlegend:false,
     shapes:[{type:'line',x0:50,x1:50,y0:-0.5,y1:sorted.length-0.5,line:{dash:'dot',color:'#5f6368',width:1}}]
