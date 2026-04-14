@@ -422,9 +422,8 @@ function renderTab1() {
   const vk = viewKey(), vl = viewLabel(), bk = bsaViewKey();
   const _weekSel = gv('fWeek') !== 'ALL';
   const fd = _weekSel ? filterWeekly(month) : filterMonthly(month);
-  // BSA: 주차 선택 시 주평균 (월BSA/주수)
-  const _bsaRaw = sum(filterBSA(month, null), 'teu_bsa');  // 월 전체 BSA
-  const bsaTotal = _weekSel ? Math.round(_bsaRaw / (DATA.wpm[month]||4)) : _bsaRaw;
+  // BSA: 주차 선택 시 해당 주 BSA (WW 필터)
+  const bsaTotal = _weekSel ? sum(filterBSA(month), 'teu_bsa') : sum(filterBSA(month, null), 'teu_bsa');
 
   const totalBkg = profitSum(fd,'fst'), shipped = profitSum(fd,'norm_fst');
   const w3Bkg = profitSum(fd,'w3_fst'), w3Ship = profitSum(fd,'w3_norm_fst');
@@ -481,8 +480,11 @@ function renderTab1() {
     }
   }
   function _getBSA(m) {
+    if (isWeekSelected && m === month) {
+      return sum(filterBSA(m), 'teu_bsa');  // 해당월: 해당 주 BSA
+    }
     const v = sum(filterBSA(m, null), 'teu_bsa');
-    return isWeekSelected ? v / (DATA.wpm[m]||4) : v;
+    return isWeekSelected ? v / (DATA.wpm[m]||4) : v;  // 과거월: 주평균
   }
 
   const shipM = ms.map(m => _getMonthData(m, 'norm_fst'));
@@ -519,10 +521,10 @@ function renderTab1() {
 
   // Occupancy bar
   const items = groupByKey(fd, vk);
-  const _bsaAll = filterBSA(month, null); // 월 전체 BSA
+  // 주차 선택: 해당 주 BSA, 전체: 월 BSA
+  const _bsaForOcc = _weekSel ? filterBSA(month) : filterBSA(month, null);
   const bsaByKey = {};
-  _bsaAll.forEach(r => { const k = r[bk]; bsaByKey[k] = (bsaByKey[k]||0) + r.teu_bsa; });
-  if (_weekSel) { const _wk = DATA.wpm[month]||4; Object.keys(bsaByKey).forEach(k => bsaByKey[k] = Math.round(bsaByKey[k] / _wk)); }
+  _bsaForOcc.forEach(r => { const k = r[bk]; bsaByKey[k] = (bsaByKey[k]||0) + r.teu_bsa; });
   // Occ data for mode switching (w3=3주전BKG/BSA, normal=Normal/BSA)
   window._occRows = Object.entries(items).map(([k,rows]) => {
     const s = profitSum(rows,'norm_fst'), b = bsaByKey[k]||0;
@@ -616,10 +618,16 @@ function buildSummaryTable(months) {
     return _ws ? v / (DATA.wpm[m]||4) : v / (DATA.wpm[m]||4);
   }
   function _tblBSA(m, byItem) {
+    if (_ws && m === _curMonth) {
+      // 해당월: 해당 주 BSA
+      let b = filterBSA(m);
+      if (byItem) b = b.filter(r=>r[bk]===byItem);
+      return sum(b, 'teu_bsa');
+    }
+    // 과거월 또는 전체: 주평균
     let b = filterBSA(m, null);
     if (byItem) b = b.filter(r=>r[bk]===byItem);
-    const v = sum(b, 'teu_bsa');
-    return v / (DATA.wpm[m]||4);
+    return sum(b, 'teu_bsa') / (DATA.wpm[m]||4);
   }
 
   items.forEach(it => {
@@ -636,11 +644,15 @@ function buildSummaryTable(months) {
     h += '</tr>';
   });
 
-  // Totals (주평균 / 월합계)
-  [L('합계(주)','Total(Wk)'),L('합계(월)','Total(Mo)')].forEach((lbl,ti) => {
+  // Totals: 주차 선택 시 합계(주)=합계(월) 동일
+  const _totalLabels = _ws
+    ? [L('합계','Total'), L('합계','Total')]  // 주차 선택: 동일
+    : [L('합계(주)','Total(Wk)'), L('합계(월)','Total(Mo)')];
+  _totalLabels.forEach((lbl,ti) => {
+    if (_ws && ti === 1) return;  // 주차 선택 시 합계 1행만
     h += `<tr class="${ti===0?'total':'total-m'}"><td class="lbl">${lbl}</td>`;
     months.forEach(m => {
-      const isMonthlyTotal = ti === 1;
+      const isMonthlyTotal = ti === 1 && !_ws;
       const b = isMonthlyTotal ? sum(filterMonthly(m),'w3_fst') : _tblData(m,'w3_fst');
       const n = isMonthlyTotal ? sum(filterMonthly(m),'w3_norm_fst') : _tblData(m,'w3_norm_fst');
       const hb = isMonthlyTotal ? sum(filterMonthly(m),'w3_hi_fst') : _tblData(m,'w3_hi_fst');
