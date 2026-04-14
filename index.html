@@ -88,7 +88,7 @@ table.summary td.lbl{text-align:left;font-weight:600;background:#fafafa}
   <label>보기</label><select id="fView"><option value="dest">도착지별</option><option value="origin">선적지별</option></select>
   <label>월</label><select id="fMonth"></select>
   <label>주차</label><select id="fWeek"><option value="ALL">전체</option></select>
-  <label>화주구분</label><select id="fProfit"><option value="ALL">전체</option><option value="hi">고수익</option><option value="lo">저수익</option></select>
+  <label>화주구분</label><select id="fProfit"><option value="ALL">전체</option><option value="hi">고수익</option><option value="lo">저수익</option><option value="ab">A+B</option><option value="cd">C+D</option></select>
   <label>영업사원</label><select id="fSales"><option value="ALL">전체</option></select>
 </div>
 
@@ -423,6 +423,8 @@ function filterShipper(month) {
   const profit = gv('fProfit');
   if(profit==='hi') d=d.filter(r=>r['\uace0\uc218\uc775\ud0dc\uadf8']==='고수익');
   if(profit==='lo') d=d.filter(r=>r['\uace0\uc218\uc775\ud0dc\uadf8']==='저수익');
+  if(profit==='ab') d=d.filter(r=>r.grade==='A+B');
+  if(profit==='cd') d=d.filter(r=>r.grade==='C+D');
   return d;
 }
 
@@ -757,11 +759,14 @@ function renderTab2() {
   const fd = filterMonthly(month);
 
   // Sub-tabs
+  const t2tabs = [
+    {id:'region', lbl:()=>T[_lang].region}, {id:'cust', lbl:()=>T[_lang].byCust},
+    {id:'sales', lbl:()=>T[_lang].bySales}, {id:'abcd', lbl:()=>'AB vs CD'}
+  ];
   let html = `<div style="display:flex;gap:0;margin-bottom:12px;border-bottom:2px solid #dadce0">
-    ${['region','cust','sales'].map(t => {
-      const lbl = t==='region'?T[_lang].region:t==='cust'?T[_lang].byCust:T[_lang].bySales;
-      const cls = t2sub===t ? 'color:#1a73e8;border-bottom:3px solid #1a73e8;font-weight:600' : 'color:#5f6368;border-bottom:3px solid transparent';
-      return `<div style="padding:8px 16px;font-size:13px;cursor:pointer;${cls}" onclick="t2sub='${t}';renderTab2()">${lbl}</div>`;
+    ${t2tabs.map(t => {
+      const cls = t2sub===t.id ? 'color:#1a73e8;border-bottom:3px solid #1a73e8;font-weight:600' : 'color:#5f6368;border-bottom:3px solid transparent';
+      return `<div style="padding:8px 16px;font-size:13px;cursor:pointer;${cls}" onclick="t2sub='${t.id}';renderTab2()">${t.lbl()}</div>`;
     }).join('')}
   </div>`;
 
@@ -867,11 +872,79 @@ function renderTab2() {
       plot_bgcolor:'#fff',paper_bgcolor:'#fff',showlegend:false}, {displayModeBar:false});
 
     return;
+  } else if (t2sub === 'abcd') {
+    html += renderABCDTab(month);
+    document.getElementById('tabContent').innerHTML = html;
+    // Render AB vs CD chart
+    const abcdKey = viewKey(), abcdLabel = viewLabel();
+    const abcdData = groupByKey(fd, abcdKey);
+    const abcdRows = Object.entries(abcdData).map(([k,arr])=>({
+      name:k, ab:sum(arr,'w3_ab_fst'), cd:sum(arr,'w3_cd_fst')
+    })).sort((a,b)=>(b.ab+b.cd)-(a.ab+a.cd)).slice(0,10);
+    if (document.getElementById('ch2abcd')) {
+      Plotly.newPlot('ch2abcd', [
+        {x:abcdRows.map(r=>r.name), y:abcdRows.map(r=>r.ab), type:'bar', name:'A+B', marker:{color:'#1a73e8'}},
+        {x:abcdRows.map(r=>r.name), y:abcdRows.map(r=>r.cd), type:'bar', name:'C+D', marker:{color:'#f9ab00'}},
+      ], {barmode:'stack', margin:{l:40,r:20,t:20,b:30},
+        yaxis:{title:'TEU',gridcolor:'#f0f0f0'},
+        legend:{orientation:'h',y:1.12}, plot_bgcolor:'#fff',paper_bgcolor:'#fff'}, {displayModeBar:false});
+    }
+    return;
   } else if (t2sub === 'cust') {
     // 화주별 뷰
     html += renderShipperTable(month);
   }
   document.getElementById('tabContent').innerHTML = html;
+}
+
+function renderABCDTab(month) {
+  const vk = viewKey(), vl = viewLabel();
+  const fd = filterMonthly(month);
+  const items = groupByKey(fd, vk);
+  let rows = Object.entries(items).map(([k,arr]) => {
+    const ab=sum(arr,'w3_ab_fst'), cd=sum(arr,'w3_cd_fst'),
+          abN=sum(arr,'w3_ab_norm_fst'), cdN=sum(arr,'w3_cd_norm_fst'), tot=ab+cd;
+    return {name:k, ab, cd, abN, cdN, tot};
+  }).filter(r=>r.tot>0).sort((a,b)=>b.tot-a.tot).slice(0,15);
+
+  let h = `<div class="chart-card"><h3>AB vs CD ${L('등급별 3주전 BKG','Grade WOS-3 BKG')} - ${vl} (${fmtMonth(month)})</h3>
+  <table class="summary"><tr><th>${vl}</th><th>A+B BKG</th><th>C+D BKG</th><th>A+B %</th><th>C+D %</th><th>A+B ${L('실선적률','LFT Rate')}</th><th>C+D ${L('실선적률','LFT Rate')}</th><th>${L('전체','Total')} BKG</th></tr>`;
+  rows.forEach(r => {
+    h += `<tr><td class="lbl">${r.name}</td><td>${fmt(r.ab)}</td><td>${fmt(r.cd)}</td>`;
+    h += `<td>${pct(r.ab,r.tot)}</td><td>${pct(r.cd,r.tot)}</td>`;
+    h += `<td>${pct(r.abN,r.ab)}</td><td>${pct(r.cdN,r.cd)}</td><td>${fmt(r.tot)}</td></tr>`;
+  });
+  const tAB=rows.reduce((s,r)=>s+r.ab,0), tCD=rows.reduce((s,r)=>s+r.cd,0),
+        tABN=rows.reduce((s,r)=>s+r.abN,0), tCDN=rows.reduce((s,r)=>s+r.cdN,0), tTot=tAB+tCD;
+  h += `<tr class="total"><td class="lbl">${L('합계','Total')}</td><td>${fmt(tAB)}</td><td>${fmt(tCD)}</td>`;
+  h += `<td>${pct(tAB,tTot)}</td><td>${pct(tCD,tTot)}</td>`;
+  h += `<td>${pct(tABN,tAB)}</td><td>${pct(tCDN,tCD)}</td><td>${fmt(tTot)}</td></tr></table></div>`;
+
+  // Chart
+  h += `<div class="chart-card"><h3>${vl}${L('별 A+B vs C+D',' A+B vs C+D')}</h3><div id="ch2abcd" style="height:290px"></div></div>`;
+
+  // Analysis Guide
+  const abPct = tTot>0 ? tAB/tTot*100 : 0;
+  const abLft = tAB>0 ? tABN/tAB*100 : 0;
+  const cdLft = tCD>0 ? tCDN/tCD*100 : 0;
+  const gap = abLft - cdLft;
+  let tips = [];
+  if (abPct >= 60) tips.push(`<li><b>A+B ${L('의존도 높음','Dependency High')}:</b> ${L('전체 BKG의','Total BKG')} ${abPct.toFixed(0)}%${L('가 A+B 등급. 대형화주 집중 리스크 — 특정 화주 이탈 시 영향 큼.',' is A+B grade. Large shipper concentration risk.')}</li>`);
+  else if (abPct <= 30) tips.push(`<li><b>C+D ${L('비중 높음','Share High')}:</b> ${L('전체 BKG의','Total BKG')} ${(100-abPct).toFixed(0)}%${L('가 C+D 등급. 중소화주 기반이 넓어 안정적이나, C+D 실선적률 관리 필요.',' is C+D grade. Stable SME base but needs C+D LFT rate management.')}</li>`);
+  if (gap > 10) tips.push(`<li><b>${L('실선적률 격차 주의','LFT Rate Gap')}:</b> A+B ${abLft.toFixed(0)}% vs C+D ${cdLft.toFixed(0)}% (${L('차이','gap')} ${gap.toFixed(0)}%p). ${L('C+D 캔슬률이 높음 — 부킹 확정 관리 강화 필요.','C+D cancel rate is high — strengthen booking confirmation.')}</li>`);
+  else if (gap < -5) tips.push(`<li><b>A+B ${L('실선적률 하락','LFT Rate Drop')}:</b> A+B ${abLft.toFixed(0)}% vs C+D ${cdLft.toFixed(0)}%. ${L('대형화주 부킹 변동이 크므로 선복 조정 주의.','Large shipper booking volatility — adjust capacity carefully.')}</li>`);
+  // Regional skew
+  if (rows.length >= 2) {
+    const topAB = rows.reduce((a,b) => (b.tot>0&&b.ab/b.tot>a.ab/(a.tot||1)) ? b : a, rows[0]);
+    const lowAB = rows.reduce((a,b) => (b.tot>0&&b.ab/b.tot<a.ab/(a.tot||1)) ? b : a, rows[0]);
+    const topR = topAB.tot>0?topAB.ab/topAB.tot*100:0, lowR = lowAB.tot>0?lowAB.ab/lowAB.tot*100:0;
+    if (topR - lowR > 30) tips.push(`<li><b>${L('지역별 편차 큼','Regional Skew')}:</b> ${topAB.name} A+B ${topR.toFixed(0)}% vs ${lowAB.name} A+B ${lowR.toFixed(0)}%. ${L('지역별 차별 전략 필요.','Different strategies needed per region.')}</li>`);
+  }
+  if (!tips.length) tips.push(`<li>${L('등급별 비중 및 실선적률이 균형 잡힌 상태입니다.','Grade distribution and LFT rates are balanced.')}</li>`);
+  h += `<div style="background:#e8f0fe;border-left:4px solid #1a73e8;padding:12px 16px;border-radius:0 4px 4px 0;margin-top:12px">
+    <h4 style="color:#1a73e8;margin:0 0 8px;font-size:14px">Analysis Guide</h4>
+    <ul style="font-size:13px;line-height:1.8;color:#333;margin:0 0 0 16px">${tips.join('')}</ul></div>`;
+  return h;
 }
 
 function renderShipperTable(month) {
@@ -882,35 +955,38 @@ function renderShipperTable(month) {
   const byShpr = {};
   sd.forEach(r => {
     const k = r.BKG_SHPR_CST_ENM || r.BKG_SHPR_CST_NO;
-    if (!byShpr[k]) byShpr[k] = {bkg:0,ship:0,hi:0,hi_ship:0,cm1:0,cm1l:0,_sales:new Set(),_tags:new Set()};
+    if (!byShpr[k]) byShpr[k] = {bkg:0,ship:0,hi:0,hi_ship:0,cm1:0,cm1l:0,_sales:new Set(),_tags:new Set(),_grades:new Set()};
     const s = byShpr[k];
     s.bkg += r.w3_fst||0; s.ship += r.w3_norm_fst||0;
     s.hi += r.w3_hi_fst||0; s.hi_ship += r.w3_hi_norm_fst||0;
     s.cm1 += r.cm1_norm||0; s.cm1l += r.lst_norm||0;
     if (r.Salesman_POR) s._sales.add(r.Salesman_POR);
     if (r['\uace0\uc218\uc775\ud0dc\uadf8']) s._tags.add(r['\uace0\uc218\uc775\ud0dc\uadf8']);
+    if (r.grade) s._grades.add(r.grade);
   });
 
   let rows = Object.entries(byShpr).map(([k,s]) => {
     const sales = [...s._sales].join(', ');
     const tag = [...s._tags].join(', ');
-    return {name:k, tag, sales, bkg:s.bkg, ship:s.ship, hi:s.hi, hi_ship:s.hi_ship, cm1:s.cm1, cm1l:s.cm1l};
+    const grade = [...s._grades].join(', ');
+    return {name:k, grade, tag, sales, bkg:s.bkg, ship:s.ship, hi:s.hi, hi_ship:s.hi_ship, cm1:s.cm1, cm1l:s.cm1l};
   }).sort((a,b)=>b.bkg-a.bkg);
 
   let h = `<div class="chart-card"><h3>${L('화주별 3주전 BKG','WOS-3 BKG by Shipper')} (${fmtMonth(month)})</h3>
-  <table class="summary"><tr><th>${L('화주','Shipper')}</th><th>${L('고수익화주','Hi-Shipper')}</th><th>${L('영업사원','Salesperson')}</th><th>BKG</th><th>${L('실선적','LFT')}</th><th>${L('실선적률','Rate')}</th><th>${L('구간별고수익','Route Hi')}</th><th>${L('구간별고수익%','Route Hi%')}</th><th>CM1</th><th>CM1/TEU</th></tr>`;
+  <table class="summary"><tr><th>${L('화주','Shipper')}</th><th>${L('등급','Grade')}</th><th>${L('고수익화주','Hi-Shipper')}</th><th>${L('영업사원','Salesperson')}</th><th>BKG</th><th>${L('실선적','LFT')}</th><th>${L('실선적률','Rate')}</th><th>${L('구간별고수익','Route Hi')}</th><th>${L('구간별고수익%','Route Hi%')}</th><th>CM1</th><th>CM1/TEU</th></tr>`;
 
   rows.forEach(r => {
     const ct = r.cm1l>0 ? r.cm1/r.cm1l : 0;
     const tagStyle = r.tag==='고수익' ? 'color:#34a853;font-weight:600' : r.tag==='저수익' ? 'color:#ea4335' : '';
-    h += `<tr><td class="lbl">${r.name}</td><td style="${tagStyle}">${tagLabel(r.tag)}</td><td>${r.sales}</td><td>${fmt(r.bkg)}</td><td>${fmt(r.ship)}</td><td>${pct(r.ship,r.bkg)}</td>`;
+    const gradeStyle = r.grade==='A+B' ? 'color:#1a73e8;font-weight:600' : 'color:#f9ab00';
+    h += `<tr><td class="lbl">${r.name}</td><td style="${gradeStyle}">${r.grade}</td><td style="${tagStyle}">${tagLabel(r.tag)}</td><td>${r.sales}</td><td>${fmt(r.bkg)}</td><td>${fmt(r.ship)}</td><td>${pct(r.ship,r.bkg)}</td>`;
     h += `<td>${fmt(r.hi)}</td><td>${pct(r.hi,r.bkg)}</td><td>${fmt(Math.round(r.cm1))}</td><td>${fmt(Math.round(ct))}</td></tr>`;
   });
 
   const tb=rows.reduce((s,r)=>s+r.bkg,0), ts=rows.reduce((s,r)=>s+r.ship,0);
   const th2=rows.reduce((s,r)=>s+r.hi,0), tc=rows.reduce((s,r)=>s+r.cm1,0);
   const tl=rows.reduce((s,r)=>s+r.cm1l,0), tct=tl>0?tc/tl:0;
-  h += `<tr class="total"><td class="lbl">${L('합계','Total')}</td><td></td><td></td><td>${fmt(tb)}</td><td>${fmt(ts)}</td><td>${pct(ts,tb)}</td>`;
+  h += `<tr class="total"><td class="lbl">${L('합계','Total')}</td><td></td><td></td><td></td><td>${fmt(tb)}</td><td>${fmt(ts)}</td><td>${pct(ts,tb)}</td>`;
   h += `<td>${fmt(th2)}</td><td>${pct(th2,tb)}</td><td>${fmt(Math.round(tc))}</td><td>${fmt(Math.round(tct))}</td></tr>`;
   h += '</table></div>';
   return h;
