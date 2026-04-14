@@ -594,6 +594,8 @@ function buildSummaryTable(months) {
     return sb - sa;
   }).slice(0, 15);
 
+  const _ws = gv('fWeek') !== 'ALL';
+  const _curMonth = gv('fMonth');
   const _selWeek = gv('fWeek');
   let h = `<table class="summary"><tr><th rowspan="2">${vl}</th>`;
   months.forEach(m => {
@@ -613,9 +615,7 @@ function buildSummaryTable(months) {
   });
   h += '</tr>';
 
-  const _ws = gv('fWeek') !== 'ALL';
-  const _curMonth = gv('fMonth');
-  // 주차 선택: 해당월=해당주, 과거월=주평균, BSA=항상 주평균
+  // 주차 선택: 해당월=해당주, 과거월=주평균, BSA=해당주/주평균
   function _tblData(m, key, byItem) {
     if (_ws && m === _curMonth) {
       const d = filterWeekly(m);
