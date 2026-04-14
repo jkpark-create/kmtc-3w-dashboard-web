@@ -594,10 +594,18 @@ function buildSummaryTable(months) {
     return sb - sa;
   }).slice(0, 15);
 
+  const _selWeek = gv('fWeek');
   let h = `<table class="summary"><tr><th rowspan="2">${vl}</th>`;
   months.forEach(m => {
     const wk = DATA.wpm[m]||4;
-    h += `<th colspan="11">${fmtMonth(m)} 실적 (${wk}주)</th>`;
+    if (_ws && m === _curMonth) {
+      const wkLabel = fmtWeekLabel(_selWeek);
+      h += `<th colspan="11">${fmtMonth(m)} ${L('실적','Perf')} (${wkLabel})</th>`;
+    } else if (_ws) {
+      h += `<th colspan="11">${fmtMonth(m)} ${L('실적','Perf')} (${L('주평균','Wk Avg')})</th>`;
+    } else {
+      h += `<th colspan="11">${fmtMonth(m)} ${L('실적','Perf')} (${wk}${L('주','wk')})</th>`;
+    }
   });
   h += '</tr><tr>';
   months.forEach(() => {
