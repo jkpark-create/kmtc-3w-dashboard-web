@@ -123,7 +123,7 @@ function doLogin() {
     '&response_type=token' +
     '&scope=' + encodeURIComponent(SCOPES) +
     '&include_granted_scopes=true' +
-    '&prompt=consent';
+    '&prompt=select_account';
   location.href = authUrl;
 }
 
