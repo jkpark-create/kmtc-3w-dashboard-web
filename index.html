@@ -156,7 +156,7 @@ function handleRedirect() {
     showApp();
   }).catch(e => {
     document.getElementById('loginErr').style.display = 'block';
-    document.getElementById('loginErr').textContent = '사용자 정보 확인 실패: ' + e.message;
+    document.getElementById('loginErr').textContent = L('사용자 정보 확인 실패: ','Failed to verify user: ') + e.message;
   });
   return true;
 }
@@ -183,7 +183,7 @@ function logout() {
 function showApp() {
   document.getElementById('login').style.display = 'none';
   document.getElementById('app').style.display = 'block';
-  document.getElementById('userInfo').textContent = `${gUser.name} | 로그아웃`;
+  document.getElementById('userInfo').textContent = `${gUser.name} | ${L('로그아웃','Logout')}`;
   loadData();
 }
 
@@ -294,7 +294,13 @@ function fillSelect(id, vals, def) {
 
 function fmtMonth(v) {
   const m = v.match(/^(\d{4})(\d{2})$/);
-  return m ? `${parseInt(m[2])}월` : v;
+  if (!m) return v;
+  const mi = parseInt(m[2]);
+  if (_lang === 'en') {
+    const names = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return names[mi] || mi;
+  }
+  return `${mi}월`;
 }
 
 function gv(id) { return document.getElementById(id).value; }
@@ -433,8 +439,9 @@ function fmtWeekLabel(w) {
   return m ? `${m[1]}/${m[2]}` : w;
 }
 function viewKey() { return gv('fView') === 'origin' ? 'origin' : 'dest'; }
-function viewLabel() { return gv('fView') === 'origin' ? '선적지' : '도착지'; }
+function viewLabel() { return gv('fView') === 'origin' ? L('선적지','Origin') : L('도착지','Dest'); }
 function bsaViewKey() { return gv('fView') === 'origin' ? 'POR_Country' : 'DLY_Country'; }
+function tagLabel(t) { return (t||'').split(', ').map(v => v==='고수익'?L('고수익','High'):v==='저수익'?L('저수익','Low'):v).join(', '); }
 
 // 화주구분 필터: 고수익/저수익에 따라 BKG/실선적 수치 조정
 function profitSum(arr, key) {
@@ -518,7 +525,7 @@ function renderTab1() {
   </div>`;
 
   // Summary table
-  html += `<div class="chart-card"><h3>${vl}별 월간 실적</h3><div id="summaryTbl"></div></div>`;
+  html += `<div class="chart-card"><h3>${vl} ${L('월간 실적','Monthly Performance')}</h3><div id="summaryTbl"></div></div>`;
 
   document.getElementById('tabContent').innerHTML = html;
 
@@ -766,7 +773,7 @@ function renderTab2() {
     const wk = DATA.wpm[month]||4;
     const bySM = {};
     sd.forEach(r => {
-      const sm = r.Salesman_POR || '(미지정)';
+      const sm = r.Salesman_POR || L('(미지정)','(N/A)');
       if (!bySM[sm]) bySM[sm] = {bkg:0,ship:0};
       bySM[sm].bkg += r.w3_fst||0; bySM[sm].ship += r.w3_norm_fst||0;
     });
@@ -776,7 +783,7 @@ function renderTab2() {
       Plotly.newPlot('ch2sm', [
         {y:smRows.map(r=>r.name).reverse(), x:smRows.map(r=>r.bkg).reverse(), type:'bar', orientation:'h', name:'BKG', marker:{color:'#1a73e8',opacity:.7}},
         {y:smRows.map(r=>r.name).reverse(), x:smRows.map(r=>r.ship).reverse(), type:'bar', orientation:'h', name:L('실선적(Normal)','LFT(Normal)'), marker:{color:'#34a853',opacity:.7}},
-      ], {barmode:'group',margin:{l:80,r:30,t:20,b:30},xaxis:{title:'TEU (주간평균)',gridcolor:'#f0f0f0'},
+      ], {barmode:'group',margin:{l:80,r:30,t:20,b:30},xaxis:{title:L('TEU (주간평균)','TEU (Weekly Avg)'),gridcolor:'#f0f0f0'},
           legend:{orientation:'h',y:1.1},plot_bgcolor:'#fff',paper_bgcolor:'#fff'}, {displayModeBar:false});
     }
     return;
@@ -896,14 +903,14 @@ function renderShipperTable(month) {
   rows.forEach(r => {
     const ct = r.cm1l>0 ? r.cm1/r.cm1l : 0;
     const tagStyle = r.tag==='고수익' ? 'color:#34a853;font-weight:600' : r.tag==='저수익' ? 'color:#ea4335' : '';
-    h += `<tr><td class="lbl">${r.name}</td><td style="${tagStyle}">${r.tag}</td><td>${r.sales}</td><td>${fmt(r.bkg)}</td><td>${fmt(r.ship)}</td><td>${pct(r.ship,r.bkg)}</td>`;
+    h += `<tr><td class="lbl">${r.name}</td><td style="${tagStyle}">${tagLabel(r.tag)}</td><td>${r.sales}</td><td>${fmt(r.bkg)}</td><td>${fmt(r.ship)}</td><td>${pct(r.ship,r.bkg)}</td>`;
     h += `<td>${fmt(r.hi)}</td><td>${pct(r.hi,r.bkg)}</td><td>${fmt(Math.round(r.cm1))}</td><td>${fmt(Math.round(ct))}</td></tr>`;
   });
 
   const tb=rows.reduce((s,r)=>s+r.bkg,0), ts=rows.reduce((s,r)=>s+r.ship,0);
   const th2=rows.reduce((s,r)=>s+r.hi,0), tc=rows.reduce((s,r)=>s+r.cm1,0);
   const tl=rows.reduce((s,r)=>s+r.cm1l,0), tct=tl>0?tc/tl:0;
-  h += `<tr class="total"><td class="lbl">${L('합계','Total')}</td><td></td><td>${fmt(tb)}</td><td>${fmt(ts)}</td><td>${pct(ts,tb)}</td>`;
+  h += `<tr class="total"><td class="lbl">${L('합계','Total')}</td><td></td><td></td><td>${fmt(tb)}</td><td>${fmt(ts)}</td><td>${pct(ts,tb)}</td>`;
   h += `<td>${fmt(th2)}</td><td>${pct(th2,tb)}</td><td>${fmt(Math.round(tc))}</td><td>${fmt(Math.round(tct))}</td></tr>`;
   h += '</table></div>';
   return h;
@@ -916,7 +923,7 @@ function renderSalesmanTable(month) {
   // Aggregate by salesman
   const bySM = {};
   sd.forEach(r => {
-    const sm = r.Salesman_POR || '(미지정)';
+    const sm = r.Salesman_POR || L('(미지정)','(N/A)');
     if (!bySM[sm]) bySM[sm] = {bkg:0,ship:0,hi:0,cm1:0,cm1l:0,custs:new Set()};
     const s = bySM[sm];
     s.bkg += r.w3_fst||0; s.ship += r.w3_norm_fst||0;
@@ -1151,7 +1158,7 @@ function renderTab5() {
   }).sort((a,b)=>b.total-a.total).slice(0,15);
 
   let html = `<div class="chart-card"><h3>${vl} ${L('부킹 접수 시점 분석','Booking Timing')} (${fmtMonth(month)})</h3>
-  <table class="summary"><tr><th>${vl}</th><th>${L('전체BKG','Total BKG')}</th><th>WOS-3</th><th>비중</th><th>WOS-2</th><th>비중</th><th>WOS-1</th><th>비중</th><th>WOS</th><th>비중</th></tr>`;
+  <table class="summary"><tr><th>${vl}</th><th>${L('전체BKG','Total BKG')}</th><th>WOS-3</th><th>${L('비중','Ratio')}</th><th>WOS-2</th><th>${L('비중','Ratio')}</th><th>WOS-1</th><th>${L('비중','Ratio')}</th><th>WOS</th><th>${L('비중','Ratio')}</th></tr>`;
   destRows.forEach(r => {
     html += `<tr><td class="lbl">${r.name}</td><td>${fmt(r.total)}</td>`;
     html += `<td>${fmt(r.w3)}</td><td>${pct(r.w3,r.total)}</td>`;
@@ -1184,10 +1191,10 @@ function renderTab5() {
   }).sort((a,b)=>b.total-a.total);
 
   html += `<div class="chart-card"><h3>${L('화주별 부킹 접수 시점','Shipper Booking Timing')} (${fmtMonth(month)})</h3>
-  <table class="summary"><tr><th>${L('화주','Shipper')}</th><th>${L('고수익화주','Hi-Shipper')}</th><th>${L('영업사원','Sales')}</th><th>${L('전체BKG','Total')}</th><th>WOS-3</th><th>비중</th><th>WOS-2</th><th>비중</th><th>WOS-1</th><th>비중</th><th>WOS</th><th>비중</th></tr>`;
+  <table class="summary"><tr><th>${L('화주','Shipper')}</th><th>${L('고수익화주','Hi-Shipper')}</th><th>${L('영업사원','Sales')}</th><th>${L('전체BKG','Total')}</th><th>WOS-3</th><th>${L('비중','Ratio')}</th><th>WOS-2</th><th>${L('비중','Ratio')}</th><th>WOS-1</th><th>${L('비중','Ratio')}</th><th>WOS</th><th>${L('비중','Ratio')}</th></tr>`;
   custRows.forEach(r => {
     const tagStyle = r.tag==='고수익' ? 'color:#34a853;font-weight:600' : r.tag==='저수익' ? 'color:#ea4335' : '';
-    html += `<tr><td class="lbl">${r.name}</td><td style="${tagStyle}">${r.tag}</td><td>${r.sales}</td><td>${fmt(r.total)}</td>`;
+    html += `<tr><td class="lbl">${r.name}</td><td style="${tagStyle}">${tagLabel(r.tag)}</td><td>${r.sales}</td><td>${fmt(r.total)}</td>`;
     html += `<td>${fmt(r.w3)}</td><td>${pct(r.w3,r.total)}</td>`;
     html += `<td>${fmt(r.w2)}</td><td>${pct(r.w2,r.total)}</td>`;
     html += `<td>${fmt(r.w1)}</td><td>${pct(r.w1,r.total)}</td>`;
@@ -1334,6 +1341,25 @@ function applyLang() {
   // Login
   const loginP = document.querySelector('.login-box p');
   if (loginP) loginP.textContent = t.login;
+  // User info (logout text)
+  if (gUser) document.getElementById('userInfo').textContent = `${gUser.name} | ${_lang==='en'?'Logout':'로그아웃'}`;
+  // Data date selector (latest label)
+  const dSel = document.getElementById('dataDateSel');
+  if (dSel && DATA) {
+    const first = dSel.options[0];
+    if (first && first.value === 'today') first.text = `${DATA.data_date} (${_lang==='en'?'Latest':'최신'})`;
+  }
+  // Month options (월 → English month names)
+  if (DATA) {
+    const mSel = document.getElementById('fMonth');
+    if (mSel) {
+      for (let i = 0; i < mSel.options.length; i++) {
+        const o = mSel.options[i];
+        if (o.value === 'ALL') { o.text = t.all; }
+        else { o.text = fmtMonth(o.value); }
+      }
+    }
+  }
 }
 
 // Init
