@@ -474,17 +474,27 @@ function renderTab1() {
   const w3occM = ms.map((m,i) => bsaM[i]>0 ? w3shipM[i]/bsaM[i]*100 : null);
   const xl = ms.map(fmtMonth);
 
+  // 3주전 BKG 바 + (3주전BKG)/BSA 라인
+  const w3bkgM = ms.map(m => {
+    const v = profitSum(filterMonthly(m), 'w3_fst');
+    return isWeekSelected ? v / (DATA.wpm[m]||4) : v;
+  });
+  const w3bkgBsaM = ms.map((m,i) => bsaM[i]>0 ? w3bkgM[i]/bsaM[i]*100 : null);
+
   Plotly.newPlot('ch1bar', [
+    {x:xl, y:w3bkgM, type:'bar', name:L('3주전BKG','WOS-3 BKG'), marker:{color:'#6c5ce7',opacity:.7}, text:w3bkgM.map(fmt), textposition:'outside', textfont:{size:9}},
     {x:xl, y:shipM, type:'bar', name:L('실선적(Normal)','LFT(Normal)'), marker:{color:'#1a73e8',opacity:.85}, text:shipM.map(fmt), textposition:'outside', textfont:{size:10}},
     {x:xl, y:bsaM, type:'bar', name:'BSA', marker:{color:'#dadce0',opacity:.5}, text:bsaM.map(fmt), textposition:'outside', textfont:{size:10}},
     {x:xl, y:occM, type:'scatter', mode:'lines+markers+text', name:L('소석률(Normal/BSA)','Occ(Normal/BSA)'), yaxis:'y2',
      text:occM.map(v=>v?v.toFixed(0)+'%':''), textposition:'top center', line:{color:'#ea4335',width:2}, marker:{size:8}},
+    {x:xl, y:w3bkgBsaM, type:'scatter', mode:'lines+markers+text', name:L('3주전BKG/BSA','WOS-3 BKG/BSA'), yaxis:'y2',
+     text:w3bkgBsaM.map(v=>v?v.toFixed(0)+'%':''), textposition:'top center', line:{color:'#f9ab00',width:2,dash:'dot'}, marker:{size:6,symbol:'square'}},
     {x:xl, y:w3occM, type:'scatter', mode:'lines+markers+text', name:L('3주전실선적/BSA','WOS-3 LFT/BSA'), yaxis:'y2',
      text:w3occM.map(v=>v?v.toFixed(0)+'%':''), textposition:'bottom center', line:{color:'#6c5ce7',width:2,dash:'dash'}, marker:{size:6,symbol:'diamond'}},
   ], (() => {
-    const allVals = [...shipM, ...bsaM];
+    const allVals = [...shipM, ...bsaM, ...w3bkgM];
     const y1max = Math.max(...allVals) * 1.3 || 1000;
-    const allOcc = [...occM, ...w3occM].filter(v=>v!=null);
+    const allOcc = [...occM, ...w3occM, ...w3bkgBsaM].filter(v=>v!=null);
     const y2max = Math.max(110, Math.ceil(Math.max(...allOcc, 100) * 1.15 / 10) * 10);
     return {barmode:'group', margin:{l:50,r:50,t:40,b:30},
       yaxis:{title:'TEU',gridcolor:'#f0f0f0',range:[0,y1max]},
@@ -552,7 +562,7 @@ function buildSummaryTable(months) {
     months.forEach(m => {
       const wk = DATA.wpm[m]||4;
       const fd = filterMonthly(m).filter(r=>r[vk]===it);
-      const bsa_v = sum(filterBSA(m).filter(r=>r[bk]===it), 'teu_bsa') / wk;
+      const bsa_v = sum(filterBSA(m, null).filter(r=>r[bk]===it), 'teu_bsa') / wk;
       const b=sum(fd,'w3_fst')/wk, n=sum(fd,'w3_norm_fst')/wk;
       const hb=sum(fd,'w3_hi_fst')/wk, hn=sum(fd,'w3_hi_norm_fst')/wk;
       const c1=sum(fd,'cm1_norm')/wk, cl=sum(fd,'lst_norm')/wk, ct=cl>0?c1/cl:0;
@@ -569,7 +579,7 @@ function buildSummaryTable(months) {
     months.forEach(m => {
       const wk = ti===0 ? (DATA.wpm[m]||4) : 1;
       const fd = filterMonthly(m);
-      const bsa_v = sum(filterBSA(m), 'teu_bsa') / wk;
+      const bsa_v = sum(filterBSA(m, null), 'teu_bsa') / wk;
       const b=sum(fd,'w3_fst')/wk, n=sum(fd,'w3_norm_fst')/wk;
       const hb=sum(fd,'w3_hi_fst')/wk, hn=sum(fd,'w3_hi_norm_fst')/wk;
       const c1=sum(fd,'cm1_norm')/wk, cl=sum(fd,'lst_norm')/wk, ct=cl>0?c1/cl:0;
