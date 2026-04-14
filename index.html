@@ -464,19 +464,36 @@ function renderTab1() {
 
   document.getElementById('tabContent').innerHTML = html;
 
-  // Bar chart (주차 선택: 해당월=해당주 실적, 과거월=주평균)
+  // Bar chart (주차 선택: 해당월=해당주 실적, 과거월=주평균, BSA=항상 주평균)
   const ms = DATA.months.filter(m => m <= month);
   const isWeekSelected = gv('fWeek') !== 'ALL';
-  const _avg = (m, v) => (isWeekSelected && m !== month) ? v / (DATA.wpm[m]||4) : v;
-  const shipM = ms.map(m => _avg(m, profitSum(filterMonthly(m), 'norm_fst')));
-  const bsaM = ms.map(m => _avg(m, sum(filterBSA(m, null), 'teu_bsa')));
+
+  // 데이터 소스: 해당월은 weekly(해당주), 과거월은 monthly/주수
+  function _getMonthData(m, key) {
+    if (isWeekSelected && m === month) {
+      // 해당월: weekly 데이터 (해당 주만)
+      return profitSum(filterWeekly(m), key);
+    } else if (isWeekSelected) {
+      // 과거월: monthly / 주수 (주평균)
+      return profitSum(filterMonthly(m), key) / (DATA.wpm[m]||4);
+    } else {
+      return profitSum(filterMonthly(m), key);
+    }
+  }
+  function _getBSA(m) {
+    const v = sum(filterBSA(m, null), 'teu_bsa');
+    return isWeekSelected ? v / (DATA.wpm[m]||4) : v;
+  }
+
+  const shipM = ms.map(m => _getMonthData(m, 'norm_fst'));
+  const bsaM = ms.map(m => _getBSA(m));
   const occM = ms.map((m,i) => bsaM[i]>0 ? shipM[i]/bsaM[i]*100 : null);
-  const w3shipM = ms.map(m => _avg(m, profitSum(filterMonthly(m), 'w3_norm_fst')));
+  const w3shipM = ms.map(m => _getMonthData(m, 'w3_norm_fst'));
   const w3occM = ms.map((m,i) => bsaM[i]>0 ? w3shipM[i]/bsaM[i]*100 : null);
   const xl = ms.map(fmtMonth);
 
   // 3주전 BKG 바 + (3주전BKG)/BSA 라인
-  const w3bkgM = ms.map(m => _avg(m, profitSum(filterMonthly(m), 'w3_fst')));
+  const w3bkgM = ms.map(m => _getMonthData(m, 'w3_fst'));
   const w3bkgBsaM = ms.map((m,i) => bsaM[i]>0 ? w3bkgM[i]/bsaM[i]*100 : null);
 
   Plotly.newPlot('ch1bar', [
@@ -586,15 +603,32 @@ function buildSummaryTable(months) {
   });
   h += '</tr>';
 
+  const _ws = gv('fWeek') !== 'ALL';
+  const _curMonth = gv('fMonth');
+  // 주차 선택: 해당월=해당주, 과거월=주평균, BSA=항상 주평균
+  function _tblData(m, key, byItem) {
+    if (_ws && m === _curMonth) {
+      const d = filterWeekly(m);
+      return byItem ? sum(d.filter(r=>r[vk]===byItem), key) : sum(d, key);
+    }
+    const d = filterMonthly(m);
+    const v = byItem ? sum(d.filter(r=>r[vk]===byItem), key) : sum(d, key);
+    return _ws ? v / (DATA.wpm[m]||4) : v / (DATA.wpm[m]||4);
+  }
+  function _tblBSA(m, byItem) {
+    let b = filterBSA(m, null);
+    if (byItem) b = b.filter(r=>r[bk]===byItem);
+    const v = sum(b, 'teu_bsa');
+    return v / (DATA.wpm[m]||4);
+  }
+
   items.forEach(it => {
     h += `<tr><td class="lbl">${it}</td>`;
     months.forEach(m => {
-      const wk = DATA.wpm[m]||4;
-      const fd = filterMonthly(m).filter(r=>r[vk]===it);
-      const bsa_v = sum(filterBSA(m, null).filter(r=>r[bk]===it), 'teu_bsa') / wk;
-      const b=sum(fd,'w3_fst')/wk, n=sum(fd,'w3_norm_fst')/wk;
-      const hb=sum(fd,'w3_hi_fst')/wk, hn=sum(fd,'w3_hi_norm_fst')/wk;
-      const c1=sum(fd,'cm1_norm')/wk, cl=sum(fd,'lst_norm')/wk, ct=cl>0?c1/cl:0;
+      const b=_tblData(m,'w3_fst',it), n=_tblData(m,'w3_norm_fst',it);
+      const hb=_tblData(m,'w3_hi_fst',it), hn=_tblData(m,'w3_hi_norm_fst',it);
+      const c1=_tblData(m,'cm1_norm',it), cl=_tblData(m,'lst_norm',it), ct=cl>0?c1/cl:0;
+      const bsa_v=_tblBSA(m,it);
       h += `<td>${fmt(Math.round(b))}</td><td>${fmt(Math.round(bsa_v))}</td><td>${pct(b,bsa_v)}</td><td>${fmt(Math.round(n))}</td><td>${pct(n,b)}</td>`;
       h += `<td>${fmt(Math.round(hb))}</td><td>${pct(hb,b)}</td><td>${fmt(Math.round(hn))}</td><td>${pct(hn,hb)}</td>`;
       h += `<td>${fmt(Math.round(c1))}</td><td>${fmt(Math.round(ct))}</td>`;
@@ -602,16 +636,19 @@ function buildSummaryTable(months) {
     h += '</tr>';
   });
 
-  // Totals
+  // Totals (주평균 / 월합계)
   [L('합계(주)','Total(Wk)'),L('합계(월)','Total(Mo)')].forEach((lbl,ti) => {
     h += `<tr class="${ti===0?'total':'total-m'}"><td class="lbl">${lbl}</td>`;
     months.forEach(m => {
-      const wk = ti===0 ? (DATA.wpm[m]||4) : 1;
-      const fd = filterMonthly(m);
-      const bsa_v = sum(filterBSA(m, null), 'teu_bsa') / wk;
-      const b=sum(fd,'w3_fst')/wk, n=sum(fd,'w3_norm_fst')/wk;
-      const hb=sum(fd,'w3_hi_fst')/wk, hn=sum(fd,'w3_hi_norm_fst')/wk;
-      const c1=sum(fd,'cm1_norm')/wk, cl=sum(fd,'lst_norm')/wk, ct=cl>0?c1/cl:0;
+      const isMonthlyTotal = ti === 1;
+      const b = isMonthlyTotal ? sum(filterMonthly(m),'w3_fst') : _tblData(m,'w3_fst');
+      const n = isMonthlyTotal ? sum(filterMonthly(m),'w3_norm_fst') : _tblData(m,'w3_norm_fst');
+      const hb = isMonthlyTotal ? sum(filterMonthly(m),'w3_hi_fst') : _tblData(m,'w3_hi_fst');
+      const hn = isMonthlyTotal ? sum(filterMonthly(m),'w3_hi_norm_fst') : _tblData(m,'w3_hi_norm_fst');
+      const c1 = isMonthlyTotal ? sum(filterMonthly(m),'cm1_norm') : _tblData(m,'cm1_norm');
+      const cl = isMonthlyTotal ? sum(filterMonthly(m),'lst_norm') : _tblData(m,'lst_norm');
+      const ct = cl>0?c1/cl:0;
+      const bsa_v = isMonthlyTotal ? sum(filterBSA(m,null),'teu_bsa') : _tblBSA(m);
       h += `<td>${fmt(Math.round(b))}</td><td>${fmt(Math.round(bsa_v))}</td><td>${pct(b,bsa_v)}</td><td>${fmt(Math.round(n))}</td><td>${pct(n,b)}</td>`;
       h += `<td>${fmt(Math.round(hb))}</td><td>${pct(hb,b)}</td><td>${fmt(Math.round(hn))}</td><td>${pct(hn,hb)}</td>`;
       h += `<td>${fmt(Math.round(c1))}</td><td>${fmt(Math.round(ct))}</td>`;
