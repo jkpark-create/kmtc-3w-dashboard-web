@@ -33,6 +33,7 @@ li{margin:4px 0}
 .tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:600}
 .tag-hi{background:#e6f4ea;color:#137333}
 .tag-lo{background:#fce8e6;color:#c5221f}
+.anchor{display:block}
 </style>
 </head>
 <body>
@@ -55,7 +56,21 @@ function applyLang() {
   document.querySelectorAll('.en').forEach(el=>el.style.display=lang==='en'?'':'none');
   document.getElementById('langBtn').textContent=lang==='ko'?'EN':'KO';
 }
-document.addEventListener('DOMContentLoaded', applyLang);
+document.addEventListener('DOMContentLoaded', function() {
+  applyLang();
+  document.querySelectorAll('.toc a[href^="#"]').forEach(function(a) {
+    a.addEventListener('click', function(e) {
+      e.preventDefault();
+      var id = this.getAttribute('href').substring(1);
+      var el = document.getElementById(id);
+      if (!el) return;
+      // Skip hidden siblings to find the visible h2
+      var target = el.nextElementSibling;
+      while (target && target.style.display === 'none') target = target.nextElementSibling;
+      if (target) target.scrollIntoView({behavior:'smooth',block:'start'});
+    });
+  });
+});
 </script>
 
 <div class="container">
@@ -93,7 +108,8 @@ document.addEventListener('DOMContentLoaded', applyLang);
 </ul></div>
 
 <!-- OVERVIEW -->
-<h2 id="overview" class="ko">개요</h2><h2 class="en" style="display:none">Overview</h2>
+<span class="anchor" id="overview"></span>
+<h2 class="ko">개요</h2><h2 class="en" style="display:none">Overview</h2>
 <div class="card ko">
   <p><strong>-3W Booking Dashboard</strong>는 출항 3주 전(WOS-3) 부킹 현황을 모니터링하는 대시보드입니다.</p>
   <ul>
@@ -103,7 +119,7 @@ document.addEventListener('DOMContentLoaded', applyLang);
     <li><strong>④ 수익성</strong> — CM1/TEU Top/Bottom, 수익 집중도</li>
     <li><strong>⑤ 부킹 패턴</strong> — WOS 단계별 부킹 접수 시점 분석</li>
   </ul>
-  <p>기본 월 필터: <strong>현재 주 +3주 후의 월</strong>로 자동 설정됩니다.</p>
+  <p>기본 필터: <strong>현재 주 +3주 후의 월 및 해당 주차</strong>로 자동 설정됩니다.</p>
 </div>
 <div class="card en" style="display:none">
   <p><strong>-3W Booking Dashboard</strong> monitors booking status 3 weeks before sailing (WOS-3).</p>
@@ -114,11 +130,12 @@ document.addEventListener('DOMContentLoaded', applyLang);
     <li><strong>④ Profitability</strong> — CM1/TEU Top/Bottom, revenue concentration</li>
     <li><strong>⑤ Patterns</strong> — WOS stage booking timing analysis</li>
   </ul>
-  <p>Default month: automatically set to <strong>current week + 3 weeks ahead</strong>.</p>
+  <p>Default filter: automatically set to <strong>the month &amp; week of current week + 3 weeks ahead</strong>.</p>
 </div>
 
 <!-- FILTERS -->
-<h2 id="filters" class="ko">필터 사용법</h2><h2 class="en" style="display:none">Filters</h2>
+<span class="anchor" id="filters"></span>
+<h2 class="ko">필터 사용법</h2><h2 class="en" style="display:none">Filters</h2>
 <div class="card ko">
   <table>
     <tr><th>필터</th><th>설명</th><th>기본값</th></tr>
@@ -127,7 +144,7 @@ document.addEventListener('DOMContentLoaded', applyLang);
     <tr><td>도착지 / 도착포트</td><td>도착 국가 + 포트 (DLY)</td><td>전체</td></tr>
     <tr><td>보기</td><td>도착지별 / 선적지별 뷰 전환</td><td>도착지별</td></tr>
     <tr><td>월</td><td>조회 월 (445 캘린더)</td><td>현재 주 +3주 후</td></tr>
-    <tr><td>주차</td><td>특정 주차 선택</td><td>전체</td></tr>
+    <tr><td>주차</td><td>특정 주차 선택</td><td>+3주 후 해당 주차</td></tr>
     <tr><td>화주구분</td><td>고수익 / 저수익 (고수익태그 기준)</td><td>전체</td></tr>
     <tr><td>영업사원</td><td>특정 영업사원 필터</td><td>전체</td></tr>
   </table>
@@ -141,7 +158,7 @@ document.addEventListener('DOMContentLoaded', applyLang);
     <tr><td>Dest / Port</td><td>DLY country + port</td><td>All</td></tr>
     <tr><td>View</td><td>By Destination / By Origin</td><td>By Dest</td></tr>
     <tr><td>Month</td><td>445 calendar month</td><td>Current +3 weeks</td></tr>
-    <tr><td>Week</td><td>Specific week selection</td><td>All</td></tr>
+    <tr><td>Week</td><td>Specific week selection</td><td>+3 weeks target week</td></tr>
     <tr><td>Profit</td><td>High / Low (by profit tag)</td><td>All</td></tr>
     <tr><td>Salesperson</td><td>Filter by salesperson</td><td>All</td></tr>
   </table>
@@ -149,7 +166,8 @@ document.addEventListener('DOMContentLoaded', applyLang);
 </div>
 
 <!-- HISTORY -->
-<h2 id="history" class="ko">과거 데이터 조회</h2><h2 class="en" style="display:none">Historical Data</h2>
+<span class="anchor" id="history"></span>
+<h2 class="ko">과거 데이터 조회</h2><h2 class="en" style="display:none">Historical Data</h2>
 <div class="card ko">
   <p>헤더 우측의 <strong>날짜 드롭다운</strong>을 사용하여 과거 시점의 대시보드 데이터를 조회할 수 있습니다.</p>
   <h3>사용법</h3>
@@ -186,7 +204,8 @@ document.addEventListener('DOMContentLoaded', applyLang);
 </div>
 
 <!-- WEEK RULE -->
-<h2 id="week-rule" class="ko">주차 선택 규칙</h2><h2 class="en" style="display:none">Week Selection Rules</h2>
+<span class="anchor" id="week-rule"></span>
+<h2 class="ko">주차 선택 규칙</h2><h2 class="en" style="display:none">Week Selection Rules</h2>
 <div class="card ko">
   <table>
     <tr><th>항목</th><th>주차=전체</th><th>주차 선택 (예: 5월 1주)</th></tr>
@@ -211,7 +230,8 @@ document.addEventListener('DOMContentLoaded', applyLang);
 </div>
 
 <!-- TAB1 -->
-<h2 id="tab1" class="ko">① 소석률 현황</h2><h2 class="en" style="display:none">① Occupancy Status</h2>
+<span class="anchor" id="tab1"></span>
+<h2 class="ko">① 소석률 현황</h2><h2 class="en" style="display:none">① Occupancy Status</h2>
 <div class="card ko">
   <h3>KPI 카드</h3>
   <p>전체BKG | 실선적(Normal) | 3주전BKG | 3주전실선적(Normal) | BSA | 소석률 | 실선적률 | CM1/TEU</p>
@@ -234,7 +254,8 @@ document.addEventListener('DOMContentLoaded', applyLang);
 </div>
 
 <!-- TAB2 -->
-<h2 id="tab2" class="ko">② 부킹 트렌드</h2><h2 class="en" style="display:none">② Booking Trends</h2>
+<span class="anchor" id="tab2"></span>
+<h2 class="ko">② 부킹 트렌드</h2><h2 class="en" style="display:none">② Booking Trends</h2>
 <div class="card ko">
   <h3>서브탭</h3>
   <table>
@@ -265,7 +286,8 @@ document.addEventListener('DOMContentLoaded', applyLang);
 </div>
 
 <!-- TAB3 -->
-<h2 id="tab3" class="ko">③ 전환 분석</h2><h2 class="en" style="display:none">③ Conversion Analysis</h2>
+<span class="anchor" id="tab3"></span>
+<h2 class="ko">③ 전환 분석</h2><h2 class="en" style="display:none">③ Conversion Analysis</h2>
 <div class="card ko">
   <ul>
     <li><strong>WOS-3 → 실선적 퍼널</strong> — 3주전BKG → 캔슬제외 → 실선적(Normal)</li>
@@ -286,7 +308,8 @@ document.addEventListener('DOMContentLoaded', applyLang);
 </div>
 
 <!-- TAB4 -->
-<h2 id="tab4" class="ko">④ 수익성 분석</h2><h2 class="en" style="display:none">④ Profitability</h2>
+<span class="anchor" id="tab4"></span>
+<h2 class="ko">④ 수익성 분석</h2><h2 class="en" style="display:none">④ Profitability</h2>
 <div class="card ko">
   <ul>
     <li><strong>지역별 CM1/TEU</strong> + <strong>CM1/TEU 월별 추이</strong></li>
@@ -303,7 +326,8 @@ document.addEventListener('DOMContentLoaded', applyLang);
 </div>
 
 <!-- TAB5 -->
-<h2 id="tab5" class="ko">⑤ 부킹 패턴</h2><h2 class="en" style="display:none">⑤ Booking Patterns</h2>
+<span class="anchor" id="tab5"></span>
+<h2 class="ko">⑤ 부킹 패턴</h2><h2 class="en" style="display:none">⑤ Booking Patterns</h2>
 <div class="card ko">
   <ul>
     <li><strong>지역별 WOS 분포 테이블</strong> — 전체BKG 중 WOS-3/2/1/WOS 비중</li>
@@ -322,7 +346,8 @@ document.addEventListener('DOMContentLoaded', applyLang);
 </div>
 
 <!-- WOS -->
-<h2 id="wos" class="ko">WOS (Week of Sailing) 상세</h2><h2 class="en" style="display:none">WOS Details</h2>
+<span class="anchor" id="wos"></span>
+<h2 class="ko">WOS (Week of Sailing) 상세</h2><h2 class="en" style="display:none">WOS Details</h2>
 <div class="card ko">
   <p>WOS = <strong>Week of Sailing</strong>. Booking Schedule의 주 시작일(일요일) - 부킹 접수일로 계산합니다.</p>
   <table>
@@ -347,7 +372,8 @@ document.addEventListener('DOMContentLoaded', applyLang);
 </div>
 
 <!-- PROFIT -->
-<h2 id="profit" class="ko">고수익화주 / 구간별 고수익 부킹분류</h2><h2 class="en" style="display:none">Shipper & Route Profit Classification</h2>
+<span class="anchor" id="profit"></span>
+<h2 class="ko">고수익화주 / 구간별 고수익 부킹분류</h2><h2 class="en" style="display:none">Shipper &amp; Route Profit Classification</h2>
 <div class="card ko">
   <p>선적지(POR Port)별 화주 CM1/TEU를 평균과 비교하여 분류합니다.</p>
   <table>
@@ -398,7 +424,8 @@ document.addEventListener('DOMContentLoaded', applyLang);
 </div>
 
 <!-- DATA -->
-<h2 id="data" class="ko">데이터 기준</h2><h2 class="en" style="display:none">Data Definitions</h2>
+<span class="anchor" id="data"></span>
+<h2 class="ko">데이터 기준</h2><h2 class="en" style="display:none">Data Definitions</h2>
 <div class="card ko">
   <h3>445 캘린더</h3>
   <p>4-4-5 주차 패턴. 2026년: 1월 1주=1/4(일)</p>
@@ -430,7 +457,8 @@ document.addEventListener('DOMContentLoaded', applyLang);
 </div>
 
 <!-- UPDATE -->
-<h2 id="update" class="ko">자동 업데이트</h2><h2 class="en" style="display:none">Auto Updates</h2>
+<span class="anchor" id="update"></span>
+<h2 class="ko">자동 업데이트</h2><h2 class="en" style="display:none">Auto Updates</h2>
 <div class="card ko">
   <h3>매일 09:03 자동 실행</h3>
   <ol>
