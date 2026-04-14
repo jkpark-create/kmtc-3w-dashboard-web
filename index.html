@@ -765,12 +765,11 @@ function renderTab2() {
     {id:'region', lbl:()=>T[_lang].region}, {id:'cust', lbl:()=>T[_lang].byCust},
     {id:'sales', lbl:()=>T[_lang].bySales}, {id:'abcd', lbl:()=>'AB vs CD'}
   ];
-  let html = `<div style="display:flex;gap:0;margin-bottom:12px;border-bottom:2px solid #dadce0">
-    ${t2tabs.map(t => {
+  let html = '<div style="display:flex;gap:0;margin-bottom:12px;border-bottom:2px solid #dadce0;align-items:flex-end">' +
+    t2tabs.map(t => {
       const cls = t2sub===t.id ? 'color:#1a73e8;border-bottom:3px solid #1a73e8;font-weight:600' : 'color:#5f6368;border-bottom:3px solid transparent';
       return `<div style="padding:8px 16px;font-size:13px;cursor:pointer;${cls}" onclick="t2sub='${t.id}';renderTab2()">${t.lbl()}</div>`;
-    }).join('')}
-  </div>`;
+    }).join('') + '</div>';
 
   if (t2sub === 'sales') {
     html += renderSalesmanTable(month);
