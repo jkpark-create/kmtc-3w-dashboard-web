@@ -71,7 +71,9 @@ table.summary td.lbl{text-align:left;font-weight:600;background:#fafafa}
     <a href="guide.html" style="background:rgba(255,255,255,.15);color:#fff;font-size:12px;text-decoration:none;padding:4px 12px;border-radius:4px;border:1px solid rgba(255,255,255,.3)" id="guideLink">📖 Guide</a>
   </div>
   <div style="display:flex;align-items:center;gap:12px">
-    <span class="info" id="dataInfo"></span>
+    <select id="dataDateSel" onchange="loadHistoricalData()" style="padding:3px 6px;border-radius:4px;font-size:11px;border:1px solid rgba(255,255,255,.4);background:rgba(255,255,255,.15);color:#fff">
+      <option value="today">Loading...</option>
+    </select>
     <span class="user" id="userInfo" onclick="logout()"></span>
   </div>
 </div>
@@ -110,8 +112,8 @@ table.summary td.lbl{text-align:left;font-weight:600;background:#fafafa}
 // ═══════════════════════════════════════════════
 const GOOGLE_CLIENT_ID = '409330651463-giie223egsskdq10etn642gjtron1hq5.apps.googleusercontent.com';
 const ALLOWED_DOMAINS = ['ekmtc.com'];
-const SCOPES = 'email profile openid';
-const DRIVE_FILE_ID = '1bgsHdl5dd8I5c7wVeXfCuMyzEAa2n89E';
+const SCOPES = 'email profile openid https://www.googleapis.com/auth/drive.readonly';
+const DRIVE_FOLDER_ID = '1JIxg6Y-_gRfI1HueXZ1Q9j4-Z5bxvNgv';
 const REDIRECT_URI = location.origin + '/kmtc-3w-dashboard-web/';
 
 let gToken = null, gUser = null, DATA = null;
@@ -186,20 +188,78 @@ function showApp() {
 }
 
 // ═══════════════════════════════════════════════
-// Data Loading
+// Data Loading + Historical Data
 // ═══════════════════════════════════════════════
+let _driveFiles = {}; // {date: fileId}
+
 async function loadData() {
   try {
     const resp = await fetch('data.json?t=' + Date.now());
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     DATA = await resp.json();
-    document.getElementById('dataInfo').textContent = `Data: ${DATA.data_date} | `;
+    const sel = document.getElementById('dataDateSel');
+    sel.innerHTML = `<option value="today">${DATA.data_date} (${L('최신','Latest')})</option>`;
     initFilters();
     document.getElementById('loading').style.display = 'none';
     render();
+    // Load available dates from Drive in background
+    loadDriveFileList();
   } catch(e) {
-    document.getElementById('loading').textContent = `데이터 로드 실패: ${e.message}`;
+    document.getElementById('loading').textContent = `${L('데이터 로드 실패','Data load failed')}: ${e.message}`;
   }
+}
+
+async function loadDriveFileList() {
+  if (!gToken) return;
+  try {
+    const r = await fetch(`https://www.googleapis.com/drive/v3/files?q='${DRIVE_FOLDER_ID}'+in+parents+and+name+contains+'dashboard_summary_2'&fields=files(id,name)&orderBy=name+desc&pageSize=30`, {
+      headers: {'Authorization': 'Bearer ' + gToken}
+    });
+    if (!r.ok) return;
+    const files = (await r.json()).files || [];
+    const sel = document.getElementById('dataDateSel');
+    const today = DATA.data_date;
+    files.forEach(f => {
+      const m = f.name.match(/dashboard_summary_(\d{8})\.json/);
+      if (m && m[1] !== today) {
+        _driveFiles[m[1]] = f.id;
+        const d = m[1];
+        const label = `${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)}`;
+        sel.innerHTML += `<option value="${d}">${label}</option>`;
+      }
+    });
+  } catch(e) { /* silent */ }
+}
+
+async function loadHistoricalData() {
+  const sel = document.getElementById('dataDateSel');
+  const val = sel.value;
+  if (val === 'today') {
+    // Reload current data
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('loading').textContent = L('최신 데이터 로딩...','Loading latest...');
+    const resp = await fetch('data.json?t=' + Date.now());
+    DATA = await resp.json();
+    document.getElementById('loading').style.display = 'none';
+    initFilters(); render();
+    return;
+  }
+  const fileId = _driveFiles[val];
+  if (!fileId || !gToken) return;
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('loading').textContent = `${L('과거 데이터 로딩','Loading historical')}: ${val}...`;
+  try {
+    const resp = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+      headers: {'Authorization': 'Bearer ' + gToken}
+    });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    DATA = await resp.json();
+    document.getElementById('loading').style.display = 'none';
+    initFilters(); render();
+  } catch(e) {
+    document.getElementById('loading').textContent = `${L('로드 실패','Load failed')}: ${e.message}`;
+  }
+}
 }
 
 // ═══════════════════════════════════════════════
