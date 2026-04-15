@@ -568,35 +568,47 @@ function renderTab1() {
   const w3bkgM = ms.map(m => _getMonthData(m, 'w3_fst'));
   const w3bkgBsaM = ms.map((m,i) => bsaM[i]>0 ? w3bkgM[i]/bsaM[i]*100 : null);
 
-  // --- 월별 BKG vs BSA: smart label positioning ---
+  // --- 월별 BKG vs BSA: smart label positioning (bars + scatter) ---
   const _allBV = [...shipM, ...bsaM, ...w3bkgM];
   const _y1m = Math.max(..._allBV) * 1.3 || 1000;
   const _allOV = [...occM, ...w3occM, ...w3bkgBsaM].filter(v=>v!=null);
   const _y2m = Math.max(110, Math.ceil(Math.max(..._allOV, 100) * 1.15 / 10) * 10);
-  // Per-point textposition for scatter traces — avoid bar labels & other lines
-  const _G=0.07, _oP=[], _wbP=[], _woP=[];
+  const _G=0.07;
+  const _oP=[], _wbP=[], _woP=[];           // scatter textposition per-point
+  const _bpW3=[], _bpSh=[], _bpBs=[];       // bar textposition per-point
   xl.forEach((_,i) => {
-    const bTops=[w3bkgM[i],shipM[i],bsaM[i]].filter(v=>v>0).map(v=>v/_y1m+0.03);
+    // Step 1: scatter positions (assume bars outside)
+    const bNorms=[{v:w3bkgM[i],n:w3bkgM[i]/_y1m},{v:shipM[i],n:shipM[i]/_y1m},{v:bsaM[i],n:bsaM[i]/_y1m}];
+    const bTops=bNorms.filter(b=>b.v>0).map(b=>b.n+0.03);
     const ents=[
       {yn:occM[i]!=null?occM[i]/_y2m:null,def:'top',idx:0},
       {yn:w3bkgBsaM[i]!=null?w3bkgBsaM[i]/_y2m:null,def:'top',idx:1},
       {yn:w3occM[i]!=null?w3occM[i]/_y2m:null,def:'bottom',idx:2}];
-    const res=['top center','top center','bottom center'], placed=[...bTops];
+    const scRes=['top center','top center','bottom center'], placed=[...bTops];
     ents.filter(e=>e.yn!=null).sort((a,b)=>b.yn-a.yn).forEach(e=>{
       let ch=e.def;
       for(const d of [e.def, e.def==='top'?'bottom':'top']){
-        const ly=e.yn+(d==='top'?0.04:-0.04);
-        if(!placed.some(p=>Math.abs(ly-p)<_G)){ch=d;break;}
+        if(!placed.some(p=>Math.abs(e.yn+(d==='top'?0.04:-0.04)-p)<_G)){ch=d;break;}
       }
-      res[e.idx]=ch+' center';
+      scRes[e.idx]=ch+' center';
       placed.push(e.yn+(ch==='top'?0.04:-0.04));
     });
-    _oP.push(res[0]); _wbP.push(res[1]); _woP.push(res[2]);
+    _oP.push(scRes[0]); _wbP.push(scRes[1]); _woP.push(scRes[2]);
+    // Step 2: bar positions — check against placed scatter labels
+    const scPlaced=[];
+    ents.forEach(e=>{if(e.yn!=null) scPlaced.push(e.yn+(scRes[e.idx].startsWith('top')?0.04:-0.04));});
+    const barHit=bn=>bn>0&&scPlaced.some(sp=>Math.abs(bn+0.03-sp)<_G);
+    _bpW3.push(barHit(bNorms[0].n)?'inside':'outside');
+    _bpSh.push(barHit(bNorms[1].n)?'inside':'outside');
+    _bpBs.push(barHit(bNorms[2].n)?'inside':'outside');
   });
   Plotly.newPlot('ch1bar', [
-    {x:xl, y:w3bkgM, type:'bar', name:L('3주전BKG','WOS-3 BKG'), marker:{color:'#6c5ce7',opacity:.7}, text:w3bkgM.map(fmt), textposition:'outside', textfont:{size:9}},
-    {x:xl, y:shipM, type:'bar', name:L('실선적(Normal)','LFT(Normal)'), marker:{color:'#1a73e8',opacity:.85}, text:shipM.map(fmt), textposition:'outside', textfont:{size:10}},
-    {x:xl, y:bsaM, type:'bar', name:'BSA', marker:{color:'#dadce0',opacity:.5}, text:bsaM.map(fmt), textposition:'outside', textfont:{size:10}},
+    {x:xl, y:w3bkgM, type:'bar', name:L('3주전BKG','WOS-3 BKG'), marker:{color:'#6c5ce7',opacity:.7},
+     text:w3bkgM.map(fmt), textposition:_bpW3, outsidetextfont:{size:9}, insidetextfont:{size:9,color:'#fff'}, cliponaxis:false},
+    {x:xl, y:shipM, type:'bar', name:L('실선적(Normal)','LFT(Normal)'), marker:{color:'#1a73e8',opacity:.85},
+     text:shipM.map(fmt), textposition:_bpSh, outsidetextfont:{size:10}, insidetextfont:{size:10,color:'#fff'}, cliponaxis:false},
+    {x:xl, y:bsaM, type:'bar', name:'BSA', marker:{color:'#dadce0',opacity:.5},
+     text:bsaM.map(fmt), textposition:_bpBs, outsidetextfont:{size:10}, insidetextfont:{size:10}, cliponaxis:false},
     {x:xl, y:occM, type:'scatter', mode:'lines+markers+text', name:L('소석률(Normal/BSA)','Occ(Normal/BSA)'), yaxis:'y2',
      text:occM.map(v=>v?v.toFixed(0)+'%':''), textposition:_oP, line:{color:'#ea4335',width:2}, marker:{size:8}},
     {x:xl, y:w3bkgBsaM, type:'scatter', mode:'lines+markers+text', name:L('3주전BKG/BSA','WOS-3 BKG/BSA'), yaxis:'y2',
