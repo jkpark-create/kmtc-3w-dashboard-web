@@ -308,21 +308,55 @@ function gv(id) { return document.getElementById(id).value; }
 
 function updateCascade() {
   let d = DATA.monthly;
-  const team=gv('fTeam'), ori=gv('fOri'), oriP=gv('fOriP'), dst=gv('fDst');
+  const team=gv('fTeam'), ori=gv('fOri'), oriP=gv('fOriP'), dst=gv('fDst'), dstP=gv('fDstP'), sales=gv('fSales');
   if(team!=='ALL') d=d.filter(r=>r.team===team);
-  fillSelect('fOri', [...new Set(d.map(r=>r.origin))].sort());
+  fillSelect('fOri', [...new Set(d.map(r=>r.origin))].sort(), ori);
   if(ori!=='ALL') d=d.filter(r=>r.origin===ori);
-  fillSelect('fOriP', [...new Set(d.map(r=>r.ori_port))].sort());
+  
+  // 선적포트 옵션: Monthly + BSA 데이터 모두에서 추출
+  let oriPOpts = [...new Set(d.map(r=>r.ori_port))];
+  if(DATA.bsa) {
+    let b = DATA.bsa;
+    if(team!=='ALL') b=b.filter(r=>r.team===team);
+    if(ori!=='ALL') b=b.filter(r=>r.origin===ori);
+    const bsaOriPorts = [...new Set(b.map(r=>r.POR_PORT))];
+    oriPOpts = [...new Set([...oriPOpts, ...bsaOriPorts])];
+  }
+  fillSelect('fOriP', oriPOpts.sort(), oriP);
   if(oriP!=='ALL') d=d.filter(r=>r.ori_port===oriP);
-  fillSelect('fDst', [...new Set(d.map(r=>r.dest))].sort());
+  
+  // 도착지 옵션: Monthly + BSA 데이터 모두에서 추출
+  let dstOpts = [...new Set(d.map(r=>r.dest))];
+  if(DATA.bsa) {
+    let b = DATA.bsa;
+    if(team!=='ALL') b=b.filter(r=>r.team===team);
+    if(ori!=='ALL') b=b.filter(r=>r.origin===ori);
+    if(oriP!=='ALL') b=b.filter(r=>r.POR_PORT===oriP);
+    const bsaDests = [...new Set(b.map(r=>r.dest))];
+    dstOpts = [...new Set([...dstOpts, ...bsaDests])];
+  }
+  fillSelect('fDst', dstOpts.sort(), dst);
   if(dst!=='ALL') d=d.filter(r=>r.dest===dst);
-  fillSelect('fDstP', [...new Set(d.map(r=>r.dst_port))].sort());
+  
+  // 도착포트 옵션: Monthly + BSA 데이터 모두에서 추출
+  let dstPOpts = [...new Set(d.map(r=>r.dst_port))];
+  if(DATA.bsa) {
+    let b = DATA.bsa;
+    if(team!=='ALL') b=b.filter(r=>r.team===team);
+    if(ori!=='ALL') b=b.filter(r=>r.origin===ori);
+    if(oriP!=='ALL') b=b.filter(r=>r.POR_PORT===oriP);
+    if(dst!=='ALL') b=b.filter(r=>r.dest===dst);
+    const bsaDstPorts = [...new Set(b.map(r=>r.DLY_PORT))];
+    dstPOpts = [...new Set([...dstPOpts, ...bsaDstPorts])];
+  }
+  fillSelect('fDstP', dstPOpts.sort(), dstP);
+  
   // 영업사원 옵션 (shipper 데이터에서)
   if (DATA.shipper) {
     let sd = DATA.shipper;
     if(gv('fTeam')!=='ALL') sd=sd.filter(r=>r.team===gv('fTeam'));
     const salesList = [...new Set(sd.map(r=>r.Salesman_POR).filter(s=>s&&s!==''))].sort();
-    fillSelect('fSales', salesList);
+    fillSelect('fSales', salesList, sales);
   }
 }
 
