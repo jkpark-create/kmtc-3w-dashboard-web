@@ -419,6 +419,8 @@ function filterShipper(month) {
   if (!DATA.shipper) return [];
   let d = applyGlobalFilter([...DATA.shipper], true);
   if(month) d=d.filter(r=>r.YYYYMM===month);
+  const week = gv('fWeek');
+  if(week!=='ALL' && d.length>0 && d[0].week_start_date) d=d.filter(r=>r.week_start_date===week);
   const sales = gv('fSales');
   if(sales!=='ALL') d=d.filter(r=>r.Salesman_POR===sales);
   const profit = gv('fProfit');
@@ -820,20 +822,24 @@ function renderTab2() {
     }
     return;
   } else if (t2sub === 'region') {
-    // 지역별: 글로벌 보기 필터(도착지/선적지) 연동
-    const useVk = viewKey(), useVl = viewLabel();
+    // 지역별: 글로벌 보기 필터(도착지/선적지) 연동 + BSA/소석률
+    const useVk = viewKey(), useVl = viewLabel(), useBk = bsaViewKey();
     const items = groupByKey(fd, useVk);
+    const _bsaR = week !== 'ALL' ? filterBSA(month) : filterBSA(month, null);
+    const bsaByR = {};
+    _bsaR.forEach(r => { const k = r[useBk]; bsaByR[k] = (bsaByR[k]||0) + r.teu_bsa; });
     let rows = Object.entries(items).map(([k,r]) => ({
-      name:k, bkg:profitSum(r,'w3_fst'), ship:profitSum(r,'w3_norm_fst'), hi:sum(r,'w3_hi_fst')
+      name:k, bkg:profitSum(r,'w3_fst'), ship:profitSum(r,'w3_norm_fst'), hi:sum(r,'w3_hi_fst'), bsa:bsaByR[k]||0
     })).sort((a,b)=>b.bkg-a.bkg).slice(0,15);
 
     html += `<div class="chart-card"><h3>${L('3주전 BKG 현황','WOS-3 BKG Status')} - ${useVl} (${fmtMonth(month)})</h3>
-    <table class="summary"><tr><th>${useVl}</th><th>BKG</th><th>${L('실선적(Normal)','LFT(Normal)')}</th><th>${L('실선적률','LFT Rate')}</th><th>${L('구간별고수익','Route Hi')}</th><th>${L('구간별고수익%','Route Hi%')}</th></tr>`;
+    <table class="summary"><tr><th>${useVl}</th><th>BKG</th><th>BSA</th><th>${L('소석률','Occ')}</th><th>${L('실선적(Normal)','LFT(Normal)')}</th><th>${L('실선적률','LFT Rate')}</th><th>${L('구간별고수익','Route Hi')}</th><th>${L('구간별고수익%','Route Hi%')}</th></tr>`;
     rows.forEach(r => {
-      html += `<tr><td class="lbl">${r.name}</td><td>${fmt(r.bkg)}</td><td>${fmt(r.ship)}</td><td>${pct(r.ship,r.bkg)}</td><td>${fmt(r.hi)}</td><td>${pct(r.hi,r.bkg)}</td></tr>`;
+      html += `<tr><td class="lbl">${r.name}</td><td>${fmt(r.bkg)}</td><td>${fmt(r.bsa)}</td><td>${pct(r.bkg,r.bsa)}</td><td>${fmt(r.ship)}</td><td>${pct(r.ship,r.bkg)}</td><td>${fmt(r.hi)}</td><td>${pct(r.hi,r.bkg)}</td></tr>`;
     });
     const tb=rows.reduce((s,r)=>s+r.bkg,0), ts=rows.reduce((s,r)=>s+r.ship,0), th2=rows.reduce((s,r)=>s+r.hi,0);
-    html += `<tr class="total"><td class="lbl">${L('합계','Total')}</td><td>${fmt(tb)}</td><td>${fmt(ts)}</td><td>${pct(ts,tb)}</td><td>${fmt(th2)}</td><td>${pct(th2,tb)}</td></tr></table></div>`;
+    const tbsa=rows.reduce((s,r)=>s+r.bsa,0);
+    html += `<tr class="total"><td class="lbl">${L('합계','Total')}</td><td>${fmt(tb)}</td><td>${fmt(tbsa)}</td><td>${pct(tb,tbsa)}</td><td>${fmt(ts)}</td><td>${pct(ts,tb)}</td><td>${fmt(th2)}</td><td>${pct(th2,tb)}</td></tr></table></div>`;
 
     const wkData = filterWeekly(month);
     const weeks = [...new Set(wkData.map(r=>r.week_start_date))].sort();
