@@ -650,7 +650,7 @@ function renderTab1() {
   // 주차 선택: 해당 주 BSA, 전체: 월 BSA
   const _bsaForOcc = _weekSel ? filterBSA(month) : filterBSA(month, null);
   const bsaByKey = {};
-  _bsaForOcc.forEach(r => { const k = r[bk]; bsaByKey[k] = (bsaByKey[k]||0) + r.teu_bsa; });
+  _bsaForOcc.forEach(r => { const k = r[bk]; bsaByKey[k] = (bsaByKey[k]||0) + (r.teu_bsa||0); });
   // Occ data for mode switching (w3=3주전BKG/BSA, normal=Normal/BSA)
   window._occRows = Object.entries(items).map(([k,rows]) => {
     const s = profitSum(rows,'norm_fst'), b = bsaByKey[k]||0;
@@ -861,7 +861,7 @@ function renderTab2() {
     const items = groupByKey(fd, useVk);
     const _bsaR = week !== 'ALL' ? filterBSA(month) : filterBSA(month, null);
     const bsaByR = {};
-    _bsaR.forEach(r => { const k = r[useBk]; bsaByR[k] = (bsaByR[k]||0) + r.teu_bsa; });
+    _bsaR.forEach(r => { const k = r[useBk]; bsaByR[k] = (bsaByR[k]||0) + (r.teu_bsa||0); });
     let rows = Object.entries(items).map(([k,r]) => ({
       name:k, bkg:profitSum(r,'w3_fst'), ship:profitSum(r,'w3_norm_fst'), hi:sum(r,'w3_hi_fst'), bsa:bsaByR[k]||0
     })).sort((a,b)=>b.bkg-a.bkg).slice(0,15);
