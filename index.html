@@ -667,11 +667,10 @@ function buildSummaryTable(months) {
   const _ws = gv('fWeek') !== 'ALL';
   const _curMonth = gv('fMonth');
   const _selWeek = gv('fWeek');
-  let h = `<table class="summary"><tr><th rowspan="2">${vl}</th>`;
+  let h = `<table class="summary"><tr><th rowspan="3">${vl}</th>`;
   months.forEach(m => {
     const wk = DATA.wpm[m]||4;
     if (_ws && m === _curMonth) {
-      // 선택된 주차의 월 내 순번 찾기
       const mWeeks = [...new Set(DATA.weekly.filter(r=>r.YYYYMM===m).map(r=>r.week_start_date))].sort();
       const wkIdx = mWeeks.indexOf(_selWeek) + 1;
       h += `<th colspan="11">${fmtMonth(m)} ${L('실적','Perf')} (${wkIdx}${L('주차','wk')})</th>`;
@@ -683,6 +682,10 @@ function buildSummaryTable(months) {
   });
   h += '</tr><tr>';
   months.forEach(() => {
+    h += `<th colspan="5">${L('3주전 BKG (물량 및 실선적률)','WOS-3 BKG (Volume & LFT Rate)')}</th><th colspan="4">${L('3주전 BKG (고수익화주)','WOS-3 BKG (Hi-Shipper)')}</th><th colspan="2"></th>`;
+  });
+  h += '</tr><tr>';
+  months.forEach(() => {
     h += `<th>BKG</th><th>BSA</th><th>${L('비중','Ratio')}</th><th>${L('실선적','LFT')}</th><th>${L('실선적률','Rate')}</th><th>BKG</th><th>${L('비중','Ratio')}</th><th>${L('실선적','LFT')}</th><th>${L('실선적률','Rate')}</th><th>CM1</th><th>CM1/TEU</th>`;
   });
   h += '</tr>';
@@ -690,24 +693,26 @@ function buildSummaryTable(months) {
   // 주차 선택: 해당월=해당주, 과거월=주평균, BSA=해당주/주평균
   function _tblData(m, key, byItem) {
     if (_ws && m === _curMonth) {
+      // 선택된 주차: 해당 주 실적
       const d = filterWeekly(m);
       return byItem ? sum(d.filter(r=>r[vk]===byItem), key) : sum(d, key);
     }
     const d = filterMonthly(m);
     const v = byItem ? sum(d.filter(r=>r[vk]===byItem), key) : sum(d, key);
-    return _ws ? v / (DATA.wpm[m]||4) : v / (DATA.wpm[m]||4);
+    // 주차 선택 시 과거월은 주평균, 미선택 시 월합계
+    return _ws ? v / (DATA.wpm[m]||4) : v;
   }
   function _tblBSA(m, byItem) {
     if (_ws && m === _curMonth) {
-      // 해당월: 해당 주 BSA
+      // 선택된 주차: 해당 주 BSA
       let b = filterBSA(m);
       if (byItem) b = b.filter(r=>r[bk]===byItem);
       return sum(b, 'teu_bsa');
     }
-    // 과거월 또는 전체: 주평균
     let b = filterBSA(m, null);
     if (byItem) b = b.filter(r=>r[bk]===byItem);
-    return sum(b, 'teu_bsa') / (DATA.wpm[m]||4);
+    // 주차 선택 시 과거월은 주평균, 미선택 시 월합계
+    return _ws ? sum(b, 'teu_bsa') / (DATA.wpm[m]||4) : sum(b, 'teu_bsa');
   }
 
   items.forEach(it => {
