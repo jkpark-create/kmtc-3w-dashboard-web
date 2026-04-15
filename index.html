@@ -568,49 +568,46 @@ function renderTab1() {
   const w3bkgM = ms.map(m => _getMonthData(m, 'w3_fst'));
   const w3bkgBsaM = ms.map((m,i) => bsaM[i]>0 ? w3bkgM[i]/bsaM[i]*100 : null);
 
-  // --- 월별 BKG vs BSA: de-overlap labels ---
-  const _ch1traces = [
-    {x:xl, y:w3bkgM, type:'bar', name:L('3주전BKG','WOS-3 BKG'), marker:{color:'#6c5ce7',opacity:.7}},
-    {x:xl, y:shipM, type:'bar', name:L('실선적(Normal)','LFT(Normal)'), marker:{color:'#1a73e8',opacity:.85}},
-    {x:xl, y:bsaM, type:'bar', name:'BSA', marker:{color:'#dadce0',opacity:.5}},
-    {x:xl, y:occM, type:'scatter', mode:'lines+markers', name:L('소석률(Normal/BSA)','Occ(Normal/BSA)'), yaxis:'y2',
-     line:{color:'#ea4335',width:2}, marker:{size:8}},
-    {x:xl, y:w3bkgBsaM, type:'scatter', mode:'lines+markers', name:L('3주전BKG/BSA','WOS-3 BKG/BSA'), yaxis:'y2',
-     line:{color:'#f9ab00',width:2,dash:'dot'}, marker:{size:6,symbol:'square'}},
-    {x:xl, y:w3occM, type:'scatter', mode:'lines+markers', name:L('3주전실선적/BSA','WOS-3 LFT/BSA'), yaxis:'y2',
-     line:{color:'#6c5ce7',width:2,dash:'dash'}, marker:{size:6,symbol:'diamond'}},
-  ];
-  const _ch1allVals = [...shipM, ...bsaM, ...w3bkgM];
-  const _ch1y1max = Math.max(..._ch1allVals) * 1.3 || 1000;
-  const _ch1allOcc = [...occM, ...w3occM, ...w3bkgBsaM].filter(v=>v!=null);
-  const _ch1y2max = Math.max(110, Math.ceil(Math.max(..._ch1allOcc, 100) * 1.15 / 10) * 10);
-  const _ch1lbls = [
-    [w3bkgM,'y',v=>fmt(v),'#6c5ce7'],[shipM,'y',v=>fmt(v),'#1a73e8'],[bsaM,'y',v=>fmt(v),'#5f6368'],
-    [occM,'y2',v=>v.toFixed(0)+'%','#ea4335'],[w3bkgBsaM,'y2',v=>v.toFixed(0)+'%','#f9ab00'],
-    [w3occM,'y2',v=>v.toFixed(0)+'%','#6c5ce7'],
-  ];
-  const _ch1an = []; const _ch1gap = 0.08;
-  xl.forEach((xv,i) => {
-    const pts = [];
-    _ch1lbls.forEach(([vals,yax,fn,col]) => {
-      const v = vals[i]; if(v==null||isNaN(v)) return;
-      const ym = yax==='y'?_ch1y1max:_ch1y2max;
-      pts.push({yn:ym?v/ym:0, text:fn(v), yax, col});
+  // --- 월별 BKG vs BSA: smart label positioning ---
+  const _allBV = [...shipM, ...bsaM, ...w3bkgM];
+  const _y1m = Math.max(..._allBV) * 1.3 || 1000;
+  const _allOV = [...occM, ...w3occM, ...w3bkgBsaM].filter(v=>v!=null);
+  const _y2m = Math.max(110, Math.ceil(Math.max(..._allOV, 100) * 1.15 / 10) * 10);
+  // Per-point textposition for scatter traces — avoid bar labels & other lines
+  const _G=0.07, _oP=[], _wbP=[], _woP=[];
+  xl.forEach((_,i) => {
+    const bTops=[w3bkgM[i],shipM[i],bsaM[i]].filter(v=>v>0).map(v=>v/_y1m+0.03);
+    const ents=[
+      {yn:occM[i]!=null?occM[i]/_y2m:null,def:'top',idx:0},
+      {yn:w3bkgBsaM[i]!=null?w3bkgBsaM[i]/_y2m:null,def:'top',idx:1},
+      {yn:w3occM[i]!=null?w3occM[i]/_y2m:null,def:'bottom',idx:2}];
+    const res=['top center','top center','bottom center'], placed=[...bTops];
+    ents.filter(e=>e.yn!=null).sort((a,b)=>b.yn-a.yn).forEach(e=>{
+      let ch=e.def;
+      for(const d of [e.def, e.def==='top'?'bottom':'top']){
+        const ly=e.yn+(d==='top'?0.04:-0.04);
+        if(!placed.some(p=>Math.abs(ly-p)<_G)){ch=d;break;}
+      }
+      res[e.idx]=ch+' center';
+      placed.push(e.yn+(ch==='top'?0.04:-0.04));
     });
-    pts.sort((a,b)=>a.yn-b.yn);
-    for(let j=1;j<pts.length;j++) if(pts[j].yn-pts[j-1].yn<_ch1gap) pts[j].yn=pts[j-1].yn+_ch1gap;
-    pts.forEach(p => {
-      const ym = p.yax==='y'?_ch1y1max:_ch1y2max;
-      _ch1an.push({x:xv,y:p.yn*ym,yref:p.yax,text:p.text,showarrow:false,
-        font:{size:9,color:p.col},bgcolor:'rgba(255,255,255,0.85)',borderpad:2,
-        xanchor:'center',yanchor:'bottom'});
-    });
+    _oP.push(res[0]); _wbP.push(res[1]); _woP.push(res[2]);
   });
-  Plotly.newPlot('ch1bar', _ch1traces, {barmode:'group', margin:{l:50,r:50,t:40,b:30},
-    yaxis:{title:'TEU',gridcolor:'#f0f0f0',range:[0,_ch1y1max]},
-    yaxis2:{title:L('소석률 %','Occ %'),overlaying:'y',side:'right',range:[0,_ch1y2max]},
-    legend:{orientation:'h',y:1.15}, plot_bgcolor:'#fff', paper_bgcolor:'#fff',
-    annotations:_ch1an}, {displayModeBar:false});
+  Plotly.newPlot('ch1bar', [
+    {x:xl, y:w3bkgM, type:'bar', name:L('3주전BKG','WOS-3 BKG'), marker:{color:'#6c5ce7',opacity:.7}, text:w3bkgM.map(fmt), textposition:'outside', textfont:{size:9}},
+    {x:xl, y:shipM, type:'bar', name:L('실선적(Normal)','LFT(Normal)'), marker:{color:'#1a73e8',opacity:.85}, text:shipM.map(fmt), textposition:'outside', textfont:{size:10}},
+    {x:xl, y:bsaM, type:'bar', name:'BSA', marker:{color:'#dadce0',opacity:.5}, text:bsaM.map(fmt), textposition:'outside', textfont:{size:10}},
+    {x:xl, y:occM, type:'scatter', mode:'lines+markers+text', name:L('소석률(Normal/BSA)','Occ(Normal/BSA)'), yaxis:'y2',
+     text:occM.map(v=>v?v.toFixed(0)+'%':''), textposition:_oP, line:{color:'#ea4335',width:2}, marker:{size:8}},
+    {x:xl, y:w3bkgBsaM, type:'scatter', mode:'lines+markers+text', name:L('3주전BKG/BSA','WOS-3 BKG/BSA'), yaxis:'y2',
+     text:w3bkgBsaM.map(v=>v?v.toFixed(0)+'%':''), textposition:_wbP, line:{color:'#f9ab00',width:2,dash:'dot'}, marker:{size:6,symbol:'square'}},
+    {x:xl, y:w3occM, type:'scatter', mode:'lines+markers+text', name:L('3주전실선적/BSA','WOS-3 LFT/BSA'), yaxis:'y2',
+     text:w3occM.map(v=>v?v.toFixed(0)+'%':''), textposition:_woP, line:{color:'#6c5ce7',width:2,dash:'dash'}, marker:{size:6,symbol:'diamond'}},
+  ], {barmode:'group', margin:{l:50,r:50,t:40,b:30},
+    yaxis:{title:'TEU',gridcolor:'#f0f0f0',range:[0,_y1m]},
+    yaxis2:{title:L('소석률 %','Occ %'),overlaying:'y',side:'right',range:[0,_y2m]},
+    legend:{orientation:'h',y:1.15}, plot_bgcolor:'#fff', paper_bgcolor:'#fff'},
+  {displayModeBar:false});
 
   // Occupancy bar
   const items = groupByKey(fd, vk);
