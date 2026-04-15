@@ -783,7 +783,8 @@ function buildSummaryTable(months) {
 let t2sub = 'region';
 function renderTab2() {
   const month = gv('fMonth'), vk = viewKey(), vl = viewLabel();
-  const fd = filterMonthly(month);
+  const week = gv('fWeek');
+  const fd = week !== 'ALL' ? filterWeekly(month) : filterMonthly(month);
 
   // Sub-tabs
   const t2tabs = [
@@ -925,7 +926,8 @@ function renderTab2() {
 
 function renderABCDTab(month) {
   const vk = viewKey(), vl = viewLabel();
-  const fd = filterMonthly(month);
+  const week = gv('fWeek');
+  const fd = week !== 'ALL' ? filterWeekly(month) : filterMonthly(month);
   const items = groupByKey(fd, vk);
   let rows = Object.entries(items).map(([k,arr]) => {
     const ab=sum(arr,'w3_ab_fst'), cd=sum(arr,'w3_cd_fst'),
