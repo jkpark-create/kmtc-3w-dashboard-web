@@ -537,8 +537,15 @@ document.addEventListener('DOMContentLoaded', function() {
     <tr><td>3월</td><td>5</td><td>03/01~03/29</td></tr><tr><td>4월</td><td>4</td><td>04/05~04/26</td></tr>
     <tr><td>5월</td><td>4</td><td>05/03~05/24</td></tr><tr><td>6월</td><td>5</td><td>05/31~06/28</td></tr>
   </table>
-  <h3>실선적 = Normal</h3>
-  <p>LST_Status = 'Normal'인 부킹만 실선적으로 집계합니다.</p>
+  <h3>TEU 기준</h3>
+  <table>
+    <tr><th>구분</th><th>TEU 기준</th><th>설명</th></tr>
+    <tr><td><strong>BKG (부킹)</strong></td><td>FST_TEU</td><td>부킹 시점 TEU</td></tr>
+    <tr><td><strong>실선적 (Normal)</strong></td><td>LST_TEU</td><td>실제 선적 TEU (LST_Status='Normal')</td></tr>
+    <tr><td><strong>CM1/TEU</strong></td><td>CM1 / LST_TEU</td><td>Normal + CM1 있는 건만</td></tr>
+  </table>
+  <h3>데이터 소스</h3>
+  <p><strong>2.csv (Date_vsl 뷰)</strong>를 base로 하고, <strong>1.csv (Booking_schedule 뷰)</strong>에서 화주/부킹일 등 상세 정보를 보충합니다. 1.csv 범위 밖의 부킹도 2.csv에 있으면 포함됩니다.</p>
   <h3>제외 조건 (-3W 필터)</h3>
   <table>
     <tr><th>조건</th><th>설명</th></tr>
@@ -551,7 +558,15 @@ document.addEventListener('DOMContentLoaded', function() {
 <div class="card en" style="display:none">
   <h3>445 Calendar</h3>
   <p>4-4-5 week pattern. 2026: Jan Week1 = 01/04 (Sun)</p>
-  <h3>LFT = Normal status only</h3>
+  <h3>TEU Basis</h3>
+  <table>
+    <tr><th>Type</th><th>TEU Source</th><th>Description</th></tr>
+    <tr><td><strong>BKG</strong></td><td>FST_TEU</td><td>Booking TEU</td></tr>
+    <tr><td><strong>LFT (Normal)</strong></td><td>LST_TEU</td><td>Actual shipment TEU (LST_Status='Normal')</td></tr>
+    <tr><td><strong>CM1/TEU</strong></td><td>CM1 / LST_TEU</td><td>Normal with CM1 only</td></tr>
+  </table>
+  <h3>Data Source</h3>
+  <p><strong>2.csv (Date_vsl view)</strong> as base, supplemented by <strong>1.csv (Booking_schedule view)</strong> for shipper/booking details. Bookings outside 1.csv date range are included if present in 2.csv.</p>
   <h3>Exclusion Rules</h3>
   <p>1) Cancel within 3 days of booking → exclude</p>
   <p>2) Cancel + booked 21+ days before + cancelled within 7 days → exclude</p>
