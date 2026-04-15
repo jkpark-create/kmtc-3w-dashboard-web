@@ -408,7 +408,7 @@ function filterBSA(month, week) {
 }
 
 function filterWeekly(month) {
-  let d = applyGlobalFilter([...DATA.weekly], false);
+  let d = applyGlobalFilter([...DATA.weekly], true);
   if(month) d=d.filter(r=>r.YYYYMM===month);
   const week = gv('fWeek');
   if(week!=='ALL') d=d.filter(r=>r.week_start_date===week);
