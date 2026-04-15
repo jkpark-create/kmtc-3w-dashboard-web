@@ -393,9 +393,9 @@ function filterBSA(month, week) {
   let b = DATA.bsa;
   const team=gv('fTeam'),ori=gv('fOri'),oriP=gv('fOriP'),dst=gv('fDst'),dstP=gv('fDstP');
   if(team!=='ALL') b=b.filter(r=>r.team===team);
-  if(ori!=='ALL') b=b.filter(r=>r.POR_Country===ori);
+  if(ori!=='ALL') b=b.filter(r=>r.origin===ori);
   if(oriP!=='ALL') b=b.filter(r=>r.POR_PORT===oriP);
-  if(dst!=='ALL') b=b.filter(r=>r.DLY_Country===dst);
+  if(dst!=='ALL') b=b.filter(r=>r.dest===dst);
   if(dstP!=='ALL') b=b.filter(r=>r.DLY_PORT===dstP);
   if(month) b=b.filter(r=>r.YYYYMM===month);
   // 주차 필터: week=null이면 전체 월, week=undefined이면 gv 사용
@@ -446,7 +446,7 @@ function fmtWeekLabel(w) {
 }
 function viewKey() { return gv('fView') === 'origin' ? 'origin' : 'dest'; }
 function viewLabel() { return gv('fView') === 'origin' ? L('선적지','Origin') : L('도착지','Dest'); }
-function bsaViewKey() { return gv('fView') === 'origin' ? 'POR_Country' : 'DLY_Country'; }
+function bsaViewKey() { return gv('fView') === 'origin' ? 'origin' : 'dest'; }
 function tagLabel(t) { return (t||'').split(', ').map(v => v==='고수익'?L('고수익','High'):v==='저수익'?L('저수익','Low'):v).join(', '); }
 
 // 화주구분 필터: 고수익/저수익에 따라 BKG/실선적 수치 조정
@@ -456,11 +456,11 @@ function profitSum(arr, key) {
   // w3_fst → hi면 w3_hi_fst, lo면 w3_fst - w3_hi_fst
   const hiKey = key.replace('w3_','w3_hi_').replace('norm_fst','norm_fst');
   const mapping = {
-    'w3_fst': ['w3_hi_fst', r=>r.w3_fst-r.w3_hi_fst],
-    'w3_norm_fst': ['w3_hi_norm_fst', r=>r.w3_norm_fst-r.w3_hi_norm_fst],
-    'w3_canc_fst': ['w3_hi_fst', r=>0], // no hi cancel data
-    'fst': ['w3_hi_fst', r=>r.fst], // fallback
-    'norm_fst': ['w3_hi_norm_fst', r=>r.norm_fst],
+    'w3_fst': ['w3_hi_fst', r=>(r.w3_fst||0)-(r.w3_hi_fst||0)],
+    'w3_norm_fst': ['w3_hi_norm_fst', r=>(r.w3_norm_fst||0)-(r.w3_hi_norm_fst||0)],
+    'w3_canc_fst': ['w3_hi_fst', r=>0],
+    'fst': ['w3_hi_fst', r=>(r.fst||0)],
+    'norm_fst': ['w3_hi_norm_fst', r=>(r.norm_fst||0)],
   };
   if (mapping[key]) {
     if (p==='hi') return sum(arr, mapping[key][0]);
