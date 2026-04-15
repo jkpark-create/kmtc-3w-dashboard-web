@@ -451,26 +451,68 @@ document.addEventListener('DOMContentLoaded', function() {
 <span class="anchor" id="wos"></span>
 <h2 class="ko">WOS (Week of Sailing) 상세</h2><h2 class="en" style="display:none">WOS Details</h2>
 <div class="card ko">
-  <p>WOS = <strong>Week of Sailing</strong>. Booking Schedule의 주 시작일(일요일) - 부킹 접수일로 계산합니다.</p>
+  <p>WOS = <strong>Week of Sailing</strong>. 부킹이 출항 대비 얼마나 앞서 접수되었는지를 나타내는 리드타임 지표입니다.</p>
+
+  <h3>계산 공식</h3>
+  <p>대시보드의 WOS 분류는 <strong>Booking Schedule (예정 출항일)</strong> 기준으로 계산됩니다:</p>
+  <ol>
+    <li><strong>week_start (BKG_Sche)</strong> = Booking_schedule 날짜가 속한 주의 <strong>일요일</strong><br>
+      <code>week_start = Booking_schedule - (요일 offset)</code><br>
+      예: Booking_schedule = 4/29(수) → week_start = <strong>4/26(일)</strong></li>
+    <li><strong>Lead_time</strong> = week_start (BKG_Sche) - Booking_date (부킹 접수일)<br>
+      <code>diff = week_start(일요일) - 부킹접수일</code></li>
+    <li>diff 값에 따라 WOS 단계를 분류:</li>
+  </ol>
   <table>
-    <tr><th>단계</th><th>기준</th><th>의미</th><th>예시</th></tr>
-    <tr><td style="color:#1a73e8;font-weight:700">WOS-3</td><td>≥ 15일</td><td>3주+ 전 부킹</td><td>4/1 부킹 → 4/26 출항 (25일)</td></tr>
-    <tr><td style="color:#f9ab00;font-weight:700">WOS-2</td><td>8~14일</td><td>2주 전 부킹</td><td>4/15 부킹 → 4/26 출항 (11일)</td></tr>
-    <tr><td style="color:#ea4335;font-weight:700">WOS-1</td><td>1~7일</td><td>1주 전 부킹</td><td>4/20 부킹 → 4/26 출항 (6일)</td></tr>
-    <tr><td style="color:#5f6368;font-weight:700">WOS</td><td>&lt; 1일</td><td>출항 주 부킹</td><td>4/26 부킹 → 4/26 출항 (당일)</td></tr>
+    <tr><th>단계</th><th>기준 (diff)</th><th>의미</th><th>계산 예시</th></tr>
+    <tr><td style="color:#1a73e8;font-weight:700">WOS-3</td><td>≥ 15일</td><td>3주+ 전 부킹</td><td>부킹 4/1, 스케줄 4/29 → ws 4/26 → diff=25일</td></tr>
+    <tr><td style="color:#f9ab00;font-weight:700">WOS-2</td><td>8~14일</td><td>2주 전 부킹</td><td>부킹 4/15, 스케줄 4/29 → ws 4/26 → diff=11일</td></tr>
+    <tr><td style="color:#ea4335;font-weight:700">WOS-1</td><td>1~7일</td><td>1주 전 부킹</td><td>부킹 4/20, 스케줄 4/29 → ws 4/26 → diff=6일</td></tr>
+    <tr><td style="color:#5f6368;font-weight:700">WOS</td><td>&lt; 1일</td><td>출항 주 부킹</td><td>부킹 4/27, 스케줄 4/29 → ws 4/26 → diff=-1일</td></tr>
   </table>
+
+  <h3>주차 그룹 vs WOS 분류 — 날짜 기준 차이</h3>
+  <table>
+    <tr><th>항목</th><th>날짜 기준</th><th>용도</th></tr>
+    <tr><td><strong>주차 그룹 (행)</strong></td><td>Actual_Departure_schedule (Date_vsl, 실제 출항일)</td><td>월별/주차별 테이블의 행 그룹핑</td></tr>
+    <tr><td><strong>WOS 분류 (열)</strong></td><td>Booking_schedule (예정 출항일)</td><td>WOS-3/2/1/WOS 리드타임 단계</td></tr>
+  </table>
+  <p>즉, 한 부킹의 <strong>주차 배정</strong>은 실제 출항일(Date_vsl) 기준이고, <strong>리드타임(WOS) 분류</strong>는 Booking_schedule 기준입니다.</p>
+
   <div class="tip"><strong>WOS-3 비중이 높을수록 좋습니다.</strong> 조기 부킹 = 선복 계획 안정 + 캔슬 위험 감소 + 높은 수익성</div>
+  <div class="tip"><strong>Booking_schedule을 사용하는 이유:</strong> Booking_schedule은 부킹 접수 시점에 확정된 예정 출항일로, 부킹 의사결정 시점의 리드타임을 정확히 반영합니다. 실제 출항일(Date_vsl)은 이후 변경될 수 있어 사후적 관점이 됩니다.</div>
 </div>
 <div class="card en" style="display:none">
-  <p>WOS = <strong>Week of Sailing</strong>. Calculated as BKG Schedule week start (Sunday) minus Booking date.</p>
+  <p>WOS = <strong>Week of Sailing</strong>. Measures how far in advance a booking was placed relative to the sailing date.</p>
+
+  <h3>Calculation Formula</h3>
+  <p>The dashboard WOS classification is based on <strong>Booking Schedule (planned departure date)</strong>:</p>
+  <ol>
+    <li><strong>week_start (BKG_Sche)</strong> = <strong>Sunday</strong> of the week containing Booking_schedule date<br>
+      <code>week_start = Booking_schedule - (weekday offset)</code><br>
+      Example: Booking_schedule = Apr 29 (Wed) → week_start = <strong>Apr 26 (Sun)</strong></li>
+    <li><strong>Lead_time</strong> = week_start (BKG_Sche) - Booking_date<br>
+      <code>diff = week_start(Sunday) - booking date</code></li>
+    <li>Classify WOS stage by diff value:</li>
+  </ol>
   <table>
-    <tr><th>Stage</th><th>Lead Time</th><th>Meaning</th><th>Example</th></tr>
-    <tr><td style="color:#1a73e8;font-weight:700">WOS-3</td><td>≥ 15 days</td><td>3+ weeks ahead</td><td>Booked Apr 1 → Sails Apr 26</td></tr>
-    <tr><td style="color:#f9ab00;font-weight:700">WOS-2</td><td>8~14 days</td><td>2 weeks ahead</td><td>Booked Apr 15 → Sails Apr 26</td></tr>
-    <tr><td style="color:#ea4335;font-weight:700">WOS-1</td><td>1~7 days</td><td>1 week ahead</td><td>Booked Apr 20 → Sails Apr 26</td></tr>
-    <tr><td style="color:#5f6368;font-weight:700">WOS</td><td>&lt; 1 day</td><td>Sailing week</td><td>Booked Apr 26 → Sails Apr 26</td></tr>
+    <tr><th>Stage</th><th>Criteria (diff)</th><th>Meaning</th><th>Calculation Example</th></tr>
+    <tr><td style="color:#1a73e8;font-weight:700">WOS-3</td><td>≥ 15 days</td><td>3+ weeks ahead</td><td>Booked 4/1, Schedule 4/29 → ws 4/26 → diff=25d</td></tr>
+    <tr><td style="color:#f9ab00;font-weight:700">WOS-2</td><td>8~14 days</td><td>2 weeks ahead</td><td>Booked 4/15, Schedule 4/29 → ws 4/26 → diff=11d</td></tr>
+    <tr><td style="color:#ea4335;font-weight:700">WOS-1</td><td>1~7 days</td><td>1 week ahead</td><td>Booked 4/20, Schedule 4/29 → ws 4/26 → diff=6d</td></tr>
+    <tr><td style="color:#5f6368;font-weight:700">WOS</td><td>&lt; 1 day</td><td>Sailing week</td><td>Booked 4/27, Schedule 4/29 → ws 4/26 → diff=-1d</td></tr>
   </table>
+
+  <h3>Week Grouping vs WOS Classification — Different Date Bases</h3>
+  <table>
+    <tr><th>Item</th><th>Date Basis</th><th>Purpose</th></tr>
+    <tr><td><strong>Week Group (rows)</strong></td><td>Actual_Departure_schedule (Date_vsl)</td><td>Row grouping in monthly/weekly tables</td></tr>
+    <tr><td><strong>WOS Stage (columns)</strong></td><td>Booking_schedule (planned departure)</td><td>WOS-3/2/1/WOS lead time classification</td></tr>
+  </table>
+  <p>In other words, a booking's <strong>week assignment</strong> is based on actual departure (Date_vsl), while the <strong>lead time (WOS) stage</strong> is based on Booking_schedule.</p>
+
   <div class="tip"><strong>Higher WOS-3 = better.</strong> Early bookings → stable capacity + lower cancel risk + higher profitability</div>
+  <div class="tip"><strong>Why Booking_schedule?</strong> Booking_schedule is the planned departure date fixed at booking time, accurately reflecting the lead time at the point of booking decision. Actual departure (Date_vsl) may change later and represents a retrospective view.</div>
 </div>
 
 <!-- PROFIT -->
@@ -605,7 +647,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </div>
 
 <div style="text-align:center;padding:40px;color:#5f6368;font-size:12px">
-  -3W Booking Dashboard Guide | Last updated: 2026-04-14
+  -3W Booking Dashboard Guide | Last updated: 2026-04-16
 </div>
 
 </div>
