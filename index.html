@@ -776,7 +776,7 @@ function buildSummaryTable(months) {
     months.forEach(m => {
       const b=_tblData(m,'w3_fst',it), n=_tblData(m,'w3_norm_fst',it);
       const hb=_tblData(m,'w3_hi_fst',it), hn=_tblData(m,'w3_hi_norm_fst',it);
-      const c1=_tblData(m,'hi_cm1_norm',it), cl=_tblData(m,'lst_norm',it), ct=cl>0?c1/cl:0;
+      const c1=_tblData(m,'hi_cm1_norm',it), cl=_tblData(m,'hi_lst_norm',it), ct=cl>0?c1/cl:0;
       const bsa_v=_tblBSA(m,it);
       h += `<td>${fmt(Math.round(b))}</td><td>${fmt(Math.round(bsa_v))}</td><td>${pct(b,bsa_v)}</td><td>${fmt(Math.round(n))}</td><td>${pct(n,b)}</td>`;
       h += `<td>${fmt(Math.round(hb))}</td><td>${pct(hb,b)}</td><td>${fmt(Math.round(hn))}</td><td>${pct(hn,hb)}</td>`;
@@ -799,7 +799,7 @@ function buildSummaryTable(months) {
       const hb = isMonthlyTotal ? sum(filterMonthly(m),'w3_hi_fst') : _tblData(m,'w3_hi_fst');
       const hn = isMonthlyTotal ? sum(filterMonthly(m),'w3_hi_norm_fst') : _tblData(m,'w3_hi_norm_fst');
       const c1 = isMonthlyTotal ? sum(filterMonthly(m),'hi_cm1_norm') : _tblData(m,'hi_cm1_norm');
-      const cl = isMonthlyTotal ? sum(filterMonthly(m),'lst_norm') : _tblData(m,'lst_norm');
+      const cl = isMonthlyTotal ? sum(filterMonthly(m),'hi_lst_norm') : _tblData(m,'hi_lst_norm');
       const ct = cl>0?c1/cl:0;
       const bsa_v = isMonthlyTotal ? sum(filterBSA(m,null),'teu_bsa') : _tblBSA(m);
       h += `<td>${fmt(Math.round(b))}</td><td>${fmt(Math.round(bsa_v))}</td><td>${pct(b,bsa_v)}</td><td>${fmt(Math.round(n))}</td><td>${pct(n,b)}</td>`;
