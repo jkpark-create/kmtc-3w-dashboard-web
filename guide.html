@@ -77,6 +77,7 @@ li{margin:4px 0}
     <li><a href="#profit" data-id="profit">고수익 분류</a></li>
     <li><a href="#data" data-id="data">데이터 기준</a></li>
     <li><a href="#update" data-id="update">자동 업데이트</a></li>
+    <li><a href="#scheduler" data-id="scheduler">스케줄러</a></li>
   </ul>
   <ul class="en" style="display:none">
     <li><a href="#overview" data-id="overview">Overview</a></li>
@@ -92,6 +93,7 @@ li{margin:4px 0}
     <li><a href="#profit" data-id="profit">Profit Class</a></li>
     <li><a href="#data" data-id="data">Data Defs</a></li>
     <li><a href="#update" data-id="update">Auto Updates</a></li>
+    <li><a href="#scheduler" data-id="scheduler">Scheduler</a></li>
   </ul>
 </nav>
 
@@ -127,7 +129,7 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   // Section IDs for scroll spy
-  var sectionIds = ['overview','filters','history','week-rule','tab1','tab2','tab3','tab4','tab5','wos','profit','data','update'];
+  var sectionIds = ['overview','filters','history','week-rule','tab1','tab2','tab3','tab4','tab5','wos','profit','data','update','scheduler'];
   var sideToc = document.getElementById('sideToc');
   var mainTocs = document.querySelectorAll('.container > .toc');
 
@@ -174,6 +176,7 @@ document.addEventListener('DOMContentLoaded', function() {
   <li><a href="#profit">고수익화주 / 구간별 고수익 부킹분류</a></li>
   <li><a href="#data">데이터 기준</a></li>
   <li><a href="#update">자동 업데이트</a></li>
+  <li><a href="#scheduler">Windows 스케줄러 작업</a></li>
 </ul></div>
 <div class="toc en" style="display:none"><h3>Contents</h3><ul>
   <li><a href="#overview">Overview</a></li>
@@ -189,6 +192,7 @@ document.addEventListener('DOMContentLoaded', function() {
   <li><a href="#profit">Shipper &amp; Route Profit Classification</a></li>
   <li><a href="#data">Data Definitions</a></li>
   <li><a href="#update">Auto Updates</a></li>
+  <li><a href="#scheduler">Windows Scheduler Tasks</a></li>
 </ul></div>
 
 <!-- OVERVIEW -->
@@ -621,8 +625,8 @@ document.addEventListener('DOMContentLoaded', function() {
 <div class="card ko">
   <h3>매일 09:03 자동 실행</h3>
   <ol>
-    <li>Tableau에서 1.csv + 2.csv + BSA 다운로드</li>
-    <li>Booking Snapshot 처리 (수식, 필터, 고수익태그)</li>
+    <li>Tableau에서 1.csv + 2.csv + BSA + grade(분기별) 다운로드</li>
+    <li>Booking Snapshot 처리 (수식, 필터, 등급, 고수익태그)</li>
     <li>JSON 생성 → Google Drive 업로드 + dist/data.json 복사</li>
     <li><strong>GitHub Pages 자동 push</strong> → 웹 배포 완료</li>
   </ol>
@@ -637,13 +641,57 @@ document.addEventListener('DOMContentLoaded', function() {
 <div class="card en" style="display:none">
   <h3>Daily at 09:03 (auto)</h3>
   <ol>
-    <li>Download from Tableau (1.csv + 2.csv + BSA)</li>
-    <li>Process booking snapshot (formulas, filters, profit tags)</li>
+    <li>Download from Tableau (1.csv + 2.csv + BSA + grade quarterly)</li>
+    <li>Process booking snapshot (formulas, filters, grades, profit tags)</li>
     <li>Generate JSON → Google Drive + dist/data.json</li>
     <li><strong>Auto push to GitHub Pages</strong></li>
   </ol>
   <h3>Data Range</h3>
   <p>1.csv: 2025-12-28 ~ current week +4 weeks | 2.csv: Full | BSA: 2025-2027 all months</p>
+</div>
+
+<!-- SCHEDULER -->
+<span class="anchor" id="scheduler"></span>
+<h2 class="ko">Windows 스케줄러 작업</h2><h2 class="en" style="display:none">Windows Scheduler Tasks</h2>
+<div class="card ko">
+  <p>프로젝트 관련 <strong>Windows Task Scheduler</strong> 등록 작업 목록입니다.</p>
+  <table>
+    <tr><th>작업명</th><th>스케줄</th><th>설명</th></tr>
+    <tr><td><strong>3W_BKG_Dashboard</strong></td><td>평일(월~금) 09:03</td><td>대시보드 자동 업데이트 (주력 작업)<br>Tableau 다운로드 → Snapshot 처리 → JSON 생성 → GitHub Pages push → 이메일 알림</td></tr>
+    <tr><td><strong>3W_BKG_Dashboard_Daily</strong></td><td>매일 09:00</td><td>일일 백업 작업 (동일 배치 파일)</td></tr>
+    <tr><td><strong>OBT_Raw_Automation</strong></td><td>매일 09:00</td><td>Tableau OBT Raw 데이터 → Google Sheets 동기화</td></tr>
+    <tr><td><strong>RFQ_GDrive_Sync</strong></td><td>매일 08:00</td><td>Google Drive 비딩(RFQ) 파일 동기화</td></tr>
+  </table>
+  <h3>실행 순서 (3W_BKG_Dashboard)</h3>
+  <ol>
+    <li>캐시 정리 (<code>_cache_*.parquet</code>, <code>dashboard_summary_*.json</code>)</li>
+    <li><code>daily_3w_dashboard.py</code> 실행 (Tableau → 처리 → GDrive → dist/data.json)</li>
+    <li><code>dist/</code> git push (data.json 변경 시만)</li>
+    <li><code>send_notification.py</code> 이메일 알림 (성공/실패 무관)</li>
+  </ol>
+  <h3>로그 확인</h3>
+  <p>실행 로그: <code>logs/run_YYYYMMDD.log</code> | 타임아웃: 72시간</p>
+  <div class="tip"><strong>참고:</strong> 3W_BKG_Dashboard (평일 09:03)가 주력 작업입니다. 실행 결과는 이메일로 자동 발송됩니다.</div>
+</div>
+<div class="card en" style="display:none">
+  <p>Project-related <strong>Windows Task Scheduler</strong> tasks.</p>
+  <table>
+    <tr><th>Task Name</th><th>Schedule</th><th>Description</th></tr>
+    <tr><td><strong>3W_BKG_Dashboard</strong></td><td>Weekdays (Mon-Fri) 09:03</td><td>Dashboard auto-update (primary task)<br>Tableau download → Snapshot → JSON → GitHub Pages push → Email</td></tr>
+    <tr><td><strong>3W_BKG_Dashboard_Daily</strong></td><td>Daily 09:00</td><td>Daily backup task (same batch file)</td></tr>
+    <tr><td><strong>OBT_Raw_Automation</strong></td><td>Daily 09:00</td><td>Tableau OBT Raw → Google Sheets sync</td></tr>
+    <tr><td><strong>RFQ_GDrive_Sync</strong></td><td>Daily 08:00</td><td>Google Drive RFQ file sync</td></tr>
+  </table>
+  <h3>Execution Flow (3W_BKG_Dashboard)</h3>
+  <ol>
+    <li>Clean cache (<code>_cache_*.parquet</code>, <code>dashboard_summary_*.json</code>)</li>
+    <li>Run <code>daily_3w_dashboard.py</code> (Tableau → Process → GDrive → dist/data.json)</li>
+    <li><code>dist/</code> git push (only if data.json changed)</li>
+    <li><code>send_notification.py</code> email alert (runs regardless of success/failure)</li>
+  </ol>
+  <h3>Log Files</h3>
+  <p>Execution log: <code>logs/run_YYYYMMDD.log</code> | Timeout: 72 hours</p>
+  <div class="tip"><strong>Note:</strong> 3W_BKG_Dashboard (weekday 09:03) is the primary task. Results are automatically emailed.</div>
 </div>
 
 <div style="text-align:center;padding:40px;color:#5f6368;font-size:12px">
