@@ -88,7 +88,7 @@ table.summary td.lbl{text-align:left;font-weight:600;background:#fafafa}
   <label>보기</label><select id="fView"><option value="dest">도착지별</option><option value="origin">선적지별</option></select>
   <label>월</label><select id="fMonth"></select>
   <label>주차</label><select id="fWeek"><option value="ALL">전체</option></select>
-  <label>화주구분</label><select id="fProfit"><option value="ALL">전체</option><option value="hi">고수익</option><option value="lo">저수익</option></select>
+  <label>화주구분</label><select id="fProfit"><option value="ALL">전체</option><option value="hi">고수익화주</option><option value="lo">저수익화주</option></select>
   <label>등급</label><select id="fGrade"><option value="ALL">전체</option><option value="ab">A+B</option><option value="cd">C+D</option></select>
   <label>영업사원</label><select id="fSales"><option value="ALL">전체</option></select>
 </div>
@@ -458,8 +458,8 @@ function filterShipper(month) {
   const sales = gv('fSales');
   if(sales!=='ALL') d=d.filter(r=>r.Salesman_POR===sales);
   const profit = gv('fProfit');
-  if(profit==='hi') d=d.filter(r=>r['\uace0\uc218\uc775\ud0dc\uadf8']==='고수익');
-  if(profit==='lo') d=d.filter(r=>r['\uace0\uc218\uc775\ud0dc\uadf8']==='저수익');
+  if(profit==='hi') d=d.filter(r=>r['\uace0\uc218\uc775\ud0dc\uadf8']==='고수익화주');
+  if(profit==='lo') d=d.filter(r=>r['\uace0\uc218\uc775\ud0dc\uadf8']==='저수익화주');
   const grade = gv('fGrade');
   if(grade==='ab') d=d.filter(r=>r.grade==='A+B');
   if(grade==='cd') d=d.filter(r=>r.grade==='C+D');
@@ -481,7 +481,7 @@ function fmtWeekLabel(w) {
 function viewKey() { return gv('fView') === 'origin' ? 'origin' : 'dest'; }
 function viewLabel() { return gv('fView') === 'origin' ? L('선적지','Origin') : L('도착지','Dest'); }
 function bsaViewKey() { return gv('fView') === 'origin' ? 'origin' : 'dest'; }
-function tagLabel(t) { return (t||'').split(', ').map(v => v==='고수익'?L('고수익','High'):v==='저수익'?L('저수익','Low'):v).join(', '); }
+function tagLabel(t) { return (t||'').split(', ').map(v => v==='고수익화주'?L('고수익화주','High'):v==='저수익화주'?L('저수익화주','Low'):v).join(', '); }
 
 // 화주구분 필터: 고수익/저수익에 따라 BKG/실선적 수치 조정
 function profitSum(arr, key) {
@@ -776,7 +776,7 @@ function buildSummaryTable(months) {
     months.forEach(m => {
       const b=_tblData(m,'w3_fst',it), n=_tblData(m,'w3_norm_fst',it);
       const hb=_tblData(m,'w3_hi_fst',it), hn=_tblData(m,'w3_hi_norm_fst',it);
-      const c1=_tblData(m,'cm1_norm',it), cl=_tblData(m,'lst_norm',it), ct=cl>0?c1/cl:0;
+      const c1=_tblData(m,'hi_cm1_norm',it), cl=_tblData(m,'lst_norm',it), ct=cl>0?c1/cl:0;
       const bsa_v=_tblBSA(m,it);
       h += `<td>${fmt(Math.round(b))}</td><td>${fmt(Math.round(bsa_v))}</td><td>${pct(b,bsa_v)}</td><td>${fmt(Math.round(n))}</td><td>${pct(n,b)}</td>`;
       h += `<td>${fmt(Math.round(hb))}</td><td>${pct(hb,b)}</td><td>${fmt(Math.round(hn))}</td><td>${pct(hn,hb)}</td>`;
@@ -798,7 +798,7 @@ function buildSummaryTable(months) {
       const n = isMonthlyTotal ? sum(filterMonthly(m),'w3_norm_fst') : _tblData(m,'w3_norm_fst');
       const hb = isMonthlyTotal ? sum(filterMonthly(m),'w3_hi_fst') : _tblData(m,'w3_hi_fst');
       const hn = isMonthlyTotal ? sum(filterMonthly(m),'w3_hi_norm_fst') : _tblData(m,'w3_hi_norm_fst');
-      const c1 = isMonthlyTotal ? sum(filterMonthly(m),'cm1_norm') : _tblData(m,'cm1_norm');
+      const c1 = isMonthlyTotal ? sum(filterMonthly(m),'hi_cm1_norm') : _tblData(m,'hi_cm1_norm');
       const cl = isMonthlyTotal ? sum(filterMonthly(m),'lst_norm') : _tblData(m,'lst_norm');
       const ct = cl>0?c1/cl:0;
       const bsa_v = isMonthlyTotal ? sum(filterBSA(m,null),'teu_bsa') : _tblBSA(m);
@@ -904,8 +904,8 @@ function renderTab2() {
 
     // 고수익 vs 저수익 리드타임 비교 (shipper 데이터 기반)
     const sd = filterShipper(month);
-    const hiSD = sd.filter(r => r['\uace0\uc218\uc775\ud0dc\uadf8'] === '고수익');
-    const loSD = sd.filter(r => r['\uace0\uc218\uc775\ud0dc\uadf8'] === '저수익');
+    const hiSD = sd.filter(r => r['\uace0\uc218\uc775\ud0dc\uadf8'] === '고수익화주');
+    const loSD = sd.filter(r => r['\uace0\uc218\uc775\ud0dc\uadf8'] === '저수익화주');
     const wosKeys = ['w3_fst','w2_fst','w1_fst','wos_fst'];
     const wosLabels = ['WOS-3','WOS-2','WOS-1','WOS'];
     const hiTotal = wosKeys.reduce((s,k) => s + sum(hiSD,k), 0);
@@ -927,7 +927,7 @@ function renderTab2() {
       const msd = filterShipper(m);
       if (!msd.length) return null;
       const total = sum(msd, 'w3_fst');
-      const hi = sum(msd.filter(r => r['\uace0\uc218\uc775\ud0dc\uadf8'] === '고수익'), 'w3_fst');
+      const hi = sum(msd.filter(r => r['\uace0\uc218\uc775\ud0dc\uadf8'] === '고수익화주'), 'w3_fst');
       return total > 0 ? hi/total*100 : null;
     });
     Plotly.newPlot('ch2hi', [{
@@ -1045,7 +1045,7 @@ function renderShipperTable(month) {
 
   rows.forEach(r => {
     const ct = r.cm1l>0 ? r.cm1/r.cm1l : 0;
-    const tagStyle = r.tag==='고수익' ? 'color:#34a853;font-weight:600' : r.tag==='저수익' ? 'color:#ea4335' : '';
+    const tagStyle = r.tag==='고수익화주' ? 'color:#34a853;font-weight:600' : r.tag==='저수익화주' ? 'color:#ea4335' : '';
     const gradeStyle = r.grade==='A+B' ? 'color:#1a73e8;font-weight:600' : 'color:#f9ab00';
     h += `<tr><td class="lbl">${r.name}</td><td style="${gradeStyle}">${r.grade}</td><td style="${tagStyle}">${tagLabel(r.tag)}</td><td>${r.sales}</td><td>${fmt(r.bkg)}</td><td>${fmt(r.ship)}</td><td>${pct(r.ship,r.bkg)}</td>`;
     h += `<td>${fmt(r.hi)}</td><td>${pct(r.hi,r.bkg)}</td><td>${fmt(Math.round(r.cm1))}</td><td>${fmt(Math.round(ct))}</td></tr>`;
@@ -1337,7 +1337,7 @@ function renderTab5() {
   html += `<div class="chart-card"><h3>${L('화주별 부킹 접수 시점','Shipper Booking Timing')} (${fmtMonth(month)})</h3>
   <table class="summary"><tr><th>${L('화주','Shipper')}</th><th>${L('고수익화주','Hi-Shipper')}</th><th>${L('영업사원','Sales')}</th><th>${L('전체BKG','Total')}</th><th>WOS-3</th><th>${L('비중','Ratio')}</th><th>WOS-2</th><th>${L('비중','Ratio')}</th><th>WOS-1</th><th>${L('비중','Ratio')}</th><th>WOS</th><th>${L('비중','Ratio')}</th></tr>`;
   custRows.forEach(r => {
-    const tagStyle = r.tag==='고수익' ? 'color:#34a853;font-weight:600' : r.tag==='저수익' ? 'color:#ea4335' : '';
+    const tagStyle = r.tag==='고수익화주' ? 'color:#34a853;font-weight:600' : r.tag==='저수익화주' ? 'color:#ea4335' : '';
     html += `<tr><td class="lbl">${r.name}</td><td style="${tagStyle}">${tagLabel(r.tag)}</td><td>${r.sales}</td><td>${fmt(r.total)}</td>`;
     html += `<td>${fmt(r.w3)}</td><td>${pct(r.w3,r.total)}</td>`;
     html += `<td>${fmt(r.w2)}</td><td>${pct(r.w2,r.total)}</td>`;
@@ -1368,8 +1368,8 @@ function renderTab5() {
     legend:{orientation:'h',y:1.1},plot_bgcolor:'#fff',paper_bgcolor:'#fff'}, {displayModeBar:false});
 
   // 고수익 vs 저수익 리드타임 비교
-  const hiSD5 = sd.filter(r => r['\uace0\uc218\uc775\ud0dc\uadf8'] === '고수익');
-  const loSD5 = sd.filter(r => r['\uace0\uc218\uc775\ud0dc\uadf8'] === '저수익');
+  const hiSD5 = sd.filter(r => r['\uace0\uc218\uc775\ud0dc\uadf8'] === '고수익화주');
+  const loSD5 = sd.filter(r => r['\uace0\uc218\uc775\ud0dc\uadf8'] === '저수익화주');
   const hiT5 = wosKeys.reduce((s,k) => s + sum(hiSD5,k), 0);
   const loT5 = wosKeys.reduce((s,k) => s + sum(loSD5,k), 0);
   Plotly.newPlot('ch5lt', [
@@ -1388,7 +1388,7 @@ function renderTab5() {
     const msd = filterShipper(m);
     if (!msd.length) return null;
     const total = sum(msd, 'w3_fst');
-    const hi = sum(msd.filter(r => r['\uace0\uc218\uc775\ud0dc\uadf8'] === '고수익'), 'w3_fst');
+    const hi = sum(msd.filter(r => r['\uace0\uc218\uc775\ud0dc\uadf8'] === '고수익화주'), 'w3_fst');
     return total > 0 ? hi/total*100 : null;
   });
   Plotly.newPlot('ch5hi', [{
@@ -1410,7 +1410,7 @@ const T = {
     guide: '사용가이드',
     team: '팀', origin: '선적지', oriPort: '선적포트', dest: '도착지', dstPort: '도착포트',
     view: '보기', month: '월', week: '주차', profitType: '화주구분', grade: '등급', sales: '영업사원',
-    viewDest: '도착지별', viewOri: '선적지별', all: '전체', hi: '고수익', lo: '저수익',
+    viewDest: '도착지별', viewOri: '선적지별', all: '전체', hi: '고수익화주', lo: '저수익화주',
     tab1: '① 소석률 현황', tab2: '② 부킹 트렌드', tab3: '③ 전환 분석', tab4: '④ 수익성', tab5: '⑤ 부킹 패턴',
     totalBkg: '전체 BKG', shipment: '실선적(Normal)', w3bkg: '3주전 BKG', w3ship: '3주전 실선적(Normal)',
     bsa: 'BSA', occ: '소석률', shipRate: '실선적률', loading: '데이터 로딩 중...',
@@ -1422,7 +1422,7 @@ const T = {
     weeklyAvg: '주간 평균', monthlyTotal: '월 합계', total: '합계',
     region: '지역별', byCust: '화주별', bySales: '영업사원별',
     w3bkgStatus: '3주전 BKG 현황', weeklyW3: '주차별 3주전 BKG',
-    profitTag: '고수익화주', highProfit: '고수익', lowProfit: '저수익',
+    profitTag: '고수익화주', highProfit: '고수익화주', lowProfit: '저수익화주',
   },
   en: {
     title: '-3W Booking Dashboard',
