@@ -776,7 +776,7 @@ function buildSummaryTable(months) {
     months.forEach(m => {
       const b=_tblData(m,'w3_fst',it), n=_tblData(m,'w3_norm_fst',it);
       const hb=_tblData(m,'w3_hi_fst',it), hn=_tblData(m,'w3_hi_norm_fst',it);
-      const c1=_tblData(m,'w3_hi_cm1_norm',it), cl=_tblData(m,'w3_hi_lst_norm',it), ct=cl>0?c1/cl:0;
+      const c1=_tblData(m,'w3_hi_cm1_norm',it), cl=_tblData(m,'w3_hi_norm_fst',it), ct=cl>0?c1/cl:0;
       const bsa_v=_tblBSA(m,it);
       h += `<td>${fmt(Math.round(b))}</td><td>${fmt(Math.round(bsa_v))}</td><td>${pct(b,bsa_v)}</td><td>${fmt(Math.round(n))}</td><td>${pct(n,b)}</td>`;
       h += `<td>${fmt(Math.round(hb))}</td><td>${pct(hb,b)}</td><td>${fmt(Math.round(hn))}</td><td>${pct(hn,hb)}</td>`;
@@ -799,7 +799,7 @@ function buildSummaryTable(months) {
       const hb = isMonthlyTotal ? sum(filterMonthly(m),'w3_hi_fst') : _tblData(m,'w3_hi_fst');
       const hn = isMonthlyTotal ? sum(filterMonthly(m),'w3_hi_norm_fst') : _tblData(m,'w3_hi_norm_fst');
       const c1 = isMonthlyTotal ? sum(filterMonthly(m),'w3_hi_cm1_norm') : _tblData(m,'w3_hi_cm1_norm');
-      const cl = isMonthlyTotal ? sum(filterMonthly(m),'w3_hi_lst_norm') : _tblData(m,'w3_hi_lst_norm');
+      const cl = isMonthlyTotal ? sum(filterMonthly(m),'w3_hi_norm_fst') : _tblData(m,'w3_hi_norm_fst');
       const ct = cl>0?c1/cl:0;
       const bsa_v = isMonthlyTotal ? sum(filterBSA(m,null),'teu_bsa') : _tblBSA(m);
       h += `<td>${fmt(Math.round(b))}</td><td>${fmt(Math.round(bsa_v))}</td><td>${pct(b,bsa_v)}</td><td>${fmt(Math.round(n))}</td><td>${pct(n,b)}</td>`;
@@ -1027,7 +1027,7 @@ function renderShipperTable(month) {
     const s = byShpr[k];
     s.bkg += r.w3_fst||0; s.ship += r.w3_norm_fst||0;
     s.hi += r.w3_hi_fst||0; s.hi_ship += r.w3_hi_norm_fst||0;
-    s.cm1 += r.w3_cm1_norm||0; s.cm1l += r.w3_lst_norm||0;
+    s.cm1 += r.w3_cm1_norm||0; s.cm1l += r.w3_norm_fst||0;
     if (r.Salesman_POR) s._sales.add(r.Salesman_POR);
     if (r['\uace0\uc218\uc775\ud0dc\uadf8']) s._tags.add(r['\uace0\uc218\uc775\ud0dc\uadf8']);
     if (r.grade) s._grades.add(r.grade);
@@ -1072,7 +1072,7 @@ function renderSalesmanTable(month) {
     const s = bySM[sm];
     s.bkg += r.w3_fst||0; s.ship += r.w3_norm_fst||0;
     s.hi += r.w3_hi_fst||0;
-    s.cm1 += r.w3_cm1_norm||0; s.cm1l += r.w3_lst_norm||0;
+    s.cm1 += r.w3_cm1_norm||0; s.cm1l += r.w3_norm_fst||0;
     if (r.BKG_SHPR_CST_NO) s.custs.add(r.BKG_SHPR_CST_NO);
   });
 
@@ -1195,7 +1195,7 @@ function renderTab4() {
   const week = gv('fWeek');
   const fd = week !== 'ALL' ? filterWeekly(month) : filterMonthly(month);
   const items = Object.entries(groupByKey(fd, vk)).map(([k,r]) => ({
-    name:k, bkg:profitSum(r,'w3_fst'), cm1:sum(r,'w3_cm1_norm'), cm1l:sum(r,'w3_lst_norm'), hi:sum(r,'w3_hi_fst')
+    name:k, bkg:profitSum(r,'w3_fst'), cm1:sum(r,'w3_cm1_norm'), cm1l:sum(r,'w3_norm_fst'), hi:sum(r,'w3_hi_fst')
   })).filter(r=>r.bkg>0).sort((a,b)=>b.bkg-a.bkg).slice(0,10);
 
   let html = `<div class="chart-row">
@@ -1210,7 +1210,7 @@ function renderTab4() {
     const k = r.BKG_SHPR_CST_ENM || r.BKG_SHPR_CST_NO;
     if (!byShpr[k]) byShpr[k] = {bkg:0,cm1:0,cm1l:0,_sales:new Set()};
     const s = byShpr[k];
-    s.bkg += r.w3_fst||0; s.cm1 += r.w3_cm1_norm||0; s.cm1l += r.w3_lst_norm||0;
+    s.bkg += r.w3_fst||0; s.cm1 += r.w3_cm1_norm||0; s.cm1l += r.w3_norm_fst||0;
     if (r.Salesman_POR) s._sales.add(r.Salesman_POR);
   });
   let shprRows = Object.entries(byShpr).map(([k,s]) => ({
@@ -1262,7 +1262,7 @@ function renderTab4() {
     x: DATA.months.map(fmtMonth),
     y: DATA.months.map(m => {
       const d = filterMonthly(m).filter(r=>r[vk]===it);
-      const c=sum(d,'w3_cm1_norm'), l=sum(d,'w3_lst_norm');
+      const c=sum(d,'w3_cm1_norm'), l=sum(d,'w3_norm_fst');
       return l>0 ? Math.round(c/l) : null;
     }), mode:'lines+markers', name:it, connectgaps:true
   })), {margin:{l:50,r:20,t:20,b:30},yaxis:{title:'CM1/TEU',gridcolor:'#f0f0f0'},
