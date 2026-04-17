@@ -655,12 +655,12 @@ function renderTab1() {
   const occM = ms.map((m,i) => bsaM[i]>0 ? shipM[i]/bsaM[i]*100 : null);
   const xl = ms.map(fmtMonth);
 
-  // 3주전 BKG 바 + 3주전BKG/BSA 라인 + 고수익화주부킹비중(hi_fst/fst)
+  // 3주전 BKG 바 + 3주전BKG/BSA 라인 + 고수익화주부킹비중(w3_hi_fst/w3_fst)
   const w3bkgM = ms.map(m => _getMonthData(m, 'w3_fst'));
   const w3bkgBsaM = ms.map((m,i) => bsaM[i]>0 ? w3bkgM[i]/bsaM[i]*100 : null);
-  const totalBkgM = ms.map(m => _getMonthMetric(m, 'fst'));
-  const hiBkgM = ms.map(m => _getMonthMetric(m, 'hi_fst'));
-  const hiBkgShareM = ms.map((m,i) => totalBkgM[i]>0 ? hiBkgM[i]/totalBkgM[i]*100 : null);
+  const w3TotalBkgM = ms.map(m => _getMonthMetric(m, 'w3_fst'));
+  const w3HiBkgM = ms.map(m => _getMonthMetric(m, 'w3_hi_fst'));
+  const hiBkgShareM = ms.map((m,i) => w3TotalBkgM[i]>0 ? w3HiBkgM[i]/w3TotalBkgM[i]*100 : null);
 
   // --- 월별 BKG vs BSA: smart label positioning (2D overlap) ---
   const _allBV = [...shipM, ...bsaM, ...w3bkgM];
@@ -695,7 +695,7 @@ function renderTab1() {
      text:occM.map(v=>v?v.toFixed(0)+'%':''), textposition:_oP, line:{color:'#ea4335',width:2}, marker:{size:8}},
     {x:xl, y:w3bkgBsaM, type:'scatter', mode:'lines+markers+text', name:L('3주전BKG/BSA','WOS-3 BKG/BSA'), yaxis:'y2',
      text:w3bkgBsaM.map(v=>v?v.toFixed(0)+'%':''), textposition:_wbP, line:{color:'#f9ab00',width:2,dash:'dot'}, marker:{size:6,symbol:'square'}},
-    {x:xl, y:hiBkgShareM, type:'scatter', mode:'lines+markers+text', name:L('고수익화주부킹비중','Hi-Shipper BKG Share'), yaxis:'y2',
+    {x:xl, y:hiBkgShareM, type:'scatter', mode:'lines+markers+text', name:L('고수익화주부킹비중','Hi-Shipper WOS-3 BKG Share'), yaxis:'y2',
      text:hiBkgShareM.map(v=>v?v.toFixed(0)+'%':''), textposition:_woP, line:{color:'#6c5ce7',width:2,dash:'dash'}, marker:{size:6,symbol:'diamond'}},
   ], {barmode:'group', margin:{l:50,r:50,t:40,b:30},
     yaxis:{title:'TEU',gridcolor:'#f0f0f0',range:[0,_y1m]},
