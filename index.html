@@ -198,6 +198,7 @@ async function loadData() {
     const resp = await fetch('data.json?t=' + Date.now());
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     DATA = await resp.json();
+    normalizeMetricKeys(DATA);
     const sel = document.getElementById('dataDateSel');
     sel.innerHTML = `<option value="today">${DATA.data_date} (${L('최신','Latest')})</option>`;
     initFilters();
@@ -241,6 +242,7 @@ async function loadHistoricalData() {
     document.getElementById('loading').textContent = L('최신 데이터 로딩...','Loading latest...');
     const resp = await fetch('data.json?t=' + Date.now());
     DATA = await resp.json();
+    normalizeMetricKeys(DATA);
     document.getElementById('loading').style.display = 'none';
     initFilters(); render();
     return;
@@ -255,11 +257,35 @@ async function loadHistoricalData() {
     });
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     DATA = await resp.json();
+    normalizeMetricKeys(DATA);
     document.getElementById('loading').style.display = 'none';
     initFilters(); render();
   } catch(e) {
     document.getElementById('loading').textContent = `${L('로드 실패','Load failed')}: ${e.message}`;
   }
+}
+
+function normalizeMetricKeys(data) {
+  const renameMap = {
+    norm_fst: 'norm_lst',
+    w3_norm_fst: 'w3_norm_lst',
+    w3_hi_norm_fst: 'w3_hi_norm_lst',
+    w3_ab_norm_fst: 'w3_ab_norm_lst',
+    w3_cd_norm_fst: 'w3_cd_norm_lst',
+    w2_norm_fst: 'w2_norm_lst',
+    w1_norm_fst: 'w1_norm_lst',
+    wos_norm_fst: 'wos_norm_lst'
+  };
+  ['monthly', 'weekly', 'shipper'].forEach(section => {
+    (data[section] || []).forEach(row => {
+      Object.entries(renameMap).forEach(([oldKey, newKey]) => {
+        if (Object.prototype.hasOwnProperty.call(row, oldKey)) {
+          if (!Object.prototype.hasOwnProperty.call(row, newKey)) row[newKey] = row[oldKey];
+          delete row[oldKey];
+        }
+      });
+    });
+  });
 }
 
 // ═══════════════════════════════════════════════
@@ -488,13 +514,12 @@ function profitSum(arr, key) {
   const p = gv('fProfit');
   if (p === 'ALL') return sum(arr, key);
   // w3_fst → hi면 w3_hi_fst, lo면 w3_fst - w3_hi_fst
-  const hiKey = key.replace('w3_','w3_hi_').replace('norm_fst','norm_fst');
   const mapping = {
     'w3_fst': ['w3_hi_fst', r=>(r.w3_fst||0)-(r.w3_hi_fst||0)],
-    'w3_norm_fst': ['w3_hi_norm_fst', r=>(r.w3_norm_fst||0)-(r.w3_hi_norm_fst||0)],
+    'w3_norm_lst': ['w3_hi_norm_lst', r=>(r.w3_norm_lst||0)-(r.w3_hi_norm_lst||0)],
     'w3_canc_fst': ['w3_hi_fst', r=>0],
     'fst': ['w3_hi_fst', r=>(r.fst||0)],
-    'norm_fst': ['w3_hi_norm_fst', r=>(r.norm_fst||0)],
+    'norm_lst': ['w3_hi_norm_lst', r=>(r.norm_lst||0)],
   };
   if (mapping[key]) {
     if (p==='hi') return sum(arr, mapping[key][0]);
@@ -531,8 +556,8 @@ function renderTab1() {
   // BSA: 주차 선택 시 해당 주 BSA (WW 필터)
   const bsaTotal = _weekSel ? sum(filterBSA(month), 'teu_bsa') : sum(filterBSA(month, null), 'teu_bsa');
 
-  const totalBkg = profitSum(fd,'fst'), shipped = profitSum(fd,'norm_fst');
-  const w3Bkg = profitSum(fd,'w3_fst'), w3Ship = profitSum(fd,'w3_norm_fst');
+  const totalBkg = profitSum(fd,'fst'), shipped = profitSum(fd,'norm_lst');
+  const w3Bkg = profitSum(fd,'w3_fst'), w3Ship = profitSum(fd,'w3_norm_lst');
   const occ = bsaTotal>0 ? shipped/bsaTotal*100 : 0;
   const sr = w3Bkg>0 ? w3Ship/w3Bkg*100 : 0;
   const cm1 = sum(fd,'cm1_norm'), cm1l = sum(fd,'lst_norm');
@@ -593,21 +618,21 @@ function renderTab1() {
     return isWeekSelected ? v / (DATA.wpm[m]||4) : v;  // 과거월: 주평균
   }
 
-  const shipM = ms.map(m => _getMonthData(m, 'norm_fst'));
+  const shipM = ms.map(m => _getMonthData(m, 'norm_lst'));
   const bsaM = ms.map(m => _getBSA(m));
   const occM = ms.map((m,i) => bsaM[i]>0 ? shipM[i]/bsaM[i]*100 : null);
-  const w3shipM = ms.map(m => _getMonthData(m, 'w3_norm_fst'));
-  const w3occM = ms.map((m,i) => bsaM[i]>0 ? w3shipM[i]/bsaM[i]*100 : null);
+  const w3shipM = ms.map(m => _getMonthData(m, 'w3_norm_lst'));
   const xl = ms.map(fmtMonth);
 
-  // 3주전 BKG 바 + (3주전BKG)/BSA 라인
+  // 3주전 BKG 바 + 3주전BKG/BSA 라인 + 3주전 실선적률(w3_norm_lst/w3_fst)
   const w3bkgM = ms.map(m => _getMonthData(m, 'w3_fst'));
   const w3bkgBsaM = ms.map((m,i) => bsaM[i]>0 ? w3bkgM[i]/bsaM[i]*100 : null);
+  const w3shipRateM = ms.map((m,i) => w3bkgM[i]>0 ? w3shipM[i]/w3bkgM[i]*100 : null);
 
   // --- 월별 BKG vs BSA: smart label positioning (2D overlap) ---
   const _allBV = [...shipM, ...bsaM, ...w3bkgM];
   const _y1m = Math.max(..._allBV) * 1.3 || 1000;
-  const _allOV = [...occM, ...w3occM, ...w3bkgBsaM].filter(v=>v!=null);
+  const _allOV = [...occM, ...w3shipRateM, ...w3bkgBsaM].filter(v=>v!=null);
   const _y2m = Math.max(110, Math.ceil(Math.max(..._allOV, 100) * 1.15 / 10) * 10);
   const _G=0.07, _oP=[], _wbP=[], _woP=[];
   xl.forEach((_,i) => {
@@ -615,7 +640,7 @@ function renderTab1() {
     const ents=[
       {yn:occM[i]!=null?occM[i]/_y2m:null,def:'top',idx:0},
       {yn:w3bkgBsaM[i]!=null?w3bkgBsaM[i]/_y2m:null,def:'top',idx:1},
-      {yn:w3occM[i]!=null?w3occM[i]/_y2m:null,def:'bottom',idx:2}];
+      {yn:w3shipRateM[i]!=null?w3shipRateM[i]/_y2m:null,def:'bottom',idx:2}];
     const res=['top center','top center','bottom center'];
     const cP=[...bTops], rP=[];  // center-placed vs right-placed (separate columns)
     const noC=(y)=>!cP.some(p=>Math.abs(y-p)<_G);
@@ -637,8 +662,8 @@ function renderTab1() {
      text:occM.map(v=>v?v.toFixed(0)+'%':''), textposition:_oP, line:{color:'#ea4335',width:2}, marker:{size:8}},
     {x:xl, y:w3bkgBsaM, type:'scatter', mode:'lines+markers+text', name:L('3주전BKG/BSA','WOS-3 BKG/BSA'), yaxis:'y2',
      text:w3bkgBsaM.map(v=>v?v.toFixed(0)+'%':''), textposition:_wbP, line:{color:'#f9ab00',width:2,dash:'dot'}, marker:{size:6,symbol:'square'}},
-    {x:xl, y:w3occM, type:'scatter', mode:'lines+markers+text', name:L('3주전실선적/BSA','WOS-3 LFT/BSA'), yaxis:'y2',
-     text:w3occM.map(v=>v?v.toFixed(0)+'%':''), textposition:_woP, line:{color:'#6c5ce7',width:2,dash:'dash'}, marker:{size:6,symbol:'diamond'}},
+    {x:xl, y:w3shipRateM, type:'scatter', mode:'lines+markers+text', name:L('3주전실선적/3주전부킹','WOS-3 LFT/WOS-3 BKG'), yaxis:'y2',
+     text:w3shipRateM.map(v=>v?v.toFixed(0)+'%':''), textposition:_woP, line:{color:'#6c5ce7',width:2,dash:'dash'}, marker:{size:6,symbol:'diamond'}},
   ], {barmode:'group', margin:{l:50,r:50,t:40,b:30},
     yaxis:{title:'TEU',gridcolor:'#f0f0f0',range:[0,_y1m]},
     yaxis2:{title:L('소석률 %','Occ %'),overlaying:'y',side:'right',range:[0,_y2m]},
@@ -653,7 +678,7 @@ function renderTab1() {
   _bsaForOcc.forEach(r => { const k = r[bk]; bsaByKey[k] = (bsaByKey[k]||0) + (r.teu_bsa||0); });
   // Occ data for mode switching (w3=3주전BKG/BSA, normal=Normal/BSA)
   window._occRows = Object.entries(items).map(([k,rows]) => {
-    const s = profitSum(rows,'norm_fst'), b = bsaByKey[k]||0;
+    const s = profitSum(rows,'norm_lst'), b = bsaByKey[k]||0;
     const w3b = profitSum(rows,'w3_fst');
     return {name:k, ship:s, w3bkg:w3b, bsa:b, occ: b>0?s/b*100:0, w3ratio: b>0?w3b/b*100:0};
   }).filter(r=>r.ship>0||r.bsa>0);
@@ -774,9 +799,9 @@ function buildSummaryTable(months) {
   items.forEach(it => {
     h += `<tr><td class="lbl">${it}</td>`;
     months.forEach(m => {
-      const b=_tblData(m,'w3_fst',it), n=_tblData(m,'w3_norm_fst',it);
-      const hb=_tblData(m,'w3_hi_fst',it), hn=_tblData(m,'w3_hi_norm_fst',it);
-      const c1=_tblData(m,'w3_hi_cm1_norm',it), cl=_tblData(m,'w3_hi_norm_fst',it), ct=cl>0?c1/cl:0;
+      const b=_tblData(m,'w3_fst',it), n=_tblData(m,'w3_norm_lst',it);
+      const hb=_tblData(m,'w3_hi_fst',it), hn=_tblData(m,'w3_hi_norm_lst',it);
+      const c1=_tblData(m,'w3_hi_cm1_norm',it), cl=_tblData(m,'w3_hi_norm_lst',it), ct=cl>0?c1/cl:0;
       const bsa_v=_tblBSA(m,it);
       h += `<td>${fmt(Math.round(b))}</td><td>${fmt(Math.round(bsa_v))}</td><td>${pct(b,bsa_v)}</td><td>${fmt(Math.round(n))}</td><td>${pct(n,b)}</td>`;
       h += `<td>${fmt(Math.round(hb))}</td><td>${pct(hb,b)}</td><td>${fmt(Math.round(hn))}</td><td>${pct(hn,hb)}</td>`;
@@ -795,11 +820,11 @@ function buildSummaryTable(months) {
     months.forEach(m => {
       const isMonthlyTotal = ti === 1 && !_ws;
       const b = isMonthlyTotal ? sum(filterMonthly(m),'w3_fst') : _tblData(m,'w3_fst');
-      const n = isMonthlyTotal ? sum(filterMonthly(m),'w3_norm_fst') : _tblData(m,'w3_norm_fst');
+      const n = isMonthlyTotal ? sum(filterMonthly(m),'w3_norm_lst') : _tblData(m,'w3_norm_lst');
       const hb = isMonthlyTotal ? sum(filterMonthly(m),'w3_hi_fst') : _tblData(m,'w3_hi_fst');
-      const hn = isMonthlyTotal ? sum(filterMonthly(m),'w3_hi_norm_fst') : _tblData(m,'w3_hi_norm_fst');
+      const hn = isMonthlyTotal ? sum(filterMonthly(m),'w3_hi_norm_lst') : _tblData(m,'w3_hi_norm_lst');
       const c1 = isMonthlyTotal ? sum(filterMonthly(m),'w3_hi_cm1_norm') : _tblData(m,'w3_hi_cm1_norm');
-      const cl = isMonthlyTotal ? sum(filterMonthly(m),'w3_hi_norm_fst') : _tblData(m,'w3_hi_norm_fst');
+      const cl = isMonthlyTotal ? sum(filterMonthly(m),'w3_hi_norm_lst') : _tblData(m,'w3_hi_norm_lst');
       const ct = cl>0?c1/cl:0;
       const bsa_v = isMonthlyTotal ? sum(filterBSA(m,null),'teu_bsa') : _tblBSA(m);
       h += `<td>${fmt(Math.round(b))}</td><td>${fmt(Math.round(bsa_v))}</td><td>${pct(b,bsa_v)}</td><td>${fmt(Math.round(n))}</td><td>${pct(n,b)}</td>`;
@@ -843,7 +868,7 @@ function renderTab2() {
     sd.forEach(r => {
       const sm = r.Salesman_POR || L('(미지정)','(N/A)');
       if (!bySM[sm]) bySM[sm] = {bkg:0,ship:0};
-      bySM[sm].bkg += r.w3_fst||0; bySM[sm].ship += r.w3_norm_fst||0;
+      bySM[sm].bkg += r.w3_fst||0; bySM[sm].ship += r.w3_norm_lst||0;
     });
     const smRows = Object.entries(bySM).map(([k,s])=>({name:k,bkg:s.bkg/wk,ship:s.ship/wk,sr:s.bkg>0?s.ship/s.bkg*100:0}))
       .sort((a,b)=>b.bkg-a.bkg).slice(0,20);
@@ -863,7 +888,7 @@ function renderTab2() {
     const bsaByR = {};
     _bsaR.forEach(r => { const k = r[useBk]; bsaByR[k] = (bsaByR[k]||0) + (r.teu_bsa||0); });
     let rows = Object.entries(items).map(([k,r]) => ({
-      name:k, bkg:profitSum(r,'w3_fst'), ship:profitSum(r,'w3_norm_fst'), hi:sum(r,'w3_hi_fst'), bsa:bsaByR[k]||0
+      name:k, bkg:profitSum(r,'w3_fst'), ship:profitSum(r,'w3_norm_lst'), hi:sum(r,'w3_hi_fst'), bsa:bsaByR[k]||0
     })).sort((a,b)=>b.bkg-a.bkg).slice(0,15);
 
     html += `<div class="chart-card"><h3>${L('3주전 BKG 현황','WOS-3 BKG Status')} - ${useVl} (${fmtMonth(month)})</h3>
@@ -971,7 +996,7 @@ function renderABCDTab(month) {
   const items = groupByKey(fd, vk);
   let rows = Object.entries(items).map(([k,arr]) => {
     const ab=sum(arr,'w3_ab_fst'), cd=sum(arr,'w3_cd_fst'),
-          abN=sum(arr,'w3_ab_norm_fst'), cdN=sum(arr,'w3_cd_norm_fst'), tot=ab+cd;
+          abN=sum(arr,'w3_ab_norm_lst'), cdN=sum(arr,'w3_cd_norm_lst'), tot=ab+cd;
     return {name:k, ab, cd, abN, cdN, tot};
   }).filter(r=>r.tot>0).sort((a,b)=>b.tot-a.tot).slice(0,15);
 
@@ -1025,9 +1050,9 @@ function renderShipperTable(month) {
     const k = r.BKG_SHPR_CST_ENM || r.BKG_SHPR_CST_NO;
     if (!byShpr[k]) byShpr[k] = {bkg:0,ship:0,hi:0,hi_ship:0,cm1:0,cm1l:0,_sales:new Set(),_tags:new Set(),_grades:new Set()};
     const s = byShpr[k];
-    s.bkg += r.w3_fst||0; s.ship += r.w3_norm_fst||0;
-    s.hi += r.w3_hi_fst||0; s.hi_ship += r.w3_hi_norm_fst||0;
-    s.cm1 += r.w3_cm1_norm||0; s.cm1l += r.w3_norm_fst||0;
+    s.bkg += r.w3_fst||0; s.ship += r.w3_norm_lst||0;
+    s.hi += r.w3_hi_fst||0; s.hi_ship += r.w3_hi_norm_lst||0;
+    s.cm1 += r.w3_cm1_norm||0; s.cm1l += r.w3_norm_lst||0;
     if (r.Salesman_POR) s._sales.add(r.Salesman_POR);
     if (r['\uace0\uc218\uc775\ud0dc\uadf8']) s._tags.add(r['\uace0\uc218\uc775\ud0dc\uadf8']);
     if (r.grade) s._grades.add(r.grade);
@@ -1070,9 +1095,9 @@ function renderSalesmanTable(month) {
     const sm = r.Salesman_POR || L('(미지정)','(N/A)');
     if (!bySM[sm]) bySM[sm] = {bkg:0,ship:0,hi:0,cm1:0,cm1l:0,custs:new Set()};
     const s = bySM[sm];
-    s.bkg += r.w3_fst||0; s.ship += r.w3_norm_fst||0;
+    s.bkg += r.w3_fst||0; s.ship += r.w3_norm_lst||0;
     s.hi += r.w3_hi_fst||0;
-    s.cm1 += r.w3_cm1_norm||0; s.cm1l += r.w3_norm_fst||0;
+    s.cm1 += r.w3_cm1_norm||0; s.cm1l += r.w3_norm_lst||0;
     if (r.BKG_SHPR_CST_NO) s.custs.add(r.BKG_SHPR_CST_NO);
   });
 
@@ -1109,7 +1134,7 @@ function renderTab3() {
   const month = gv('fMonth'), vk = viewKey(), vl = viewLabel();
   const week = gv('fWeek');
   const fd = week !== 'ALL' ? filterWeekly(month) : filterMonthly(month);
-  const w3b = profitSum(fd,'w3_fst'), w3c = profitSum(fd,'w3_canc_fst'), w3n = profitSum(fd,'w3_norm_fst');
+  const w3b = profitSum(fd,'w3_fst'), w3c = profitSum(fd,'w3_canc_fst'), w3n = profitSum(fd,'w3_norm_lst');
 
   let html = `<div class="chart-row">
     <div class="chart-card" style="flex:5"><h3>WOS-3 → ${L('실선적(Normal)','LFT(Normal)')}</h3><div id="ch3fn" style="height:300px"></div></div>
@@ -1118,7 +1143,7 @@ function renderTab3() {
 
   // 도착지별 캔슬률 랭킹
   const byDest = Object.entries(groupByKey(fd, vk)).map(([k,r]) => {
-    const b=profitSum(r,'w3_fst'), c=profitSum(r,'w3_canc_fst'), n=profitSum(r,'w3_norm_fst');
+    const b=profitSum(r,'w3_fst'), c=profitSum(r,'w3_canc_fst'), n=profitSum(r,'w3_norm_lst');
     return {name:k, bkg:b, cancel:c, ship:n, cancelRate:b>0?c/b*100:0, shipRate:b>0?n/b*100:0};
   }).filter(r=>r.bkg>0).sort((a,b)=>b.cancelRate-a.cancelRate);
 
@@ -1133,7 +1158,7 @@ function renderTab3() {
   sd.forEach(r => {
     const k = r.BKG_SHPR_CST_ENM || r.BKG_SHPR_CST_NO;
     if (!byShpr[k]) byShpr[k] = {bkg:0,cancel:0,ship:0};
-    byShpr[k].bkg += r.w3_fst||0; byShpr[k].cancel += r.w3_canc_fst||0; byShpr[k].ship += r.w3_norm_fst||0;
+    byShpr[k].bkg += r.w3_fst||0; byShpr[k].cancel += r.w3_canc_fst||0; byShpr[k].ship += r.w3_norm_lst||0;
   });
   let cancelRows = Object.entries(byShpr).map(([k,s]) => ({
     name:k, bkg:s.bkg, cancel:s.cancel, ship:s.ship, rate:s.bkg>0?s.cancel/s.bkg*100:0
@@ -1161,7 +1186,7 @@ function renderTab3() {
     x: DATA.months.map(fmtMonth),
     y: DATA.months.map(m => {
       const d = filterMonthly(m).filter(r=>r[vk]===it);
-      const b=profitSum(d,'w3_fst'), n=profitSum(d,'w3_norm_fst');
+      const b=profitSum(d,'w3_fst'), n=profitSum(d,'w3_norm_lst');
       return b>0 ? n/b*100 : null;
     }), mode:'lines+markers', name:it, connectgaps:true
   })), {margin:{l:40,r:20,t:20,b:30},yaxis:{title:L('실선적률 %','LFT Rate %'),gridcolor:'#f0f0f0'},
@@ -1195,7 +1220,7 @@ function renderTab4() {
   const week = gv('fWeek');
   const fd = week !== 'ALL' ? filterWeekly(month) : filterMonthly(month);
   const items = Object.entries(groupByKey(fd, vk)).map(([k,r]) => ({
-    name:k, bkg:profitSum(r,'w3_fst'), cm1:sum(r,'w3_cm1_norm'), cm1l:sum(r,'w3_norm_fst'), hi:sum(r,'w3_hi_fst')
+    name:k, bkg:profitSum(r,'w3_fst'), cm1:sum(r,'w3_cm1_norm'), cm1l:sum(r,'w3_norm_lst'), hi:sum(r,'w3_hi_fst')
   })).filter(r=>r.bkg>0).sort((a,b)=>b.bkg-a.bkg).slice(0,10);
 
   let html = `<div class="chart-row">
@@ -1210,7 +1235,7 @@ function renderTab4() {
     const k = r.BKG_SHPR_CST_ENM || r.BKG_SHPR_CST_NO;
     if (!byShpr[k]) byShpr[k] = {bkg:0,cm1:0,cm1l:0,_sales:new Set()};
     const s = byShpr[k];
-    s.bkg += r.w3_fst||0; s.cm1 += r.w3_cm1_norm||0; s.cm1l += r.w3_norm_fst||0;
+    s.bkg += r.w3_fst||0; s.cm1 += r.w3_cm1_norm||0; s.cm1l += r.w3_norm_lst||0;
     if (r.Salesman_POR) s._sales.add(r.Salesman_POR);
   });
   let shprRows = Object.entries(byShpr).map(([k,s]) => ({
@@ -1262,7 +1287,7 @@ function renderTab4() {
     x: DATA.months.map(fmtMonth),
     y: DATA.months.map(m => {
       const d = filterMonthly(m).filter(r=>r[vk]===it);
-      const c=sum(d,'w3_cm1_norm'), l=sum(d,'w3_norm_fst');
+      const c=sum(d,'w3_cm1_norm'), l=sum(d,'w3_norm_lst');
       return l>0 ? Math.round(c/l) : null;
     }), mode:'lines+markers', name:it, connectgaps:true
   })), {margin:{l:50,r:20,t:20,b:30},yaxis:{title:'CM1/TEU',gridcolor:'#f0f0f0'},
