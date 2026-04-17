@@ -286,6 +286,31 @@ function normalizeMetricKeys(data) {
       });
     });
   });
+  deriveHighProfitMetrics(data, 'monthly');
+  deriveHighProfitMetrics(data, 'weekly');
+}
+
+function deriveHighProfitMetrics(data, section) {
+  if (!Array.isArray(data[section])) return;
+  const needsHiFst = data[section].some(row => !Object.prototype.hasOwnProperty.call(row, 'hi_fst'));
+  const needsHiNormLst = data[section].some(row => !Object.prototype.hasOwnProperty.call(row, 'hi_norm_lst'));
+  if (!needsHiFst && !needsHiNormLst) return;
+  const keyFields = section === 'weekly'
+    ? ['team','origin','ori_port','dest','dst_port','YYYYMM','week_start_date']
+    : ['team','origin','ori_port','dest','dst_port','YYYYMM'];
+  const hiFstByKey = {};
+  const hiNormLstByKey = {};
+  (data.shipper || []).forEach(row => {
+    if (row['\uace0\uc218\uc775\ud0dc\uadf8'] !== '고수익화주') return;
+    const k = keyFields.map(f => row[f] ?? '').join('|');
+    hiFstByKey[k] = (hiFstByKey[k] || 0) + (row.fst || 0);
+    hiNormLstByKey[k] = (hiNormLstByKey[k] || 0) + (row.norm_lst || 0);
+  });
+  data[section].forEach(row => {
+    const k = keyFields.map(f => row[f] ?? '').join('|');
+    if (needsHiFst && !Object.prototype.hasOwnProperty.call(row, 'hi_fst')) row.hi_fst = hiFstByKey[k] || 0;
+    if (needsHiNormLst && !Object.prototype.hasOwnProperty.call(row, 'hi_norm_lst')) row.hi_norm_lst = hiNormLstByKey[k] || 0;
+  });
 }
 
 // ═══════════════════════════════════════════════
@@ -518,8 +543,8 @@ function profitSum(arr, key) {
     'w3_fst': ['w3_hi_fst', r=>(r.w3_fst||0)-(r.w3_hi_fst||0)],
     'w3_norm_lst': ['w3_hi_norm_lst', r=>(r.w3_norm_lst||0)-(r.w3_hi_norm_lst||0)],
     'w3_canc_fst': ['w3_hi_fst', r=>0],
-    'fst': ['w3_hi_fst', r=>(r.fst||0)],
-    'norm_lst': ['w3_hi_norm_lst', r=>(r.norm_lst||0)],
+    'fst': ['hi_fst', r=>(r.fst||0)-(r.hi_fst||0)],
+    'norm_lst': ['hi_norm_lst', r=>(r.norm_lst||0)-(r.hi_norm_lst||0)],
   };
   if (mapping[key]) {
     if (p==='hi') return sum(arr, mapping[key][0]);
@@ -610,6 +635,13 @@ function renderTab1() {
       return profitSum(filterMonthly(m), key);
     }
   }
+  function _getMonthMetric(m, key) {
+    if (isWeekSelected && m === month) {
+      return sum(filterWeekly(m), key);
+    }
+    const v = sum(filterMonthly(m), key);
+    return isWeekSelected ? v / (DATA.wpm[m]||4) : v;
+  }
   function _getBSA(m) {
     if (isWeekSelected && m === month) {
       return sum(filterBSA(m), 'teu_bsa');  // 해당월: 해당 주 BSA
@@ -621,18 +653,19 @@ function renderTab1() {
   const shipM = ms.map(m => _getMonthData(m, 'norm_lst'));
   const bsaM = ms.map(m => _getBSA(m));
   const occM = ms.map((m,i) => bsaM[i]>0 ? shipM[i]/bsaM[i]*100 : null);
-  const w3shipM = ms.map(m => _getMonthData(m, 'w3_norm_lst'));
   const xl = ms.map(fmtMonth);
 
-  // 3주전 BKG 바 + 3주전BKG/BSA 라인 + 3주전 실선적률(w3_norm_lst/w3_fst)
+  // 3주전 BKG 바 + 3주전BKG/BSA 라인 + 고수익화주부킹비중(hi_fst/fst)
   const w3bkgM = ms.map(m => _getMonthData(m, 'w3_fst'));
   const w3bkgBsaM = ms.map((m,i) => bsaM[i]>0 ? w3bkgM[i]/bsaM[i]*100 : null);
-  const w3shipRateM = ms.map((m,i) => w3bkgM[i]>0 ? w3shipM[i]/w3bkgM[i]*100 : null);
+  const totalBkgM = ms.map(m => _getMonthMetric(m, 'fst'));
+  const hiBkgM = ms.map(m => _getMonthMetric(m, 'hi_fst'));
+  const hiBkgShareM = ms.map((m,i) => totalBkgM[i]>0 ? hiBkgM[i]/totalBkgM[i]*100 : null);
 
   // --- 월별 BKG vs BSA: smart label positioning (2D overlap) ---
   const _allBV = [...shipM, ...bsaM, ...w3bkgM];
   const _y1m = Math.max(..._allBV) * 1.3 || 1000;
-  const _allOV = [...occM, ...w3shipRateM, ...w3bkgBsaM].filter(v=>v!=null);
+  const _allOV = [...occM, ...hiBkgShareM, ...w3bkgBsaM].filter(v=>v!=null);
   const _y2m = Math.max(110, Math.ceil(Math.max(..._allOV, 100) * 1.15 / 10) * 10);
   const _G=0.07, _oP=[], _wbP=[], _woP=[];
   xl.forEach((_,i) => {
@@ -640,7 +673,7 @@ function renderTab1() {
     const ents=[
       {yn:occM[i]!=null?occM[i]/_y2m:null,def:'top',idx:0},
       {yn:w3bkgBsaM[i]!=null?w3bkgBsaM[i]/_y2m:null,def:'top',idx:1},
-      {yn:w3shipRateM[i]!=null?w3shipRateM[i]/_y2m:null,def:'bottom',idx:2}];
+      {yn:hiBkgShareM[i]!=null?hiBkgShareM[i]/_y2m:null,def:'bottom',idx:2}];
     const res=['top center','top center','bottom center'];
     const cP=[...bTops], rP=[];  // center-placed vs right-placed (separate columns)
     const noC=(y)=>!cP.some(p=>Math.abs(y-p)<_G);
@@ -662,11 +695,11 @@ function renderTab1() {
      text:occM.map(v=>v?v.toFixed(0)+'%':''), textposition:_oP, line:{color:'#ea4335',width:2}, marker:{size:8}},
     {x:xl, y:w3bkgBsaM, type:'scatter', mode:'lines+markers+text', name:L('3주전BKG/BSA','WOS-3 BKG/BSA'), yaxis:'y2',
      text:w3bkgBsaM.map(v=>v?v.toFixed(0)+'%':''), textposition:_wbP, line:{color:'#f9ab00',width:2,dash:'dot'}, marker:{size:6,symbol:'square'}},
-    {x:xl, y:w3shipRateM, type:'scatter', mode:'lines+markers+text', name:L('3주전실선적/3주전부킹','WOS-3 LFT/WOS-3 BKG'), yaxis:'y2',
-     text:w3shipRateM.map(v=>v?v.toFixed(0)+'%':''), textposition:_woP, line:{color:'#6c5ce7',width:2,dash:'dash'}, marker:{size:6,symbol:'diamond'}},
+    {x:xl, y:hiBkgShareM, type:'scatter', mode:'lines+markers+text', name:L('고수익화주부킹비중','Hi-Shipper BKG Share'), yaxis:'y2',
+     text:hiBkgShareM.map(v=>v?v.toFixed(0)+'%':''), textposition:_woP, line:{color:'#6c5ce7',width:2,dash:'dash'}, marker:{size:6,symbol:'diamond'}},
   ], {barmode:'group', margin:{l:50,r:50,t:40,b:30},
     yaxis:{title:'TEU',gridcolor:'#f0f0f0',range:[0,_y1m]},
-    yaxis2:{title:L('소석률 %','Occ %'),overlaying:'y',side:'right',range:[0,_y2m]},
+    yaxis2:{title:L('비율 %','Ratio %'),overlaying:'y',side:'right',range:[0,_y2m]},
     legend:{orientation:'h',y:1.15}, plot_bgcolor:'#fff', paper_bgcolor:'#fff'},
   {displayModeBar:false});
 
