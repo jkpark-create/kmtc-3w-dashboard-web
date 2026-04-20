@@ -42,7 +42,7 @@ body{font-family:'Segoe UI',sans-serif;background:#f0f2f5;color:#202124}
 table.summary{width:100%;min-width:100%;table-layout:fixed;border-collapse:collapse;font-size:11px}
 table.summary th{background:#e8f0fe;padding:4px 6px;text-align:center;border:1px solid #dadce0;font-weight:600;white-space:nowrap}
 table.summary td{padding:4px 6px;text-align:center;border:1px solid #dadce0;white-space:nowrap}
-table.summary th.wrap, table.summary td.wrap{white-space:normal !important;max-width:140px;word-break:break-word;word-wrap:break-word;overflow-wrap:anywhere;line-height:1.2;}
+table.summary th.wrap, table.summary td.wrap{white-space:normal !important;max-width:100px;min-width:100px;width:100px;word-break:break-word;word-wrap:break-word;overflow-wrap:anywhere;line-height:1.3;font-size:10px;}
 table.summary tr.total{font-weight:700;background:#f0f4ff}
 table.summary tr.total-m{font-weight:700;background:#e8edf5}
 table.summary td.lbl{text-align:left;font-weight:600;background:#fafafa}
@@ -1111,7 +1111,8 @@ function renderShipperTable(month) {
   });
 
   let rows = Object.entries(byShpr).map(([k,s]) => {
-    const sales = [...s._sales].join(', ');
+    const salesArray = [...s._sales];
+    const sales = salesArray.length > 2 ? salesArray.slice(0, 2).join(', ') + '...' : salesArray.join(', ');
     const tag = [...s._tags].join(', ');
     const grade = [...s._grades].join(', ');
     return {name:k, grade, tag, sales, bkg:s.bkg, ship:s.ship, hi:s.hi, hi_ship:s.hi_ship, cm1:s.cm1, cm1l:s.cm1l};
@@ -1290,9 +1291,11 @@ function renderTab4() {
     s.bkg += r.w3_fst||0; s.cm1 += r.w3_cm1_norm||0; s.cm1l += r.w3_norm_lst||0;
     if (r.Salesman_POR) s._sales.add(r.Salesman_POR);
   });
-  let shprRows = Object.entries(byShpr).map(([k,s]) => ({
-    name:k, sales:[...s._sales].join(', '), bkg:s.bkg, cm1:s.cm1, cm1l:s.cm1l, ct:s.cm1l>0?s.cm1/s.cm1l:0
-  })).filter(r=>r.cm1l>0);
+  let shprRows = Object.entries(byShpr).map(([k,s]) => {
+    const salesArray = [...s._sales];
+    const sales = salesArray.length > 2 ? salesArray.slice(0, 2).join(', ') + '...' : salesArray.join(', ');
+    return {name:k, sales, bkg:s.bkg, cm1:s.cm1, cm1l:s.cm1l, ct:s.cm1l>0?s.cm1/s.cm1l:0};
+  }).filter(r=>r.cm1l>0);
 
   const top10 = [...shprRows].sort((a,b)=>b.ct-a.ct).slice(0,10);
   const bot10 = [...shprRows].sort((a,b)=>a.ct-b.ct).slice(0,10);
@@ -1408,7 +1411,9 @@ function renderTab5() {
   });
   let custRows = Object.entries(byShpr).map(([k,s]) => {
     const total = s.w3+s.w2+s.w1+s.wos;
-    return {name:k, tag:[...s.tags].join(', '), sales:[...s.sm].join(', '), total, w3:s.w3, w2:s.w2, w1:s.w1, wos:s.wos};
+    const smArray = [...s.sm];
+    const sales = smArray.length > 2 ? smArray.slice(0, 2).join(', ') + '...' : smArray.join(', ');
+    return {name:k, tag:[...s.tags].join(', '), sales, total, w3:s.w3, w2:s.w2, w1:s.w1, wos:s.wos};
   }).sort((a,b)=>b.total-a.total);
 
   html += `<div class="chart-card"><h3>${L('화주별 부킹 접수 시점','Shipper Booking Timing')} (${fmtMonth(month)})</h3>
