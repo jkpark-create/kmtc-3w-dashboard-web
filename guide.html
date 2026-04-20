@@ -328,6 +328,7 @@ document.addEventListener('DOMContentLoaded', function() {
   <h3>월별 BKG vs BSA 차트</h3>
   <p>보라 바=3주전BKG, 파란 바=실선적(Normal), 회색 바=BSA</p>
   <p>빨간 실선=소석률(Normal/BSA), 노란 점선=3주전BKG/BSA, 보라 점선=고수익화주부킹비중(고수익화주3주전BKG/3주전BKG)</p>
+  <p>실제 계산 결과가 100%를 넘으면 그대로 표시합니다. BKG/BSA는 BSA보다 부킹이 큰 경우, 실선적률은 최종 LST_TEU가 최초 FST_TEU보다 커진 경우 100%를 넘을 수 있습니다.</p>
   <h3>소석률 바 차트 (토글)</h3>
   <p><strong>3주전BKG/BSA</strong>와 <strong>Normal/BSA</strong> 두 모드를 버튼으로 전환하여 볼 수 있습니다.</p>
   <p>기본: 3주전BKG/BSA | 색상: 초록(≥65%), 노랑(50-65%), 빨강(&lt;50%)</p>
@@ -338,6 +339,7 @@ document.addEventListener('DOMContentLoaded', function() {
   <h3>Monthly BKG vs BSA Chart</h3>
   <p>Purple bar=WOS-3 BKG, Blue bar=LFT(Normal), Gray bar=BSA</p>
   <p>Red line=Occ(Normal/BSA), Yellow dotted=WOS-3 BKG/BSA, Purple dashed=Hi-Shipper WOS-3 BKG Share</p>
+  <p>Ratios above 100% are displayed as-is. BKG/BSA can exceed 100% when bookings exceed BSA; LFT Rate can exceed 100% when final LST_TEU is greater than initial FST_TEU.</p>
   <h3>Occupancy Bar (Toggle)</h3>
   <p>Switch between <strong>WOS-3 BKG/BSA</strong> and <strong>Normal/BSA</strong> with buttons.</p>
   <p>Default: WOS-3 BKG/BSA | Green(≥65%), Yellow(50-65%), Red(&lt;50%)</p>
@@ -350,9 +352,9 @@ document.addEventListener('DOMContentLoaded', function() {
   <h3>서브탭</h3>
   <table>
     <tr><th>서브탭</th><th>내용</th></tr>
-    <tr><td><strong>지역별</strong></td><td>도착지/선적지별(보기 필터 연동) BKG, 실선적, 고수익 비중 + 주차별 차트</td></tr>
+    <tr><td><strong>지역별</strong></td><td>도착지/선적지별(보기 필터 연동) BKG, 실선적, 구간별 고수익 비중 + 주차별 차트</td></tr>
     <tr><td><strong>화주별</strong></td><td>화주명, <strong>등급(A+B/C+D)</strong>, <span class="tag tag-hi">고수익태그</span>, 영업사원, BKG, 실선적, CM1/TEU</td></tr>
-    <tr><td><strong>영업사원별</strong></td><td>화주수(코드 기준 중복제거), BKG, 실선적, 고수익 비중</td></tr>
+    <tr><td><strong>영업사원별</strong></td><td>화주수(코드 기준 중복제거), BKG, 실선적, 구간별 고수익 비중</td></tr>
     <tr><td><strong>AB vs CD</strong></td><td>지역별 A+B / C+D 등급 BKG 비교 + 실선적률 + 스택 바 차트 + 분석 가이드</td></tr>
   </table>
   <h3>AB vs CD 분석 가이드</h3>
@@ -364,17 +366,17 @@ document.addEventListener('DOMContentLoaded', function() {
   </ul>
   <h3>지역별 추가 차트</h3>
   <ul>
-    <li><strong>고수익 vs 저수익 리드타임 비중</strong> — WOS 단계별 고수익(초록)/저수익(빨강) 비교</li>
-    <li><strong>고수익화주 비중 추이</strong> — 월별 WOS-3 BKG 중 고수익 비율 트렌드</li>
+    <li><strong>고수익화주 vs 저수익화주 리드타임 비중</strong> — WOS 단계별 고수익화주(초록)/저수익화주(빨강) 비교</li>
+    <li><strong>고수익화주 비중 추이</strong> — 월별 WOS-3 BKG 중 고수익화주 비율 트렌드</li>
   </ul>
 </div>
 <div class="card en" style="display:none">
   <h3>Sub-tabs</h3>
   <table>
     <tr><th>Sub-tab</th><th>Content</th></tr>
-    <tr><td><strong>By Region</strong></td><td>BKG, LFT, High-profit ratio (follows View filter) + weekly chart</td></tr>
+    <tr><td><strong>By Region</strong></td><td>BKG, LFT, Route High ratio (follows View filter) + weekly chart</td></tr>
     <tr><td><strong>By Shipper</strong></td><td>Shipper, <strong>Grade(A+B/C+D)</strong>, <span class="tag tag-hi">Profit Tag</span>, Salesperson, BKG, LFT, CM1/TEU</td></tr>
-    <tr><td><strong>By Salesperson</strong></td><td>Shipper count, BKG, LFT, High-profit ratio</td></tr>
+    <tr><td><strong>By Salesperson</strong></td><td>Shipper count, BKG, LFT, Route High ratio</td></tr>
     <tr><td><strong>AB vs CD</strong></td><td>A+B vs C+D BKG comparison by region + LFT rate + stacked bar chart + analysis guide</td></tr>
   </table>
   <h3>AB vs CD Analysis Guide</h3>
@@ -537,6 +539,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <li>Grade C+D → 고수익, A+B → 저수익</li>
   </ol>
   <p>동일 선적지+화주 조합에 <strong>하나의 태그만</strong> 부여됩니다 (최신월 기준).</p>
+  <p>대시보드의 <strong>고수익화주 3주전BKG</strong>와 <strong>고수익화주부킹비중</strong>은 이 고수익태그 기준으로 계산합니다.</p>
   <h3>구간별 고수익 부킹분류</h3>
   <p>POR Port + DLY Port 루트별 평균 CM1/TEU 대비 화주별 비교로 개별 부킹을 분류합니다.</p>
   <table>
@@ -561,6 +564,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <li>Grade C+D → High, A+B → Low</li>
   </ol>
   <p>One tag per POR+shipper combination (latest month basis).</p>
+  <p><strong>Hi-Shipper WOS-3 BKG</strong> and <strong>Hi-Shipper WOS-3 BKG Share</strong> use this profit tag.</p>
   <h3>Route-based Booking Classification</h3>
   <p>Compares shipper CM1/TEU against POR+DLY route average to classify individual bookings.</p>
   <table>
@@ -588,6 +592,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <tr><th>구분</th><th>TEU 기준</th><th>설명</th></tr>
     <tr><td><strong>BKG (부킹)</strong></td><td>FST_TEU</td><td>부킹 시점 TEU</td></tr>
     <tr><td><strong>실선적 (Normal)</strong></td><td>LST_TEU</td><td>실제 선적 TEU (LST_Status='Normal')</td></tr>
+    <tr><td><strong>WOS 단계별 실선적률용 실선적</strong></td><td>LST_TEU</td><td>실제 선적 TEU 기준. LST_TEU가 FST_TEU보다 커지면 실선적률은 100%를 넘을 수 있음</td></tr>
     <tr><td><strong>CM1/TEU</strong></td><td>CM1 / LST_TEU</td><td>Normal + CM1 있는 건만</td></tr>
   </table>
   <h3>데이터 소스</h3>
@@ -608,6 +613,7 @@ document.addEventListener('DOMContentLoaded', function() {
   <table>
     <tr><th>Type</th><th>TEU Source</th><th>Description</th></tr>
     <tr><td><strong>BKG</strong></td><td>FST_TEU</td><td>Booking TEU</td></tr>
+    <tr><td><strong>WOS-stage LFT for rate</strong></td><td>LST_TEU</td><td>Actual loaded TEU. LFT Rate can exceed 100% when LST_TEU is greater than FST_TEU</td></tr>
     <tr><td><strong>LFT (Normal)</strong></td><td>LST_TEU</td><td>Actual shipment TEU (LST_Status='Normal')</td></tr>
     <tr><td><strong>CM1/TEU</strong></td><td>CM1 / LST_TEU</td><td>Normal with CM1 only</td></tr>
   </table>
@@ -695,7 +701,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </div>
 
 <div style="text-align:center;padding:40px;color:#5f6368;font-size:12px">
-  -3W Booking Dashboard Guide | Last updated: 2026-04-16
+  -3W Booking Dashboard Guide | Last updated: 2026-04-21
 </div>
 
 </div>
