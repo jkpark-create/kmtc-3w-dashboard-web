@@ -39,9 +39,10 @@ body{font-family:'Segoe UI',sans-serif;background:#f0f2f5;color:#202124}
 .chart-card{background:#fff;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.08);padding:16px;max-width:100%;min-width:0;overflow-x:auto}
 .chart-card h3{font-size:14px;font-weight:600;margin-bottom:8px}
 .chart-card .sub{font-size:11px;color:#5f6368}
-table.summary{width:max-content;min-width:100%;border-collapse:collapse;font-size:11px}
+table.summary{width:100%;min-width:100%;table-layout:fixed;border-collapse:collapse;font-size:11px}
 table.summary th{background:#e8f0fe;padding:4px 6px;text-align:center;border:1px solid #dadce0;font-weight:600;white-space:nowrap}
 table.summary td{padding:4px 6px;text-align:center;border:1px solid #dadce0;white-space:nowrap}
+table.summary th.wrap, table.summary td.wrap{white-space:normal !important;max-width:140px;word-break:break-word;word-wrap:break-word;overflow-wrap:anywhere;line-height:1.2;}
 table.summary tr.total{font-weight:700;background:#f0f4ff}
 table.summary tr.total-m{font-weight:700;background:#e8edf5}
 table.summary td.lbl{text-align:left;font-weight:600;background:#fafafa}
@@ -1117,13 +1118,13 @@ function renderShipperTable(month) {
   }).sort((a,b)=>b.bkg-a.bkg);
 
   let h = `<div class="chart-card"><h3>${L('화주별 3주전 BKG','WOS-3 BKG by Shipper')} (${fmtMonth(month)})</h3>
-  <table class="summary"><tr><th>${L('화주','Shipper')}</th><th>${L('등급','Grade')}</th><th>${L('고수익화주','Hi-Shipper')}</th><th>${L('영업사원','Salesperson')}</th><th>BKG</th><th>${L('실선적','LFT')}</th><th>${L('실선적률','Rate')}</th><th>${L('구간별고수익','Route Hi')}</th><th>${L('구간별고수익%','Route Hi%')}</th><th>CM1</th><th>CM1/TEU</th></tr>`;
+  <table class="summary"><tr><th>${L('화주','Shipper')}</th><th>${L('등급','Grade')}</th><th>${L('고수익화주','Hi-Shipper')}</th><th class="wrap">${L('영업사원','Salesperson')}</th><th>BKG</th><th>${L('실선적','LFT')}</th><th>${L('실선적률','Rate')}</th><th>${L('구간별고수익','Route Hi')}</th><th>${L('구간별고수익%','Route Hi%')}</th><th>CM1</th><th>CM1/TEU</th></tr>`;
 
   rows.forEach(r => {
     const ct = r.cm1l>0 ? r.cm1/r.cm1l : 0;
     const tagStyle = r.tag==='고수익화주' ? 'color:#34a853;font-weight:600' : r.tag==='저수익화주' ? 'color:#ea4335' : '';
     const gradeStyle = r.grade==='A+B' ? 'color:#1a73e8;font-weight:600' : 'color:#f9ab00';
-    h += `<tr><td class="lbl">${r.name}</td><td style="${gradeStyle}">${r.grade}</td><td style="${tagStyle}">${tagLabel(r.tag)}</td><td>${r.sales}</td><td>${fmt(r.bkg)}</td><td>${fmt(r.ship)}</td><td>${pct(r.ship,r.bkg)}</td>`;
+    h += `<tr><td class="lbl">${r.name}</td><td style="${gradeStyle}">${r.grade}</td><td style="${tagStyle}">${tagLabel(r.tag)}</td><td class="wrap">${r.sales}</td><td>${fmt(r.bkg)}</td><td>${fmt(r.ship)}</td><td>${pct(r.ship,r.bkg)}</td>`;
     h += `<td>${fmt(r.hi)}</td><td>${pct(r.hi,r.bkg)}</td><td>${fmt(Math.round(r.cm1))}</td><td>${fmt(Math.round(ct))}</td></tr>`;
   });
 
@@ -1157,7 +1158,7 @@ function renderSalesmanTable(month) {
   })).sort((a,b)=>b.bkg-a.bkg);
 
   let h = `<div class="chart-card"><h3>${L('영업사원별 실적','Salesperson Performance')} (${fmtMonth(month)})</h3>
-  <table class="summary"><tr><th>${L('영업사원','Salesperson')}</th><th>${L('화주수','Shippers')}</th><th>BKG</th><th>${L('실선적','LFT')}</th><th>${L('실선적률','Rate')}</th><th>${L('구간별고수익','Route Hi')}</th><th>${L('구간별고수익%','Route Hi%')}</th><th>CM1</th><th>CM1/TEU</th></tr>`;
+  <table class="summary"><tr><th class="wrap">${L('영업사원','Salesperson')}</th><th>${L('화주수','Shippers')}</th><th>BKG</th><th>${L('실선적','LFT')}</th><th>${L('실선적률','Rate')}</th><th>${L('구간별고수익','Route Hi')}</th><th>${L('구간별고수익%','Route Hi%')}</th><th>CM1</th><th>CM1/TEU</th></tr>`;
 
   rows.forEach(r => {
     const ct = r.cm1l>0?r.cm1/r.cm1l:0;
@@ -1298,15 +1299,15 @@ function renderTab4() {
 
   html += `<div class="chart-row">
     <div class="chart-card" style="flex:1"><h3>CM1/TEU Top 10 ${L('화주','Shippers')}</h3>
-    <table class="summary"><tr><th>${L('화주','Shipper')}</th><th>${L('영업사원','Sales')}</th><th>BKG</th><th>CM1/TEU</th><th>CM1</th></tr>`;
+    <table class="summary"><tr><th>${L('화주','Shipper')}</th><th class="wrap">${L('영업사원','Sales')}</th><th>BKG</th><th>CM1/TEU</th><th>CM1</th></tr>`;
   top10.forEach(r => {
-    html += `<tr><td class="lbl">${r.name}</td><td>${r.sales}</td><td>${fmt(r.bkg)}</td><td style="color:#34a853;font-weight:600">${fmt(Math.round(r.ct))}</td><td>${fmt(Math.round(r.cm1))}</td></tr>`;
+    html += `<tr><td class="lbl">${r.name}</td><td class="wrap">${r.sales}</td><td>${fmt(r.bkg)}</td><td style="color:#34a853;font-weight:600">${fmt(Math.round(r.ct))}</td><td>${fmt(Math.round(r.cm1))}</td></tr>`;
   });
   html += `</table></div>
     <div class="chart-card" style="flex:1"><h3>CM1/TEU Bottom 10 ${L('화주','Shippers')}</h3>
-    <table class="summary"><tr><th>${L('화주','Shipper')}</th><th>${L('영업사원','Sales')}</th><th>BKG</th><th>CM1/TEU</th><th>CM1</th></tr>`;
+    <table class="summary"><tr><th>${L('화주','Shipper')}</th><th class="wrap">${L('영업사원','Sales')}</th><th>BKG</th><th>CM1/TEU</th><th>CM1</th></tr>`;
   bot10.forEach(r => {
-    html += `<tr><td class="lbl">${r.name}</td><td>${r.sales}</td><td>${fmt(r.bkg)}</td><td style="color:#ea4335">${fmt(Math.round(r.ct))}</td><td>${fmt(Math.round(r.cm1))}</td></tr>`;
+    html += `<tr><td class="lbl">${r.name}</td><td class="wrap">${r.sales}</td><td>${fmt(r.bkg)}</td><td style="color:#ea4335">${fmt(Math.round(r.ct))}</td><td>${fmt(Math.round(r.cm1))}</td></tr>`;
   });
   html += '</table></div></div>';
 
@@ -1411,10 +1412,10 @@ function renderTab5() {
   }).sort((a,b)=>b.total-a.total);
 
   html += `<div class="chart-card"><h3>${L('화주별 부킹 접수 시점','Shipper Booking Timing')} (${fmtMonth(month)})</h3>
-  <table class="summary"><tr><th>${L('화주','Shipper')}</th><th>${L('고수익화주','Hi-Shipper')}</th><th>${L('영업사원','Sales')}</th><th>${L('전체BKG','Total')}</th><th>WOS-3</th><th>${L('비중','Ratio')}</th><th>WOS-2</th><th>${L('비중','Ratio')}</th><th>WOS-1</th><th>${L('비중','Ratio')}</th><th>WOS</th><th>${L('비중','Ratio')}</th></tr>`;
+  <table class="summary"><tr><th>${L('화주','Shipper')}</th><th>${L('고수익화주','Hi-Shipper')}</th><th class="wrap">${L('영업사원','Sales')}</th><th>${L('전체BKG','Total')}</th><th>WOS-3</th><th>${L('비중','Ratio')}</th><th>WOS-2</th><th>${L('비중','Ratio')}</th><th>WOS-1</th><th>${L('비중','Ratio')}</th><th>WOS</th><th>${L('비중','Ratio')}</th></tr>`;
   custRows.forEach(r => {
     const tagStyle = r.tag==='고수익화주' ? 'color:#34a853;font-weight:600' : r.tag==='저수익화주' ? 'color:#ea4335' : '';
-    html += `<tr><td class="lbl">${r.name}</td><td style="${tagStyle}">${tagLabel(r.tag)}</td><td>${r.sales}</td><td>${fmt(r.total)}</td>`;
+    html += `<tr><td class="lbl">${r.name}</td><td style="${tagStyle}">${tagLabel(r.tag)}</td><td class="wrap">${r.sales}</td><td>${fmt(r.total)}</td>`;
     html += `<td>${fmt(r.w3)}</td><td>${pct(r.w3,r.total)}</td>`;
     html += `<td>${fmt(r.w2)}</td><td>${pct(r.w2,r.total)}</td>`;
     html += `<td>${fmt(r.w1)}</td><td>${pct(r.w1,r.total)}</td>`;
