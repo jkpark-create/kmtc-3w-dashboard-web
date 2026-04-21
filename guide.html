@@ -208,6 +208,23 @@ document.addEventListener('DOMContentLoaded', function() {
     <li><strong>⑤ 부킹 패턴</strong> — WOS 단계별 부킹 접수 시점 분석</li>
   </ul>
   <p>기본 필터: <strong>현재 주 +3주 후의 월 및 해당 주차</strong>로 자동 설정됩니다.</p>
+  <h3>이 대시보드가 답하는 질문</h3>
+  <table>
+    <tr><th>질문</th><th>먼저 볼 화면</th><th>판단 포인트</th></tr>
+    <tr><td>선복 대비 물량이 충분한가?</td><td>① 소석률 현황</td><td>BSA 대비 Normal 실선적, WOS-3 BKG/BSA, 월별 추이</td></tr>
+    <tr><td>어느 지역/화주/영업사원이 물량을 만들고 있는가?</td><td>② 부킹 트렌드</td><td>도착국가/선적지, 화주, 영업사원별 BKG와 실선적률</td></tr>
+    <tr><td>3주전 부킹이 실제 선적으로 잘 전환되는가?</td><td>③ 전환 분석</td><td>실선적률, 캔슬률, 캔슬 화주</td></tr>
+    <tr><td>물량이 수익성 있는 물량인가?</td><td>④ 수익성 분석</td><td>CM1/TEU, Top/Bottom 화주, 수익 집중도</td></tr>
+    <tr><td>부킹이 충분히 일찍 들어오는가?</td><td>⑤ 부킹 패턴</td><td>WOS-3/2/1/WOS 비중, 조기 부킹 비중</td></tr>
+  </table>
+  <h3>권장 사용 순서</h3>
+  <ol>
+    <li><strong>필터</strong>에서 팀/월/주차/도착국가를 맞춥니다.</li>
+    <li><strong>① 소석률</strong>에서 전체 물량과 선복 대비 부족/초과 여부를 봅니다.</li>
+    <li><strong>② 부킹 트렌드</strong>에서 부족 또는 초과를 만든 지역, 화주, 영업사원을 찾습니다.</li>
+    <li><strong>③ 전환 분석</strong>에서 캔슬과 실선적 전환 리스크를 확인합니다.</li>
+    <li><strong>④ 수익성</strong>과 <strong>⑤ 부킹 패턴</strong>으로 물량의 질과 조기 확보 여부를 점검합니다.</li>
+  </ol>
 </div>
 <div class="card en" style="display:none">
   <p><strong>-3W Booking Dashboard</strong> monitors booking status 3 weeks before sailing (WOS-3).</p>
@@ -219,6 +236,23 @@ document.addEventListener('DOMContentLoaded', function() {
     <li><strong>⑤ Patterns</strong> — WOS stage booking timing analysis</li>
   </ul>
   <p>Default filter: automatically set to <strong>the month &amp; week of current week + 3 weeks ahead</strong>.</p>
+  <h3>Questions This Dashboard Answers</h3>
+  <table>
+    <tr><th>Question</th><th>Start Here</th><th>What to Check</th></tr>
+    <tr><td>Is volume sufficient against capacity?</td><td>① Occupancy</td><td>Normal LFT/BSA, WOS-3 BKG/BSA, monthly trend</td></tr>
+    <tr><td>Which region, shipper, or salesperson is driving volume?</td><td>② Trends</td><td>BKG and LFT rate by destination/origin, shipper, and salesperson</td></tr>
+    <tr><td>Does WOS-3 BKG convert to actual shipment?</td><td>③ Conversion</td><td>LFT rate, cancel rate, cancel-heavy shippers</td></tr>
+    <tr><td>Is the volume profitable?</td><td>④ Profitability</td><td>CM1/TEU, top/bottom shippers, revenue concentration</td></tr>
+    <tr><td>Are bookings coming early enough?</td><td>⑤ Patterns</td><td>WOS-3/2/1/WOS mix and early-booking share</td></tr>
+  </table>
+  <h3>Recommended Workflow</h3>
+  <ol>
+    <li>Set team/month/week/destination filters.</li>
+    <li>Use <strong>① Occupancy</strong> to identify capacity shortage or excess.</li>
+    <li>Use <strong>② Trends</strong> to find the region, shipper, or salesperson behind the movement.</li>
+    <li>Use <strong>③ Conversion</strong> to check cancel and shipment-conversion risk.</li>
+    <li>Use <strong>④ Profitability</strong> and <strong>⑤ Patterns</strong> to judge quality and early-booking stability.</li>
+  </ol>
 </div>
 
 <!-- FILTERS -->
@@ -238,6 +272,14 @@ document.addEventListener('DOMContentLoaded', function() {
     <tr><td>영업사원</td><td>특정 영업사원 필터</td><td>전체</td></tr>
   </table>
   <p>EN/KO 토글: 헤더의 <code>EN</code> 버튼으로 한/영 전환 가능</p>
+  <h3>필터 해석 기준</h3>
+  <ul>
+    <li><strong>팀/선적지/선적포트/도착지/도착포트</strong>는 물리적인 운송 루트 범위를 좁히는 필터입니다. 지역별, 소석률, 수익성 화면에 모두 큰 영향을 줍니다.</li>
+    <li><strong>보기</strong>는 지역을 묶는 축을 바꿉니다. 도착지별은 시장/수요 관점, 선적지별은 영업/공급 출발지 관점으로 읽으면 됩니다.</li>
+    <li><strong>주차</strong>를 선택하면 선택 월은 해당 주 실적, 과거 월 비교는 주평균으로 표시됩니다. 특정 주의 상황을 과거 월 평균과 비교할 때 사용합니다.</li>
+    <li><strong>화주구분/등급/영업사원</strong>은 주로 화주 기반 데이터에 강하게 적용됩니다. 영업사원 필터는 `shipper` 데이터 기반 화면에서 가장 정확합니다.</li>
+  </ul>
+  <div class="tip"><strong>추천:</strong> 처음에는 팀+월만 선택해서 전체 구조를 보고, 이상치가 보이면 도착국가/도착포트/영업사원 순서로 좁히는 방식이 가장 빠릅니다.</div>
 </div>
 <div class="card en" style="display:none">
   <table>
@@ -253,6 +295,14 @@ document.addEventListener('DOMContentLoaded', function() {
     <tr><td>Salesperson</td><td>Filter by salesperson</td><td>All</td></tr>
   </table>
   <p>EN/KO toggle available in header</p>
+  <h3>How to Interpret Filters</h3>
+  <ul>
+    <li><strong>Team/origin/origin port/destination/destination port</strong> narrow the physical route scope and affect occupancy, trend, and profitability views.</li>
+    <li><strong>View</strong> changes the regional grouping axis. Destination view is useful for market demand; origin view is useful for sales/supply origin management.</li>
+    <li><strong>Week</strong> changes the selected month to actual weekly data while past months are shown as weekly averages. Use it to compare one target week against historical monthly averages.</li>
+    <li><strong>Profit/grade/salesperson</strong> are most precise in shipper-based views because those fields live in the shipper dataset.</li>
+  </ul>
+  <div class="tip"><strong>Recommended:</strong> Start with team + month, then narrow by destination country, destination port, and salesperson only after you see an abnormal pattern.</div>
 </div>
 
 <!-- HISTORY -->
@@ -325,6 +375,15 @@ document.addEventListener('DOMContentLoaded', function() {
 <div class="card ko">
   <h3>KPI 카드</h3>
   <p>전체BKG | 실선적(Normal) | 3주전BKG | 3주전실선적(Normal) | BSA | 소석률 | 실선적률 | CM1/TEU</p>
+  <table>
+    <tr><th>지표</th><th>의미</th><th>높거나 낮을 때 해석</th></tr>
+    <tr><td><strong>전체BKG</strong></td><td>조회 범위 전체 부킹 TEU</td><td>시장 전체 물량 규모를 봅니다. BSA와 함께 봐야 과부족 판단이 가능합니다.</td></tr>
+    <tr><td><strong>실선적(Normal)</strong></td><td>Normal 상태로 실제 선적된 TEU</td><td>BSA 대비 실질 소석 기여 물량입니다.</td></tr>
+    <tr><td><strong>3주전BKG</strong></td><td>WOS-3 단계에서 확보된 부킹 TEU</td><td>조기 확보 물량입니다. 높을수록 선복 계획이 안정적입니다.</td></tr>
+    <tr><td><strong>소석률</strong></td><td>실선적(Normal) / BSA</td><td>낮으면 선복 미소진, 높으면 BSA 초과 또는 강한 수요를 의미합니다.</td></tr>
+    <tr><td><strong>실선적률</strong></td><td>3주전실선적 / 3주전BKG</td><td>낮으면 캔슬/노쇼/변경 리스크를 의심합니다.</td></tr>
+    <tr><td><strong>CM1/TEU</strong></td><td>CM1 / LST_TEU</td><td>물량의 수익성을 판단합니다. 물량이 커도 이 값이 낮으면 믹스 점검이 필요합니다.</td></tr>
+  </table>
   <h3>월별 BKG vs BSA 차트</h3>
   <p>보라 바=3주전BKG, 파란 바=실선적(Normal), 회색 바=BSA</p>
   <p>빨간 실선=소석률(Normal/BSA), 노란 점선=3주전BKG/BSA, 보라 점선=고수익화주부킹비중(고수익화주3주전BKG/3주전BKG)</p>
@@ -332,10 +391,26 @@ document.addEventListener('DOMContentLoaded', function() {
   <h3>소석률 바 차트 (토글)</h3>
   <p><strong>3주전BKG/BSA</strong>와 <strong>Normal/BSA</strong> 두 모드를 버튼으로 전환하여 볼 수 있습니다.</p>
   <p>기본: 3주전BKG/BSA | 색상: 초록(≥65%), 노랑(50-65%), 빨강(&lt;50%)</p>
+  <h3>사용 방법</h3>
+  <ol>
+    <li>먼저 KPI 카드에서 전체 소석률과 실선적률을 봅니다.</li>
+    <li>월별 차트에서 이번 달이 과거 월 대비 높은지 낮은지 확인합니다.</li>
+    <li>소석률 바 차트에서 부족한 도착국가/선적지를 찾습니다.</li>
+    <li>부족 지역은 ② 부킹 트렌드에서 화주/영업사원 원인을 확인하고, 초과 지역은 BSA 조정 또는 수익성 점검 대상으로 봅니다.</li>
+  </ol>
 </div>
 <div class="card en" style="display:none">
   <h3>KPI Cards</h3>
   <p>Total BKG | LFT(Normal) | WOS-3 BKG | WOS-3 LFT | BSA | Occupancy | LFT Rate | CM1/TEU</p>
+  <table>
+    <tr><th>Metric</th><th>Meaning</th><th>How to Interpret</th></tr>
+    <tr><td><strong>Total BKG</strong></td><td>Total booking TEU in the selected scope</td><td>Read with BSA to judge shortage or excess.</td></tr>
+    <tr><td><strong>LFT(Normal)</strong></td><td>Actually loaded Normal TEU</td><td>Represents the volume that consumed capacity.</td></tr>
+    <tr><td><strong>WOS-3 BKG</strong></td><td>Booking TEU secured at WOS-3</td><td>Higher means earlier volume capture and more stable planning.</td></tr>
+    <tr><td><strong>Occupancy</strong></td><td>LFT(Normal) / BSA</td><td>Low means under-utilization; high means strong demand or BSA excess.</td></tr>
+    <tr><td><strong>LFT Rate</strong></td><td>WOS-3 LFT / WOS-3 BKG</td><td>Low suggests cancel/no-show/change risk.</td></tr>
+    <tr><td><strong>CM1/TEU</strong></td><td>CM1 / LST_TEU</td><td>Profitability per TEU. Large volume with low CM1/TEU needs mix review.</td></tr>
+  </table>
   <h3>Monthly BKG vs BSA Chart</h3>
   <p>Purple bar=WOS-3 BKG, Blue bar=LFT(Normal), Gray bar=BSA</p>
   <p>Red line=Occ(Normal/BSA), Yellow dotted=WOS-3 BKG/BSA, Purple dashed=Hi-Shipper WOS-3 BKG Share</p>
@@ -343,6 +418,13 @@ document.addEventListener('DOMContentLoaded', function() {
   <h3>Occupancy Bar (Toggle)</h3>
   <p>Switch between <strong>WOS-3 BKG/BSA</strong> and <strong>Normal/BSA</strong> with buttons.</p>
   <p>Default: WOS-3 BKG/BSA | Green(≥65%), Yellow(50-65%), Red(&lt;50%)</p>
+  <h3>How to Use</h3>
+  <ol>
+    <li>Start with the KPI cards for overall occupancy and LFT rate.</li>
+    <li>Use the monthly chart to compare the current month with prior months.</li>
+    <li>Use the occupancy bar to find weak destination/origin areas.</li>
+    <li>For weak areas, move to ② Trends to find the shipper or salesperson cause. For excess areas, review BSA adjustment and profitability.</li>
+  </ol>
 </div>
 
 <!-- TAB2 -->
@@ -358,6 +440,51 @@ document.addEventListener('DOMContentLoaded', function() {
     <tr><td><strong>AB vs CD</strong></td><td>지역별 A+B / C+D 등급 BKG 비교 + 실선적률 + 스택 바 차트 + 분석 가이드</td></tr>
   </table>
   <p>화주명은 줄바꿈 없이 한 줄로 표시합니다. 영업사원이 3명 이상인 경우에는 앞 2명과 <code>...</code>로 축약 표시합니다.</p>
+  <h3>Tab 2를 읽는 순서</h3>
+  <ol>
+    <li><strong>지역별</strong>에서 어느 도착국가/선적지가 물량 변화를 만들었는지 확인합니다.</li>
+    <li><strong>화주별</strong>에서 해당 지역의 핵심 화주와 등급, 고수익태그, CM1/TEU를 확인합니다.</li>
+    <li><strong>영업사원별</strong>에서 물량을 담당하는 영업사원과 도착국가 집중도를 봅니다.</li>
+    <li><strong>AB vs CD</strong>에서 대형화주(A+B) 의존도와 중소화주(C+D) 기반의 안정성을 비교합니다.</li>
+  </ol>
+  <h3>서브탭별 상세 해석</h3>
+  <table>
+    <tr><th>서브탭</th><th>주요 질문</th><th>해석 기준</th></tr>
+    <tr><td><strong>지역별</strong></td><td>어느 지역에서 WOS-3 물량이 크거나 부족한가?</td><td>BKG는 수요 규모, BSA/소석률은 선복 대비 과부족, 실선적률은 부킹 품질을 의미합니다. 구간별고수익%가 높으면 해당 지역 물량의 수익성이 상대적으로 좋습니다.</td></tr>
+    <tr><td><strong>화주별</strong></td><td>어떤 화주가 물량과 수익을 만들고 있는가?</td><td>BKG 큰 화주는 물량 영향도가 높고, 실선적률 낮은 화주는 캔슬/변경 관리 대상입니다. CM1/TEU가 낮은 대형 화주는 수익성 개선 후보입니다.</td></tr>
+    <tr><td><strong>영업사원별</strong></td><td>어떤 영업사원이 어느 도착국가에서 물량을 만들고 있는가?</td><td>영업사원 총성과와 도착국가 매트릭스를 함께 봅니다. 특정 국가 쏠림이 크면 해당 국가의 시장/화주 리스크가 영업사원 성과에 크게 영향을 줍니다.</td></tr>
+    <tr><td><strong>AB vs CD</strong></td><td>물량이 대형화주 중심인가, 중소화주 기반인가?</td><td>A+B 비중이 높으면 물량 확보는 쉽지만 특정 화주 이탈 리스크가 큽니다. C+D 비중이 높으면 기반은 넓지만 실선적률과 캔슬 관리가 중요합니다.</td></tr>
+  </table>
+  <h3>지역별 화면 활용</h3>
+  <ul>
+    <li><strong>3주전 BKG 현황</strong>은 선택한 보기 기준(도착지별/선적지별)으로 WOS-3 BKG, BSA, 소석률, 실선적률, 구간별고수익을 보여줍니다.</li>
+    <li><strong>주차별 3주전 BKG</strong>는 해당 월 안에서 주차별 물량 변동을 보여줍니다. 특정 주차만 튀면 일시적 선복/선박 스케줄 영향인지 확인합니다.</li>
+    <li><strong>고수익화주 vs 저수익화주 리드타임</strong>은 수익성 좋은 화주가 조기에 부킹하는지 확인하는 화면입니다.</li>
+    <li><strong>고수익화주 비중 추이</strong>는 WOS-3 물량 중 고수익화주 비중의 월별 변화입니다. 물량이 늘어도 이 비중이 떨어지면 수익성 질이 나빠질 수 있습니다.</li>
+  </ul>
+  <h3>화주별 화면 활용</h3>
+  <ul>
+    <li><strong>등급</strong>은 A+B/C+D 기반의 화주 규모 구분이고, <strong>고수익화주</strong>는 선적지 기준 CM1/TEU 비교 태그입니다. 두 지표는 서로 다른 기준입니다.</li>
+    <li><strong>구간별고수익</strong>은 루트 평균 대비 해당 부킹의 수익성 분류입니다. 화주가 고수익화주가 아니더라도 특정 구간에서는 구간별고수익일 수 있습니다.</li>
+    <li><strong>CM1/TEU</strong>는 실선적된 Normal 물량 기준 수익성입니다. BKG가 큰데 CM1/TEU가 낮으면 영업/운임 조건 점검이 필요합니다.</li>
+  </ul>
+  <h3>영업사원별 도착국가 분석</h3>
+  <p><strong>영업사원별</strong> 서브탭은 영업사원 단위의 WOS-3 부킹 성과를 먼저 보여준 뒤, 같은 데이터를 <strong>도착국가 기준</strong>으로 다시 쪼개서 보여줍니다. 포트 단위가 아니라 국가/그룹(<code>dest</code>) 기준이므로, 영업사원별 지역 포트폴리오와 특정 국가 쏠림을 빠르게 확인하는 용도입니다.</p>
+  <table>
+    <tr><th>영역</th><th>확인 포인트</th></tr>
+    <tr><td><strong>영업사원별 실적</strong></td><td>화주수, WOS-3 BKG, 실선적, 실선적률, 구간별 고수익 비중, CM1/TEU를 영업사원별로 비교합니다.</td></tr>
+    <tr><td><strong>Top 영업사원 도착국가 구성</strong></td><td>상위 영업사원별 WOS-3 BKG를 도착국가별 누적 막대로 표시합니다. 한 사람의 부킹이 특정 국가에 집중되어 있는지, 여러 국가로 분산되어 있는지 확인합니다.</td></tr>
+    <tr><td><strong>영업사원×도착국가 매트릭스</strong></td><td>행은 영업사원, 열은 도착국가입니다. 셀 값은 WOS-3 BKG TEU이며, 색이 진할수록 해당 조합의 부킹 규모가 큽니다.</td></tr>
+    <tr><td><strong>영업사원별 도착국가 상세</strong></td><td>영업사원+도착국가 조합별 화주수, BKG, 실선적, 캔슬, 구간별 고수익, CM1/TEU를 상세 확인합니다.</td></tr>
+  </table>
+  <h3>해석 방법</h3>
+  <ul>
+    <li><strong>BKG 집중</strong> — 매트릭스에서 특정 셀만 진하면 해당 영업사원의 부킹이 특정 도착국가에 집중된 상태입니다.</li>
+    <li><strong>실선적률/캔슬률</strong> — 상세 테이블에서 BKG가 큰 조합의 실선적률이 낮거나 캔슬률이 높으면 확정 관리가 필요한 후보입니다.</li>
+    <li><strong>수익성</strong> — BKG 규모가 커도 CM1/TEU가 낮으면 물량 확대보다 수익성 개선 또는 화주 믹스 점검이 우선일 수 있습니다.</li>
+    <li><strong>고수익 구성</strong> — 구간별 고수익%가 높은 조합은 해당 영업사원/국가에서 수익성 있는 부킹이 잘 만들어지는 영역입니다.</li>
+  </ul>
+  <div class="tip"><strong>주의:</strong> BSA는 도착국가/포트 전체 선복 기준 데이터이며 영업사원별로 배분되어 있지 않습니다. 따라서 영업사원×도착국가 상세에는 소석률을 넣지 않고, BKG/실선적/캔슬/수익성 지표 중심으로 봅니다.</div>
   <h3>AB vs CD 분석 가이드</h3>
   <p>AB vs CD 탭 하단에 데이터 기반 자동 진단이 표시됩니다:</p>
   <ul>
@@ -381,6 +508,51 @@ document.addEventListener('DOMContentLoaded', function() {
     <tr><td><strong>AB vs CD</strong></td><td>A+B vs C+D BKG comparison by region + LFT rate + stacked bar chart + analysis guide</td></tr>
   </table>
   <p>Shipper names are shown on a single line without wrapping. When a shipper has three or more salesperson names, the table shows the first two followed by <code>...</code>.</p>
+  <h3>How to Read Tab 2</h3>
+  <ol>
+    <li>Use <strong>By Region</strong> to find which destination/origin is driving the volume movement.</li>
+    <li>Use <strong>By Shipper</strong> to identify key shippers, grade, profit tag, and CM1/TEU.</li>
+    <li>Use <strong>By Salesperson</strong> to see ownership and destination-country concentration.</li>
+    <li>Use <strong>AB vs CD</strong> to compare large-shipper dependency against SME-base stability.</li>
+  </ol>
+  <h3>Sub-tab Interpretation</h3>
+  <table>
+    <tr><th>Sub-tab</th><th>Question</th><th>How to Interpret</th></tr>
+    <tr><td><strong>By Region</strong></td><td>Which area has high or weak WOS-3 volume?</td><td>BKG shows demand size, BSA/occupancy shows capacity gap, and LFT rate shows booking quality. High route high-profit % means better route-level profitability.</td></tr>
+    <tr><td><strong>By Shipper</strong></td><td>Which shippers drive volume and profit?</td><td>Large BKG shippers have high volume impact. Low LFT rate means cancel/change management. Large volume with low CM1/TEU is a profitability-improvement candidate.</td></tr>
+    <tr><td><strong>By Salesperson</strong></td><td>Which salesperson drives which destination country?</td><td>Read total salesperson performance together with the country matrix. Heavy concentration means that country's market/shipper risk strongly affects the salesperson's result.</td></tr>
+    <tr><td><strong>AB vs CD</strong></td><td>Is volume concentrated in large shippers or spread across SMEs?</td><td>High A+B share gives easier volume capture but higher concentration risk. High C+D share means a broader base, but LFT and cancel management matter more.</td></tr>
+  </table>
+  <h3>By Region</h3>
+  <ul>
+    <li><strong>WOS-3 BKG Status</strong> shows WOS-3 BKG, BSA, occupancy, LFT rate, and route high-profit metrics by the selected View axis.</li>
+    <li><strong>Weekly WOS-3 BKG</strong> shows week-by-week movement inside the selected month. Spikes may require checking vessel schedule or short-term capacity changes.</li>
+    <li><strong>High vs Low Profit Lead Time</strong> checks whether profitable shippers book early.</li>
+    <li><strong>High-Profit Ratio Trend</strong> tracks the share of WOS-3 BKG from high-profit shippers. If volume rises while this share falls, volume quality may be weakening.</li>
+  </ul>
+  <h3>By Shipper</h3>
+  <ul>
+    <li><strong>Grade</strong> is A+B/C+D shipper scale classification, while <strong>Profit Tag</strong> is based on POR-level CM1/TEU. They are different dimensions.</li>
+    <li><strong>Route High</strong> compares each booking against the route average. A shipper can be low-profit overall but route-high on a specific lane.</li>
+    <li><strong>CM1/TEU</strong> is profitability based on loaded Normal TEU. High BKG with low CM1/TEU should be reviewed for pricing or shipper mix.</li>
+  </ul>
+  <h3>Salesperson x Destination Country Analysis</h3>
+  <p>The <strong>By Salesperson</strong> sub-tab first summarizes WOS-3 booking performance by salesperson, then breaks the same shipper-level data down by <strong>destination country</strong>. This view uses country/group (<code>dest</code>), not destination port, so it is meant for reading each salesperson's country portfolio and concentration risk.</p>
+  <table>
+    <tr><th>Area</th><th>How to read it</th></tr>
+    <tr><td><strong>Salesperson Performance</strong></td><td>Compares shipper count, WOS-3 BKG, LFT, LFT rate, route high-profit share, and CM1/TEU by salesperson.</td></tr>
+    <tr><td><strong>Top Salesperson Dest Country Mix</strong></td><td>Stacked bars show each top salesperson's WOS-3 BKG composition by destination country. Use it to see whether volume is concentrated in one country or spread across several.</td></tr>
+    <tr><td><strong>Salesperson x Dest Country Matrix</strong></td><td>Rows are salespeople and columns are destination countries. Each cell is WOS-3 BKG TEU; darker cells indicate larger booking volume.</td></tr>
+    <tr><td><strong>Salesperson by Dest Country Detail</strong></td><td>Shows shipper count, BKG, LFT, cancel, route high-profit, and CM1/TEU for each salesperson-country pair.</td></tr>
+  </table>
+  <h3>Interpretation</h3>
+  <ul>
+    <li><strong>BKG concentration</strong> — A dark cell in the matrix means that salesperson's volume is concentrated in that destination country.</li>
+    <li><strong>LFT/cancel risk</strong> — Large BKG pairs with low LFT rate or high cancel rate are candidates for booking confirmation follow-up.</li>
+    <li><strong>Profitability</strong> — High volume with low CM1/TEU may require a profitability or shipper-mix review before chasing more volume.</li>
+    <li><strong>High-profit mix</strong> — A high route high-profit % means the salesperson-country pair is generating stronger route-level profitable bookings.</li>
+  </ul>
+  <div class="tip"><strong>Note:</strong> BSA is allocated by destination country/port at the route level, not by salesperson. For that reason, the salesperson-country detail does not show occupancy; use BKG, LFT, cancel, and profitability metrics instead.</div>
   <h3>AB vs CD Analysis Guide</h3>
   <p>Auto-diagnosis displayed at the bottom of AB vs CD tab:</p>
   <ul>
@@ -399,21 +571,37 @@ document.addEventListener('DOMContentLoaded', function() {
 <span class="anchor" id="tab3"></span>
 <h2 class="ko">③ 전환 분석</h2><h2 class="en" style="display:none">③ Conversion Analysis</h2>
 <div class="card ko">
+  <p>전환 분석은 <strong>3주전에 확보한 부킹이 실제 선적으로 얼마나 남았는지</strong>를 보는 화면입니다. 물량이 충분해 보여도 전환률이 낮으면 실제 소석과 매출로 이어지지 않을 수 있습니다.</p>
+  <table>
+    <tr><th>영역</th><th>의미</th><th>사용 방법</th></tr>
+    <tr><td><strong>WOS-3 → 실선적 퍼널</strong></td><td>3주전BKG → 캔슬제외 → 실선적(Normal)의 흐름</td><td>어느 단계에서 물량이 빠지는지 확인합니다. 캔슬 제외 이후에도 실선적이 낮으면 스케줄 변경/노쇼/상태값을 확인합니다.</td></tr>
+    <tr><td><strong>실선적률 추이</strong></td><td>지역별 월간 실선적률 변화</td><td>특정 지역의 전환률이 지속적으로 낮은지, 특정 월에만 급락했는지 구분합니다.</td></tr>
+    <tr><td><strong>캔슬률 바 차트</strong></td><td>지역별 WOS-3 캔슬률</td><td>빨강(&gt;30%)은 즉시 관리 후보, 노랑(&gt;20%)은 관찰 후보입니다.</td></tr>
+    <tr><td><strong>월별 캔슬률 추이</strong></td><td>전체 캔슬률의 시간 변화</td><td>캔슬이 구조적으로 증가하는지, 일시적인 이벤트인지 확인합니다.</td></tr>
+    <tr><td><strong>화주별 캔슬 Top 15</strong></td><td>캔슬 TEU가 큰 화주 목록</td><td>반복 캔슬 화주, 특정 영업사원/지역과 연결되는지 확인합니다.</td></tr>
+  </table>
+  <h3>해석 포인트</h3>
   <ul>
-    <li><strong>WOS-3 → 실선적 퍼널</strong> — 3주전BKG → 캔슬제외 → 실선적(Normal)</li>
-    <li><strong>실선적률 추이</strong> — 지역별 월간 실선적률 라인 차트</li>
-    <li><strong>캔슬률 바 차트</strong> — 지역별 캔슬률 (빨강>30%, 노랑>20%, 초록)</li>
-    <li><strong>월별 캔슬률 추이</strong> — 전체 캔슬률 트렌드</li>
-    <li><strong>화주별 캔슬 Top 15</strong> — 캔슬이 많은 화주 식별</li>
+    <li><strong>BKG는 충분한데 실선적률이 낮음</strong> — 확보한 부킹의 품질이 낮거나 캔슬/변경이 많을 수 있습니다.</li>
+    <li><strong>캔슬률은 낮은데 실선적률이 낮음</strong> — 캔슬 외 사유(스케줄 변경, 지연, 상태값, LST_TEU 변동)를 확인합니다.</li>
+    <li><strong>특정 화주 캔슬 집중</strong> — 영업사원과 함께 부킹 확정 프로세스, 반복 패턴, 선복 배정 우선순위를 점검합니다.</li>
   </ul>
 </div>
 <div class="card en" style="display:none">
+  <p>Conversion analysis shows <strong>how much WOS-3 booking actually remains as loaded shipment</strong>. Even if BKG looks sufficient, low conversion means it may not translate into occupancy or revenue.</p>
+  <table>
+    <tr><th>Area</th><th>Meaning</th><th>How to Use</th></tr>
+    <tr><td><strong>Funnel</strong></td><td>WOS-3 BKG → cancel removed → LFT(Normal)</td><td>Find where volume drops. If LFT remains low after cancel removal, check schedule changes, no-shows, or status values.</td></tr>
+    <tr><td><strong>LFT Rate Trend</strong></td><td>Monthly LFT rate by region</td><td>Separate persistent low conversion from one-time monthly drops.</td></tr>
+    <tr><td><strong>Cancel Rate Bar</strong></td><td>WOS-3 cancel rate by region</td><td>Red (&gt;30%) needs immediate follow-up; yellow (&gt;20%) should be watched.</td></tr>
+    <tr><td><strong>Monthly Cancel Trend</strong></td><td>Overall cancel rate over time</td><td>Check whether cancel behavior is structural or event-driven.</td></tr>
+    <tr><td><strong>Top 15 Cancel Shippers</strong></td><td>Shippers with the largest canceled TEU</td><td>Look for repeated cancel patterns by shipper, salesperson, or region.</td></tr>
+  </table>
+  <h3>Interpretation</h3>
   <ul>
-    <li><strong>Funnel</strong> — WOS-3 BKG → Cancel Removed → LFT(Normal)</li>
-    <li><strong>LFT Rate Trend</strong> — Monthly by region</li>
-    <li><strong>Cancel Rate Bar</strong> — By region (Red>30%, Yellow>20%, Green)</li>
-    <li><strong>Monthly Cancel Trend</strong> — Overall cancel rate</li>
-    <li><strong>Top 15 Cancel Shippers</strong></li>
+    <li><strong>Enough BKG but low LFT rate</strong> — Booking quality may be weak, with many cancels or changes.</li>
+    <li><strong>Low cancel rate but low LFT rate</strong> — Check non-cancel causes such as schedule change, delay, status, or LST_TEU movement.</li>
+    <li><strong>Cancel concentrated in specific shippers</strong> — Review confirmation process and capacity allocation priority with the responsible salesperson.</li>
   </ul>
 </div>
 
@@ -421,17 +609,37 @@ document.addEventListener('DOMContentLoaded', function() {
 <span class="anchor" id="tab4"></span>
 <h2 class="ko">④ 수익성 분석</h2><h2 class="en" style="display:none">④ Profitability</h2>
 <div class="card ko">
+  <p>수익성 분석은 <strong>물량의 크기</strong>가 아니라 <strong>TEU당 얼마의 CM1을 만드는지</strong>를 보는 화면입니다. 소석률이 좋아도 CM1/TEU가 낮으면 좋은 물량이라고 보기 어렵습니다.</p>
+  <table>
+    <tr><th>영역</th><th>의미</th><th>사용 방법</th></tr>
+    <tr><td><strong>지역별 CM1/TEU</strong></td><td>도착국가/선적지별 TEU당 CM1</td><td>같은 물량이라도 어느 지역이 더 좋은 수익을 만드는지 비교합니다.</td></tr>
+    <tr><td><strong>CM1/TEU 월별 추이</strong></td><td>지역별 수익성의 시간 변화</td><td>특정 지역의 수익성이 개선/악화되는 방향을 봅니다.</td></tr>
+    <tr><td><strong>Top 10 / Bottom 10 화주</strong></td><td>CM1/TEU가 가장 높거나 낮은 화주</td><td>Top은 유지/확대 후보, Bottom은 운임/조건/화주 믹스 점검 후보입니다.</td></tr>
+    <tr><td><strong>수익 집중도</strong></td><td>상위 화주가 전체 CM1에서 차지하는 비중</td><td>소수 화주 의존도가 큰지 확인합니다. 집중도가 높으면 이탈 리스크가 큽니다.</td></tr>
+  </table>
+  <h3>해석 포인트</h3>
   <ul>
-    <li><strong>지역별 CM1/TEU</strong> + <strong>CM1/TEU 월별 추이</strong></li>
-    <li><strong>CM1/TEU Top 10 / Bottom 10 화주</strong> — 영업사원 포함</li>
-    <li><strong>수익 집중도</strong> — Top 10/20 화주의 CM1 비중 + 누적 커브</li>
+    <li><strong>BKG 높고 CM1/TEU 높음</strong> — 유지/확대 가치가 높은 핵심 물량입니다.</li>
+    <li><strong>BKG 높고 CM1/TEU 낮음</strong> — 선복을 많이 쓰지만 수익성이 낮은 물량입니다. 운임 또는 믹스 점검이 필요합니다.</li>
+    <li><strong>BKG 낮고 CM1/TEU 높음</strong> — 확대 가능성이 있는 고품질 물량입니다.</li>
+    <li><strong>수익 집중도 높음</strong> — Top 화주 이탈 시 전체 수익 영향이 크므로 대체 화주/지역을 관리합니다.</li>
   </ul>
 </div>
 <div class="card en" style="display:none">
+  <p>Profitability analysis focuses on <strong>CM1 per TEU</strong>, not just volume. Strong occupancy with weak CM1/TEU may still be poor-quality volume.</p>
+  <table>
+    <tr><th>Area</th><th>Meaning</th><th>How to Use</th></tr>
+    <tr><td><strong>CM1/TEU by Region</strong></td><td>CM1 per TEU by destination/origin</td><td>Compare which regions generate better profit per TEU.</td></tr>
+    <tr><td><strong>Monthly Trend</strong></td><td>Profitability trend over time</td><td>Check whether a region is improving or deteriorating.</td></tr>
+    <tr><td><strong>Top/Bottom 10 Shippers</strong></td><td>Highest and lowest CM1/TEU shippers</td><td>Top shippers are keep/expand candidates; bottom shippers need price/condition/mix review.</td></tr>
+    <tr><td><strong>Revenue Concentration</strong></td><td>Share of total CM1 from top shippers</td><td>High concentration means higher dependency risk.</td></tr>
+  </table>
+  <h3>Interpretation</h3>
   <ul>
-    <li><strong>CM1/TEU by Region</strong> + <strong>Monthly Trend</strong></li>
-    <li><strong>CM1/TEU Top 10 / Bottom 10 Shippers</strong> — with Salesperson</li>
-    <li><strong>Revenue Concentration</strong> — Top 10/20 share + cumulative curve</li>
+    <li><strong>High BKG + high CM1/TEU</strong> — Core volume worth protecting and expanding.</li>
+    <li><strong>High BKG + low CM1/TEU</strong> — Large capacity usage with weak profit. Review pricing or shipper mix.</li>
+    <li><strong>Low BKG + high CM1/TEU</strong> — High-quality volume with expansion potential.</li>
+    <li><strong>High concentration</strong> — A top-shipper loss can materially affect total profit.</li>
   </ul>
 </div>
 
@@ -439,19 +647,37 @@ document.addEventListener('DOMContentLoaded', function() {
 <span class="anchor" id="tab5"></span>
 <h2 class="ko">⑤ 부킹 패턴</h2><h2 class="en" style="display:none">⑤ Booking Patterns</h2>
 <div class="card ko">
+  <p>부킹 패턴은 <strong>물량이 언제 들어오는지</strong>를 보는 화면입니다. WOS-3 비중이 높을수록 선복 계획과 영업 예측이 안정적이고, WOS/WOS-1 비중이 높을수록 막판 변동성이 큽니다.</p>
+  <table>
+    <tr><th>영역</th><th>의미</th><th>사용 방법</th></tr>
+    <tr><td><strong>지역별 WOS 분포</strong></td><td>도착국가/선적지별 전체 BKG 중 WOS-3/2/1/WOS 비중</td><td>조기 부킹이 강한 지역과 막판 부킹이 많은 지역을 구분합니다.</td></tr>
+    <tr><td><strong>100% 스택 바</strong></td><td>지역별 부킹 접수 시점 비중 시각화</td><td>지역 간 리드타임 구조를 빠르게 비교합니다.</td></tr>
+    <tr><td><strong>화주별 WOS 분포</strong></td><td>화주별 조기/막판 부킹 성향</td><td>반복적으로 늦게 부킹하는 화주는 선복 예측 리스크 후보입니다.</td></tr>
+    <tr><td><strong>고수익 vs 저수익 리드타임</strong></td><td>수익성 그룹별 부킹 시점 비교</td><td>고수익화주가 조기에 들어오는지, 저수익화주가 막판 물량을 채우는지 확인합니다.</td></tr>
+  </table>
+  <h3>해석 포인트</h3>
   <ul>
-    <li><strong>지역별 WOS 분포 테이블</strong> — 전체BKG 중 WOS-3/2/1/WOS 비중</li>
-    <li><strong>100% 스택 바 차트</strong> — 지역별 부킹 시점 비중</li>
-    <li><strong>화주별 WOS 분포</strong> — 고수익태그 + 영업사원 포함</li>
-    <li><strong>고수익 vs 저수익 리드타임</strong> + <strong>고수익 WOS-3 비중 추이</strong></li>
+    <li><strong>WOS-3 비중 높음</strong> — 조기 확보가 잘 되고 있어 선복 계획 안정성이 높습니다.</li>
+    <li><strong>WOS/WOS-1 비중 높음</strong> — 막판 영업/스팟 물량 의존도가 높고, 예측 안정성이 낮습니다.</li>
+    <li><strong>고수익화주 WOS-3 비중 하락</strong> — 조기 확보 물량의 수익성이 약해지고 있을 수 있습니다.</li>
+    <li><strong>특정 화주의 늦은 부킹 반복</strong> — 선복 예약 룰, cut-off 관리, 영업 커뮤니케이션 점검 대상입니다.</li>
   </ul>
 </div>
 <div class="card en" style="display:none">
+  <p>Booking patterns show <strong>when volume enters the pipeline</strong>. Higher WOS-3 share means more stable capacity planning; higher WOS/WOS-1 share means more last-minute volatility.</p>
+  <table>
+    <tr><th>Area</th><th>Meaning</th><th>How to Use</th></tr>
+    <tr><td><strong>Regional WOS Distribution</strong></td><td>WOS-3/2/1/WOS share by destination/origin</td><td>Separate early-booking regions from last-minute regions.</td></tr>
+    <tr><td><strong>100% Stacked Bar</strong></td><td>Visual booking-timing mix by region</td><td>Quickly compare lead-time structures across regions.</td></tr>
+    <tr><td><strong>Shipper WOS Distribution</strong></td><td>Booking timing behavior by shipper</td><td>Repeated late-booking shippers are capacity-forecast risk candidates.</td></tr>
+    <tr><td><strong>High vs Low Profit Lead Time</strong></td><td>Booking timing by profitability group</td><td>Check whether high-profit shippers book early or low-profit shippers fill last-minute volume.</td></tr>
+  </table>
+  <h3>Interpretation</h3>
   <ul>
-    <li><strong>Regional WOS Distribution</strong> — WOS-3/2/1/WOS ratio</li>
-    <li><strong>100% Stacked Bar</strong> — Booking timing by region</li>
-    <li><strong>Shipper WOS Distribution</strong> — with Profit Tag + Salesperson</li>
-    <li><strong>High vs Low Profit Lead Time</strong> + <strong>Profit WOS-3 Trend</strong></li>
+    <li><strong>High WOS-3 share</strong> — Early capture is strong and capacity planning is stable.</li>
+    <li><strong>High WOS/WOS-1 share</strong> — Greater reliance on last-minute or spot volume.</li>
+    <li><strong>Falling high-profit WOS-3 share</strong> — Early-booked volume quality may be weakening.</li>
+    <li><strong>Repeated late-booking shipper</strong> — Review booking rules, cut-off management, and sales communication.</li>
   </ul>
 </div>
 
@@ -597,6 +823,17 @@ document.addEventListener('DOMContentLoaded', function() {
     <tr><td><strong>WOS 단계별 실선적률용 실선적</strong></td><td>LST_TEU</td><td>실제 선적 TEU 기준. LST_TEU가 FST_TEU보다 커지면 실선적률은 100%를 넘을 수 있음</td></tr>
     <tr><td><strong>CM1/TEU</strong></td><td>CM1 / LST_TEU</td><td>Normal + CM1 있는 건만</td></tr>
   </table>
+  <h3>자주 헷갈리는 지표</h3>
+  <table>
+    <tr><th>지표</th><th>계산/기준</th><th>주의사항</th></tr>
+    <tr><td><strong>소석률</strong></td><td>실선적(Normal) / BSA</td><td>선복 사용률 관점입니다. WOS-3 부킹만 보는 지표가 아닙니다.</td></tr>
+    <tr><td><strong>3주전BKG/BSA</strong></td><td>WOS-3 BKG / BSA</td><td>출항 3주 전 확보 물량을 BSA와 비교합니다. 부킹이 BSA보다 많으면 100%를 넘을 수 있습니다.</td></tr>
+    <tr><td><strong>실선적률</strong></td><td>WOS-3 실선적 / WOS-3 BKG</td><td>부킹이 실제 선적으로 남는 비율입니다. 캔슬 관리와 부킹 품질 판단에 사용합니다.</td></tr>
+    <tr><td><strong>고수익화주</strong></td><td>선적지 기준 화주 CM1/TEU 비교</td><td>화주 단위 태그입니다. 루트별 개별 부킹 수익성과는 다를 수 있습니다.</td></tr>
+    <tr><td><strong>구간별고수익</strong></td><td>POR+DLY 루트 평균 대비 부킹 수익성</td><td>부킹/구간 단위 분류입니다. 고수익화주 태그와 혼동하지 않습니다.</td></tr>
+    <tr><td><strong>A+B / C+D</strong></td><td>화주 등급</td><td>규모/등급 관점이며 수익성 태그가 아닙니다.</td></tr>
+  </table>
+  <div class="tip"><strong>핵심:</strong> 소석률은 선복 사용률, 실선적률은 부킹 전환 품질, CM1/TEU는 수익성, WOS는 부킹 접수 타이밍입니다. 네 지표를 함께 봐야 물량의 양과 질을 동시에 판단할 수 있습니다.</div>
   <h3>데이터 소스</h3>
   <p><strong>2.csv (Date_vsl 뷰)</strong>를 base로 하고, <strong>1.csv (Booking_schedule 뷰)</strong>에서 화주/부킹일 등 상세 정보를 보충합니다. 1.csv 범위 밖의 부킹도 2.csv에 있으면 포함됩니다.</p>
   <h3>제외 조건 (-3W 필터)</h3>
@@ -619,6 +856,17 @@ document.addEventListener('DOMContentLoaded', function() {
     <tr><td><strong>LFT (Normal)</strong></td><td>LST_TEU</td><td>Actual shipment TEU (LST_Status='Normal')</td></tr>
     <tr><td><strong>CM1/TEU</strong></td><td>CM1 / LST_TEU</td><td>Normal with CM1 only</td></tr>
   </table>
+  <h3>Commonly Confused Metrics</h3>
+  <table>
+    <tr><th>Metric</th><th>Basis</th><th>Note</th></tr>
+    <tr><td><strong>Occupancy</strong></td><td>LFT(Normal) / BSA</td><td>Capacity usage view. It is not limited to WOS-3 bookings.</td></tr>
+    <tr><td><strong>WOS-3 BKG/BSA</strong></td><td>WOS-3 BKG / BSA</td><td>Compares early-booked volume against BSA. It can exceed 100% if bookings exceed BSA.</td></tr>
+    <tr><td><strong>LFT Rate</strong></td><td>WOS-3 LFT / WOS-3 BKG</td><td>Booking-to-shipment conversion quality. Use it for cancel and booking-quality review.</td></tr>
+    <tr><td><strong>Hi-Shipper</strong></td><td>POR-level shipper CM1/TEU comparison</td><td>A shipper-level tag. It can differ from route-level booking profitability.</td></tr>
+    <tr><td><strong>Route High</strong></td><td>Booking profitability vs POR+DLY route average</td><td>A booking/route-level classification, not the same as Hi-Shipper.</td></tr>
+    <tr><td><strong>A+B / C+D</strong></td><td>Shipper grade</td><td>Scale/grade view, not a profitability tag.</td></tr>
+  </table>
+  <div class="tip"><strong>Key idea:</strong> Occupancy measures capacity usage, LFT rate measures conversion quality, CM1/TEU measures profitability, and WOS measures booking timing. Use all four together to judge both volume quantity and quality.</div>
   <h3>Data Source</h3>
   <p><strong>2.csv (Date_vsl view)</strong> as base, supplemented by <strong>1.csv (Booking_schedule view)</strong> for shipper/booking details. Bookings outside 1.csv date range are included if present in 2.csv.</p>
   <h3>Exclusion Rules</h3>
