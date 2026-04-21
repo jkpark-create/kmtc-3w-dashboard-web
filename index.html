@@ -47,6 +47,10 @@ table.summary th.sales-col, table.summary td.sales-col{width:86px;min-width:86px
 table.summary th.sales-col span, table.summary td.sales-col span{display:block;max-width:74px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0 auto}
 table.summary.shipper-table{table-layout:auto;width:max-content;min-width:100%}
 table.summary th.shipper-col, table.summary td.shipper-col{width:420px;min-width:420px;max-width:none;white-space:nowrap !important;word-break:normal;overflow-wrap:normal;line-height:1.3;text-align:left}
+table.summary.matrix-table{table-layout:auto;width:max-content;min-width:100%}
+table.summary.matrix-table th, table.summary.matrix-table td{min-width:64px}
+table.summary.matrix-table th.matrix-sales, table.summary.matrix-table td.matrix-sales{width:110px;min-width:110px;max-width:110px;white-space:normal !important;word-break:break-word;line-height:1.3}
+table.summary.matrix-table th.total-col, table.summary.matrix-table td.total-col{background:#f8fafd;font-weight:700}
 table.summary tr.total{font-weight:700;background:#f0f4ff}
 table.summary tr.total-m{font-weight:700;background:#e8edf5}
 table.summary td.lbl{text-align:left;font-weight:600;background:#fafafa}
@@ -925,7 +929,7 @@ function renderTab2() {
   if (t2sub === 'sales') {
     html += renderSalesmanTable(month);
     document.getElementById('tabContent').innerHTML = html;
-    // Render salesman chart
+    // Render salesman charts
     const sd = filterShipper(month);
     const wk = DATA.wpm[month]||4;
     const bySM = {};
@@ -942,6 +946,30 @@ function renderTab2() {
         {y:smRows.map(r=>r.name).reverse(), x:smRows.map(r=>r.ship).reverse(), type:'bar', orientation:'h', name:L('실선적(Normal)','LFT(Normal)'), marker:{color:'#34a853',opacity:.7}},
       ], {barmode:'group',margin:{l:80,r:30,t:20,b:30},xaxis:{title:L('TEU (주간평균)','TEU (Weekly Avg)'),gridcolor:'#f0f0f0'},
           legend:{orientation:'h',y:1.1},plot_bgcolor:'#fff',paper_bgcolor:'#fff'}, {displayModeBar:false});
+    }
+    if (document.getElementById('ch2smdeststack')) {
+      const salesDestRows = buildSalesDestRows(month);
+      const salesTotals = {}, destTotals = {};
+      salesDestRows.forEach(r => {
+        salesTotals[r.sales] = (salesTotals[r.sales]||0) + r.bkg;
+        destTotals[r.dest] = (destTotals[r.dest]||0) + r.bkg;
+      });
+      const topSales = Object.entries(salesTotals).sort((a,b)=>b[1]-a[1]).slice(0,12).map(e=>e[0]);
+      const topDests = Object.entries(destTotals).sort((a,b)=>b[1]-a[1]).slice(0,8).map(e=>e[0]);
+      const otherLabel = L('기타','Other');
+      const hasOther = salesDestRows.some(r => topSales.includes(r.sales) && !topDests.includes(r.dest) && r.bkg > 0);
+      const destSeries = hasOther ? [...topDests, otherLabel] : topDests;
+      const ySales = topSales.slice().reverse();
+      const colors = ['#1a73e8','#34a853','#f9ab00','#ea4335','#5f6368','#00acc1','#ab47bc','#ff7043','#9aa0a6'];
+      Plotly.newPlot('ch2smdeststack', destSeries.map((dest,i) => {
+        const vals = ySales.map(sm => salesDestRows
+          .filter(r => r.sales === sm && (dest === otherLabel ? !topDests.includes(r.dest) : r.dest === dest))
+          .reduce((s,r)=>s+r.bkg,0));
+        return {y:ySales, x:vals, type:'bar', orientation:'h', name:dest, marker:{color:colors[i%colors.length],opacity:.82},
+          hovertemplate:'%{y}<br>'+L('도착국가','Dest Country')+': '+dest+'<br>BKG: %{x:.0f}<extra></extra>'};
+      }), {barmode:'stack',margin:{l:90,r:30,t:20,b:35},
+        xaxis:{title:'TEU',gridcolor:'#f0f0f0'},legend:{orientation:'h',y:1.16},
+        plot_bgcolor:'#fff',paper_bgcolor:'#fff'}, {displayModeBar:false});
     }
     return;
   } else if (t2sub === 'region') {
@@ -1150,6 +1178,108 @@ function renderShipperTable(month) {
   return h;
 }
 
+function buildSalesDestRows(month) {
+  const sd = filterShipper(month);
+  const bySD = {};
+  sd.forEach(r => {
+    const sales = r.Salesman_POR || L('(미지정)','(N/A)');
+    // Country-level destination; keep dst_port out of this salesperson breakdown.
+    const dest = r.dest || L('(미지정)','(N/A)');
+    const k = sales + '\u0001' + dest;
+    if (!bySD[k]) bySD[k] = {sales, dest, bkg:0, ship:0, cancel:0, hi:0, cm1:0, cm1l:0, custs:new Set()};
+    const s = bySD[k];
+    s.bkg += r.w3_fst||0;
+    s.ship += r.w3_norm_lst||0;
+    s.cancel += r.w3_canc_fst||0;
+    s.hi += metricVal(r,'w3_route_hi_fst','w3_hi_fst');
+    s.cm1 += r.w3_cm1_norm||0;
+    s.cm1l += r.w3_norm_lst||0;
+    if (r.BKG_SHPR_CST_NO) s.custs.add(r.BKG_SHPR_CST_NO);
+  });
+
+  return Object.values(bySD).map(s => ({
+    sales:s.sales, dest:s.dest, custCnt:s.custs.size, bkg:s.bkg, ship:s.ship, cancel:s.cancel,
+    hi:s.hi, cm1:s.cm1, cm1l:s.cm1l,
+    shipRate:ratio(s.ship,s.bkg) ?? 0, cancelRate:ratio(s.cancel,s.bkg) ?? 0,
+    hiRate:ratio(s.hi,s.bkg) ?? 0, cm1teu:s.cm1l>0 ? s.cm1/s.cm1l : 0
+  })).sort((a,b)=>b.bkg-a.bkg);
+}
+
+function salesDestVal(rows, sales, dest, topDests, otherLabel) {
+  return rows
+    .filter(r => r.sales === sales && (dest === otherLabel ? !topDests.includes(r.dest) : r.dest === dest))
+    .reduce((s,r)=>s+r.bkg,0);
+}
+
+function salesDestHeatStyle(v, maxVal) {
+  if (!v || !maxVal) return '';
+  const intensity = Math.min(1, v / maxVal);
+  const alpha = .12 + intensity * .62;
+  const color = alpha > .48 ? '#fff' : '#202124';
+  return `background:rgba(26,115,232,${alpha});color:${color};font-weight:600`;
+}
+
+function renderSalesDestMatrix(rows, month) {
+  const title = L('영업사원×도착국가 WOS-3 BKG 매트릭스','Salesperson x Dest Country WOS-3 BKG Matrix');
+  if (!rows.length) {
+    return `<div class="chart-card"><h3>${title} (${fmtMonth(month)})</h3><div class="sub">${L('표시할 데이터가 없습니다.','No data to display.')}</div></div>`;
+  }
+
+  const salesTotals = {}, destTotals = {};
+  rows.forEach(r => {
+    salesTotals[r.sales] = (salesTotals[r.sales]||0) + r.bkg;
+    destTotals[r.dest] = (destTotals[r.dest]||0) + r.bkg;
+  });
+  const salesList = Object.entries(salesTotals).sort((a,b)=>b[1]-a[1]).map(e=>e[0]);
+  const topDests = Object.entries(destTotals).sort((a,b)=>b[1]-a[1]).slice(0,12).map(e=>e[0]);
+  const otherLabel = L('기타','Other');
+  const hasOther = rows.some(r => !topDests.includes(r.dest) && r.bkg > 0);
+  const destList = hasOther ? [...topDests, otherLabel] : topDests;
+  const maxCell = Math.max(...salesList.flatMap(sm => destList.map(d => salesDestVal(rows, sm, d, topDests, otherLabel))));
+
+  let h = `<div class="chart-card"><h3>${title} (${fmtMonth(month)})</h3>
+  <table class="summary matrix-table"><tr><th class="matrix-sales">${L('영업사원','Salesperson')}</th>`;
+  destList.forEach(d => { h += `<th>${d}</th>`; });
+  h += `<th class="total-col">${L('합계','Total')}</th></tr>`;
+
+  salesList.forEach(sm => {
+    h += `<tr><td class="lbl matrix-sales">${sm}</td>`;
+    destList.forEach(d => {
+      const v = salesDestVal(rows, sm, d, topDests, otherLabel);
+      h += `<td style="${salesDestHeatStyle(v,maxCell)}">${v ? fmt(Math.round(v)) : '-'}</td>`;
+    });
+    h += `<td class="total-col">${fmt(Math.round(salesTotals[sm]||0))}</td></tr>`;
+  });
+
+  h += `<tr class="total"><td class="lbl matrix-sales">${L('합계','Total')}</td>`;
+  destList.forEach(d => {
+    const v = salesList.reduce((s,sm)=>s+salesDestVal(rows, sm, d, topDests, otherLabel),0);
+    h += `<td>${fmt(Math.round(v))}</td>`;
+  });
+  const total = Object.values(salesTotals).reduce((s,v)=>s+v,0);
+  h += `<td class="total-col">${fmt(Math.round(total))}</td></tr></table></div>`;
+  return h;
+}
+
+function renderSalesDestDetail(rows, sourceRows, month) {
+  const title = L('영업사원별 도착국가 상세','Salesperson by Dest Country Detail');
+  let h = `<div class="chart-card"><h3>${title} (${fmtMonth(month)})</h3>
+  <table class="summary"><tr><th class="wrap">${L('영업사원','Salesperson')}</th><th>${L('도착국가','Dest Country')}</th><th>${L('화주수','Shippers')}</th><th>BKG</th><th>${L('실선적','LFT')}</th><th>${L('실선적률','Rate')}</th><th>${L('캔슬','Cancel')}</th><th>${L('캔슬률','Cancel Rate')}</th><th>${L('구간별고수익','Route Hi')}</th><th>${L('구간별고수익%','Route Hi%')}</th><th>CM1</th><th>CM1/TEU</th></tr>`;
+
+  rows.forEach(r => {
+    h += `<tr><td class="lbl wrap">${r.sales}</td><td>${r.dest}</td><td>${r.custCnt}</td><td>${fmt(r.bkg)}</td><td>${fmt(r.ship)}</td><td>${pct(r.ship,r.bkg)}</td>`;
+    h += `<td>${fmt(r.cancel)}</td><td>${pct(r.cancel,r.bkg)}</td><td>${fmt(r.hi)}</td><td>${pct(r.hi,r.bkg)}</td><td>${fmt(Math.round(r.cm1))}</td><td>${fmt(Math.round(r.cm1teu))}</td></tr>`;
+  });
+
+  const tb=rows.reduce((s,r)=>s+r.bkg,0), ts=rows.reduce((s,r)=>s+r.ship,0), tcanc=rows.reduce((s,r)=>s+r.cancel,0);
+  const thi=rows.reduce((s,r)=>s+r.hi,0), tcm1=rows.reduce((s,r)=>s+r.cm1,0), tcm1l=rows.reduce((s,r)=>s+r.cm1l,0);
+  const tcust = new Set(sourceRows.map(r=>r.BKG_SHPR_CST_NO).filter(v=>v)).size;
+  h += `<tr class="total"><td class="lbl wrap">${L('합계','Total')}</td><td></td><td>${tcust}</td><td>${fmt(tb)}</td><td>${fmt(ts)}</td><td>${pct(ts,tb)}</td>`;
+  h += `<td>${fmt(tcanc)}</td><td>${pct(tcanc,tb)}</td><td>${fmt(thi)}</td><td>${pct(thi,tb)}</td><td>${fmt(Math.round(tcm1))}</td><td>${fmt(Math.round(tcm1l>0?tcm1/tcm1l:0))}</td></tr>`;
+  h += '</table></div>';
+  return h;
+}
+
 function renderSalesmanTable(month) {
   const sd = filterShipper(month);
   const wk = DATA.wpm[month]||4;
@@ -1187,8 +1317,14 @@ function renderSalesmanTable(month) {
   h += `<td>${fmt(th2)}</td><td>${pct(th2,tb)}</td><td>${fmt(Math.round(tc))}</td><td>${fmt(Math.round(tct))}</td></tr>`;
   h += '</table></div>';
 
-  // Salesman bar chart
-  h += `<div class="chart-card"><h3>${L('영업사원별 BKG vs 실선적률','Salesperson BKG vs LFT Rate')}</h3><div id="ch2sm" style="height:350px"></div></div>`;
+  h += `<div class="chart-row">
+    <div class="chart-card" style="flex:1"><h3>${L('영업사원별 BKG vs 실선적률','Salesperson BKG vs LFT Rate')}</h3><div id="ch2sm" style="height:350px"></div></div>
+    <div class="chart-card" style="flex:1"><h3>${L('Top 영업사원 도착국가 구성','Top Salesperson Dest Country Mix')}</h3><div id="ch2smdeststack" style="height:350px"></div></div>
+  </div>`;
+
+  const salesDestRows = buildSalesDestRows(month);
+  h += renderSalesDestMatrix(salesDestRows, month);
+  h += renderSalesDestDetail(salesDestRows, sd, month);
   return h;
 }
 
@@ -1607,4 +1743,3 @@ checkSession();
 </script>
 </body>
 </html>
-
