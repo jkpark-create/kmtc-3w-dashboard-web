@@ -22,6 +22,19 @@ body{font-family:'Segoe UI',sans-serif;background:#f0f2f5;color:#202124}
 .filters{background:#fff;padding:8px 20px;border-bottom:1px solid #dadce0;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .filters label{font-size:12px;color:#5f6368;white-space:nowrap}
 .filters select{padding:4px 8px;border:1px solid #dadce0;border-radius:4px;font-size:13px;min-width:70px}
+.multi-select{position:relative;min-width:86px}
+.multi-toggle{width:100%;height:28px;padding:4px 24px 4px 8px;border:1px solid #dadce0;border-radius:4px;background:#fff;color:#202124;font-size:13px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.multi-toggle span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.multi-caret{font-size:10px;color:#5f6368}
+.multi-menu{display:none;position:absolute;top:32px;left:0;z-index:50;width:210px;max-height:280px;background:#fff;border:1px solid #dadce0;border-radius:6px;box-shadow:0 6px 18px rgba(32,33,36,.18);overflow:hidden}
+.multi-select.open .multi-menu{display:block}
+.multi-actions{display:flex;justify-content:space-between;gap:6px;padding:6px;border-bottom:1px solid #edf0f2;background:#f8fafd}
+.multi-actions button{border:1px solid #dadce0;background:#fff;border-radius:4px;padding:3px 8px;font-size:12px;cursor:pointer}
+.multi-options{max-height:226px;overflow:auto;padding:4px 0}
+.multi-option{display:flex;align-items:center;gap:7px;padding:5px 8px;font-size:13px;line-height:1.2;cursor:pointer}
+.multi-option:hover{background:#f5f8ff}
+.multi-option input{width:14px;height:14px;flex:0 0 auto}
+.multi-empty{padding:10px 8px;color:#5f6368;font-size:12px}
 .filters .sep{width:16px}
 .tabs{display:flex;gap:0;background:#fff;border-bottom:1px solid #dadce0;padding:0 20px}
 .tabs .tab{padding:10px 16px;font-size:13px;cursor:pointer;border-bottom:3px solid transparent;color:#5f6368}
@@ -98,10 +111,10 @@ table.summary tr.total-m td.lbl{background:#e8edf5}
 
 <div class="filters">
   <label>팀</label><select id="fTeam"><option value="ALL">전체</option></select>
-  <label>선적지</label><select id="fOri"><option value="ALL">전체</option></select>
-  <label>선적포트</label><select id="fOriP"><option value="ALL">전체</option></select>
-  <label>도착지</label><select id="fDst"><option value="ALL">전체</option></select>
-  <label>도착포트</label><select id="fDstP"><option value="ALL">전체</option></select>
+  <label>선적지</label><div id="fOri" class="multi-select" aria-label="선적지"></div>
+  <label>선적포트</label><div id="fOriP" class="multi-select" aria-label="선적포트"></div>
+  <label>도착지</label><div id="fDst" class="multi-select" aria-label="도착지"></div>
+  <label>도착포트</label><div id="fDstP" class="multi-select" aria-label="도착포트"></div>
   <div class="sep"></div>
   <label>보기</label><select id="fView"><option value="dest">도착지별</option><option value="origin">선적지별</option></select>
   <label>월</label><select id="fMonth"></select>
@@ -209,7 +222,7 @@ function showApp() {
 // ═══════════════════════════════════════════════
 // Data Loading + Historical Data
 // ═══════════════════════════════════════════════
-let _driveFiles = {}; // {date: fileId}
+let _driveFiles = {}; // {dataset key: fileId}
 
 async function loadData() {
   try {
@@ -232,7 +245,7 @@ async function loadData() {
 async function loadDriveFileList() {
   if (!gToken) return;
   try {
-    const r = await fetch(`https://www.googleapis.com/drive/v3/files?q='${DRIVE_FOLDER_ID}'+in+parents+and+name+contains+'dashboard_summary_2'&fields=files(id,name)&orderBy=name+desc&pageSize=30`, {
+    const r = await fetch(`https://www.googleapis.com/drive/v3/files?q='${DRIVE_FOLDER_ID}'+in+parents+and+name+contains+'dashboard_summary_'&fields=files(id,name)&orderBy=name+desc&pageSize=100`, {
       headers: {'Authorization': 'Bearer ' + gToken}
     });
     if (!r.ok) return;
@@ -240,12 +253,15 @@ async function loadDriveFileList() {
     const sel = document.getElementById('dataDateSel');
     const today = DATA.data_date;
     files.forEach(f => {
-      const m = f.name.match(/dashboard_summary_(\d{8})\.json/);
-      if (m && m[1] !== today) {
-        _driveFiles[m[1]] = f.id;
-        const d = m[1];
-        const label = `${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)}`;
-        sel.innerHTML += `<option value="${d}">${label}</option>`;
+      const daily = f.name.match(/dashboard_summary_(\d{8})\.json/);
+      const yearly = f.name.match(/dashboard_summary_(\d{4})\.json/);
+      const key = daily ? daily[1] : yearly ? yearly[1] : null;
+      if (key && key !== today) {
+        _driveFiles[key] = f.id;
+        const label = daily
+          ? `${key.slice(0,4)}-${key.slice(4,6)}-${key.slice(6,8)}`
+          : `${key} ${L('전체','Full')}${key === '2025' ? ' (53주)' : ''}`;
+        sel.innerHTML += `<option value="${key}">${label}</option>`;
       }
     });
   } catch(e) { /* silent */ }
@@ -334,6 +350,9 @@ function deriveHighProfitMetrics(data, section) {
 // ═══════════════════════════════════════════════
 // Filters
 // ═══════════════════════════════════════════════
+const MULTI_FILTER_IDS = ['fOri','fOriP','fDst','fDstP'];
+let _multiSelectCloseBound = false;
+
 function initFilters() {
   const teams = [...new Set(DATA.monthly.map(r=>r.team))].sort();
   fillSelect('fTeam', teams);
@@ -344,22 +363,124 @@ function initFilters() {
   const _defMonth = `${_target.getFullYear()}${String(_target.getMonth()+1).padStart(2,'0')}`;
   const defMonth = DATA.months.includes(_defMonth) ? _defMonth : DATA.months[DATA.months.length-1];
   fillSelect('fMonth', DATA.months, defMonth);
+  bindMultiSelectClose();
   updateCascade();
   updateWeekOpts();
   // 기본 주차: 전체 (월 전체 실적 표시)
-  ['fTeam','fOri','fOriP','fDst','fDstP','fView','fProfit','fGrade','fSales'].forEach(id =>
+  ['fTeam','fView','fProfit','fGrade','fSales'].forEach(id =>
     document.getElementById(id).addEventListener('change', () => { updateCascade(); render(); }));
+  MULTI_FILTER_IDS.forEach(id =>
+    document.getElementById(id).addEventListener('change', e => { updateCascade(e.detail && e.detail.keepOpen); render(); }));
   document.getElementById('fMonth').addEventListener('change', () => { updateWeekOpts(); updateCascade(); render(); });
   document.getElementById('fWeek').addEventListener('change', () => { render(); });
 }
 
 function fillSelect(id, vals, def) {
+  vals = cleanVals(vals);
+  if (MULTI_FILTER_IDS.includes(id)) {
+    fillMultiSelect(id, vals, def);
+    return;
+  }
   const el = document.getElementById(id);
   const cur = el.value;
   const opts = ['<option value="ALL">' + L('전체','All') + '</option>'];
-  vals.forEach(v => opts.push(`<option value="${v}">${fmtMonth(v)}</option>`));
+  vals.forEach(v => opts.push(`<option value="${escAttr(v)}">${escHtml(fmtMonth(v))}</option>`));
   el.innerHTML = opts.join('');
   el.value = def || (vals.includes(cur) ? cur : 'ALL');
+}
+
+function cleanVals(vals) {
+  return [...new Set((vals || [])
+    .filter(v => v !== undefined && v !== null && String(v).trim() !== '')
+    .map(v => String(v).trim()))];
+}
+
+function escHtml(v) {
+  return String(v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function escAttr(v) { return escHtml(v); }
+
+function fillMultiSelect(id, vals, def) {
+  const el = document.getElementById(id);
+  const cur = Array.isArray(def) ? def : gvList(id);
+  const allowed = new Set(vals);
+  el._values = vals;
+  el._selected = cleanVals(cur).filter(v => allowed.has(v));
+  renderMultiSelect(id, el.classList.contains('open'));
+}
+
+function renderMultiSelect(id, keepOpen) {
+  const el = document.getElementById(id);
+  const vals = el._values || [];
+  const selectedVals = gvList(id);
+  const selected = new Set(selectedVals);
+  const label = multiSelectLabel(selectedVals);
+  const options = vals.length
+    ? vals.map(v => `<label class="multi-option"><input type="checkbox" value="${escAttr(v)}"${selected.has(v) ? ' checked' : ''}><span>${escHtml(v)}</span></label>`).join('')
+    : `<div class="multi-empty">${L('없음','None')}</div>`;
+  el.innerHTML = `
+    <button type="button" class="multi-toggle" title="${escAttr(label)}"><span>${escHtml(label)}</span><span class="multi-caret">v</span></button>
+    <div class="multi-menu">
+      <div class="multi-actions"><button type="button" class="multi-clear">${L('전체','All')}</button><button type="button" class="multi-close">${L('닫기','Close')}</button></div>
+      <div class="multi-options">${options}</div>
+    </div>`;
+  el.classList.toggle('open', !!keepOpen);
+  el.querySelector('.multi-toggle').addEventListener('click', e => {
+    e.stopPropagation();
+    const willOpen = !el.classList.contains('open');
+    closeAllMultiSelects();
+    el.classList.toggle('open', willOpen);
+  });
+  el.querySelector('.multi-clear').addEventListener('click', e => {
+    e.stopPropagation();
+    el._selected = [];
+    renderMultiSelect(id, true);
+    dispatchMultiChange(id);
+  });
+  el.querySelector('.multi-close').addEventListener('click', e => {
+    e.stopPropagation();
+    el.classList.remove('open');
+  });
+  el.querySelectorAll('input[type="checkbox"]').forEach(input => {
+    input.addEventListener('change', e => {
+      const next = new Set(gvList(id));
+      if (e.target.checked) next.add(e.target.value);
+      else next.delete(e.target.value);
+      const allowedNow = new Set(el._values || []);
+      el._selected = [...next].filter(v => allowedNow.has(v));
+      renderMultiSelect(id, true);
+      dispatchMultiChange(id);
+    });
+  });
+}
+
+function multiSelectLabel(vals) {
+  if (!vals.length) return L('전체','All');
+  if (vals.length <= 2) return vals.join(', ');
+  return `${vals[0]} +${vals.length - 1}`;
+}
+
+function bindMultiSelectClose() {
+  if (_multiSelectCloseBound) return;
+  _multiSelectCloseBound = true;
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.multi-select')) closeAllMultiSelects();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeAllMultiSelects();
+  });
+}
+
+function closeAllMultiSelects() {
+  MULTI_FILTER_IDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('open');
+  });
+}
+
+function dispatchMultiChange(id) {
+  document.getElementById(id).dispatchEvent(new CustomEvent('change', {detail: {keepOpen: id}}));
 }
 
 function fmtMonth(v) {
@@ -373,59 +494,92 @@ function fmtMonth(v) {
   return `${mi}월`;
 }
 
-function gv(id) { return document.getElementById(id).value; }
+function gv(id) {
+  if (MULTI_FILTER_IDS.includes(id)) {
+    const vals = gvList(id);
+    return vals.length ? vals[0] : 'ALL';
+  }
+  return document.getElementById(id).value;
+}
 
-function updateCascade() {
+function gvList(id) {
+  if (!MULTI_FILTER_IDS.includes(id)) {
+    const v = document.getElementById(id).value;
+    return v === 'ALL' ? [] : [v];
+  }
+  const el = document.getElementById(id);
+  if (!el || !Array.isArray(el._selected)) return [];
+  const allowed = new Set(el._values || []);
+  return el._selected.filter(v => allowed.has(v));
+}
+
+function matchAny(value, selected) {
+  return !selected.length || selected.includes(String(value || '').trim());
+}
+
+function updateCascade(keepOpenId) {
   let d = DATA.monthly;
-  const team=gv('fTeam'), ori=gv('fOri'), oriP=gv('fOriP'), dst=gv('fDst'), dstP=gv('fDstP'), sales=gv('fSales');
+  const team=gv('fTeam'), sales=gv('fSales');
+  let ori=gvList('fOri'), oriP=gvList('fOriP'), dst=gvList('fDst'), dstP=gvList('fDstP');
   if(team!=='ALL') d=d.filter(r=>r.team===team);
   fillSelect('fOri', [...new Set(d.map(r=>r.origin))].sort(), ori);
-  if(ori!=='ALL') d=d.filter(r=>r.origin===ori);
+  ori = gvList('fOri');
+  if(ori.length) d=d.filter(r=>matchAny(r.origin, ori));
   
   // 선적포트 옵션: Monthly + BSA 데이터 모두에서 추출
   let oriPOpts = [...new Set(d.map(r=>r.ori_port))];
   if(DATA.bsa) {
     let b = DATA.bsa;
     if(team!=='ALL') b=b.filter(r=>r.team===team);
-    if(ori!=='ALL') b=b.filter(r=>r.origin===ori);
+    if(ori.length) b=b.filter(r=>matchAny(r.origin, ori));
     const bsaOriPorts = [...new Set(b.map(r=>r.POR_PORT))];
     oriPOpts = [...new Set([...oriPOpts, ...bsaOriPorts])];
   }
   fillSelect('fOriP', oriPOpts.sort(), oriP);
-  if(oriP!=='ALL') d=d.filter(r=>r.ori_port===oriP);
+  oriP = gvList('fOriP');
+  if(oriP.length) d=d.filter(r=>matchAny(r.ori_port, oriP));
   
   // 도착지 옵션: Monthly + BSA 데이터 모두에서 추출
   let dstOpts = [...new Set(d.map(r=>r.dest))];
   if(DATA.bsa) {
     let b = DATA.bsa;
     if(team!=='ALL') b=b.filter(r=>r.team===team);
-    if(ori!=='ALL') b=b.filter(r=>r.origin===ori);
-    if(oriP!=='ALL') b=b.filter(r=>r.POR_PORT===oriP);
+    if(ori.length) b=b.filter(r=>matchAny(r.origin, ori));
+    if(oriP.length) b=b.filter(r=>matchAny(r.POR_PORT, oriP));
     const bsaDests = [...new Set(b.map(r=>r.dest))];
     dstOpts = [...new Set([...dstOpts, ...bsaDests])];
   }
   fillSelect('fDst', dstOpts.sort(), dst);
-  if(dst!=='ALL') d=d.filter(r=>r.dest===dst);
+  dst = gvList('fDst');
+  if(dst.length) d=d.filter(r=>matchAny(r.dest, dst));
   
   // 도착포트 옵션: Monthly + BSA 데이터 모두에서 추출
   let dstPOpts = [...new Set(d.map(r=>r.dst_port))];
   if(DATA.bsa) {
     let b = DATA.bsa;
     if(team!=='ALL') b=b.filter(r=>r.team===team);
-    if(ori!=='ALL') b=b.filter(r=>r.origin===ori);
-    if(oriP!=='ALL') b=b.filter(r=>r.POR_PORT===oriP);
-    if(dst!=='ALL') b=b.filter(r=>r.dest===dst);
+    if(ori.length) b=b.filter(r=>matchAny(r.origin, ori));
+    if(oriP.length) b=b.filter(r=>matchAny(r.POR_PORT, oriP));
+    if(dst.length) b=b.filter(r=>matchAny(r.dest, dst));
     const bsaDstPorts = [...new Set(b.map(r=>r.DLY_PORT))];
     dstPOpts = [...new Set([...dstPOpts, ...bsaDstPorts])];
   }
   fillSelect('fDstP', dstPOpts.sort(), dstP);
+  dstP = gvList('fDstP');
   
   // 영업사원 옵션 (shipper 데이터에서)
   if (DATA.shipper) {
     let sd = DATA.shipper;
     if(gv('fTeam')!=='ALL') sd=sd.filter(r=>r.team===gv('fTeam'));
+    if(ori.length) sd=sd.filter(r=>matchAny(r.origin, ori));
+    if(oriP.length) sd=sd.filter(r=>matchAny(r.ori_port, oriP));
+    if(dst.length) sd=sd.filter(r=>matchAny(r.dest, dst));
+    if(dstP.length) sd=sd.filter(r=>matchAny(r.dst_port, dstP));
     const salesList = [...new Set(sd.map(r=>r.Salesman_POR).filter(s=>s&&s!==''))].sort();
     fillSelect('fSales', salesList, sales);
+  }
+  if (keepOpenId && MULTI_FILTER_IDS.includes(keepOpenId)) {
+    document.getElementById(keepOpenId).classList.add('open');
   }
 }
 
@@ -444,16 +598,16 @@ function updateWeekOpts() {
 }
 
 function applyGlobalFilter(d, isMonthly) {
-  const team=gv('fTeam'),ori=gv('fOri'),dst=gv('fDst');
+  const team=gv('fTeam'),ori=gvList('fOri'),dst=gvList('fDst');
   if(team!=='ALL') d=d.filter(r=>r.team===team);
-  if(ori!=='ALL') d=d.filter(r=>r.origin===ori);
+  if(ori.length) d=d.filter(r=>matchAny(r.origin, ori));
   if(isMonthly) {
-    const oriP=gv('fOriP'),dstP=gv('fDstP');
-    if(oriP!=='ALL') d=d.filter(r=>r.ori_port===oriP);
-    if(dst!=='ALL') d=d.filter(r=>r.dest===dst);
-    if(dstP!=='ALL') d=d.filter(r=>r.dst_port===dstP);
+    const oriP=gvList('fOriP'),dstP=gvList('fDstP');
+    if(oriP.length) d=d.filter(r=>matchAny(r.ori_port, oriP));
+    if(dst.length) d=d.filter(r=>matchAny(r.dest, dst));
+    if(dstP.length) d=d.filter(r=>matchAny(r.dst_port, dstP));
   } else {
-    if(dst!=='ALL') d=d.filter(r=>r.dest===dst);
+    if(dst.length) d=d.filter(r=>matchAny(r.dest, dst));
   }
   return d;
 }
@@ -482,24 +636,44 @@ function filterMonthly(month) {
 
 // week_start_date → WW 변환 (445 calendar)
 function weekToWW(weekStr) {
-  const m = weekStr.match(/(\d{1,2})\D+(\d{1,2})\D*$/);
+  if (!weekStr || !DATA) return null;
+  const rows = (DATA.weekly || []).filter(r => r.week_start_date === weekStr);
+  if (rows.length && rows[0].YYYYMM) {
+    const month = rows[0].YYYYMM;
+    const monthWeeks = [...new Set((DATA.weekly || [])
+      .filter(r => r.YYYYMM === month)
+      .map(r => r.week_start_date))].sort();
+    const idx = monthWeeks.indexOf(weekStr);
+    if (idx >= 0) {
+      const months = (DATA.months || []).filter(m => m.slice(0,4) === month.slice(0,4)).sort();
+      let ww = idx + 1;
+      for (const m of months) {
+        if (m === month) break;
+        ww += DATA.wpm[m] || [...new Set((DATA.weekly || [])
+          .filter(r => r.YYYYMM === m)
+          .map(r => r.week_start_date))].length;
+      }
+      return String(ww);
+    }
+  }
+  const m = weekStr.match(/(\d{4})\D+(\d{1,2})\D+(\d{1,2})/);
   if (!m) return null;
-  const mon = parseInt(m[1]), day = parseInt(m[2]);
-  // 445: WW1=01/04, each +7 days
-  const start = new Date(2026, 0, 4); // 2026-01-04
-  const target = new Date(2026, mon-1, day);
+  const year = parseInt(m[1]), mon = parseInt(m[2]), day = parseInt(m[3]);
+  const starts = {2024: new Date(2024, 11, 29), 2025: new Date(2024, 11, 29), 2026: new Date(2026, 0, 4), 2027: new Date(2027, 0, 3)};
+  const start = starts[year] || starts[2026];
+  const target = new Date(year, mon-1, day);
   const diff = Math.round((target - start) / (7*86400000));
   return diff >= 0 ? String(diff + 1) : null;
 }
 
 function filterBSA(month, week) {
   let b = DATA.bsa;
-  const team=gv('fTeam'),ori=gv('fOri'),oriP=gv('fOriP'),dst=gv('fDst'),dstP=gv('fDstP');
+  const team=gv('fTeam'),ori=gvList('fOri'),oriP=gvList('fOriP'),dst=gvList('fDst'),dstP=gvList('fDstP');
   if(team!=='ALL') b=b.filter(r=>r.team===team);
-  if(ori!=='ALL') b=b.filter(r=>r.origin===ori);
-  if(oriP!=='ALL') b=b.filter(r=>r.POR_PORT===oriP);
-  if(dst!=='ALL') b=b.filter(r=>r.dest===dst);
-  if(dstP!=='ALL') b=b.filter(r=>r.DLY_PORT===dstP);
+  if(ori.length) b=b.filter(r=>matchAny(r.origin, ori));
+  if(oriP.length) b=b.filter(r=>matchAny(r.POR_PORT, oriP));
+  if(dst.length) b=b.filter(r=>matchAny(r.dest, dst));
+  if(dstP.length) b=b.filter(r=>matchAny(r.DLY_PORT, dstP));
   if(month) b=b.filter(r=>r.YYYYMM===month);
   // 주차 필터: week=null이면 전체 월, week=undefined이면 gv 사용
   const wk = week === null ? 'ALL' : (week !== undefined ? week : gv('fWeek'));
@@ -1708,9 +1882,13 @@ function applyLang() {
     pEl.options[0].text = t.all; pEl.options[1].text = t.hi; pEl.options[2].text = t.lo;
   }
   // All "전체" options in dropdowns
-  ['fTeam','fOri','fOriP','fDst','fDstP','fWeek','fSales'].forEach(id => {
+  ['fTeam','fWeek','fSales'].forEach(id => {
     const el = document.getElementById(id);
-    if (el && el.options[0] && el.options[0].value === 'ALL') el.options[0].text = t.all;
+    if (el && el.options && el.options[0] && el.options[0].value === 'ALL') el.options[0].text = t.all;
+  });
+  MULTI_FILTER_IDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el._values) renderMultiSelect(id, el.classList.contains('open'));
   });
   // Login
   const loginP = document.querySelector('.login-box p');

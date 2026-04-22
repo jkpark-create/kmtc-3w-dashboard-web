@@ -262,8 +262,8 @@ document.addEventListener('DOMContentLoaded', function() {
   <table>
     <tr><th>필터</th><th>설명</th><th>기본값</th></tr>
     <tr><td>팀</td><td>OBT / EST / IST / JBT</td><td>전체</td></tr>
-    <tr><td>선적지 / 선적포트</td><td>출발 국가 + 포트 (POR)</td><td>전체</td></tr>
-    <tr><td>도착지 / 도착포트</td><td>도착 국가 + 포트 (DLY)</td><td>전체</td></tr>
+    <tr><td>선적지 / 선적포트</td><td>출발 국가 + 포트 (POR), 복수 선택 가능</td><td>전체</td></tr>
+    <tr><td>도착지 / 도착포트</td><td>도착 국가 + 포트 (DLY), 복수 선택 가능. 도착지는 그룹이 아닌 국가 단위로 표시</td><td>전체</td></tr>
     <tr><td>보기</td><td>도착지별 / 선적지별 뷰 전환</td><td>도착지별</td></tr>
     <tr><td>월</td><td>조회 월 (445 캘린더)</td><td>현재 주 +3주 후</td></tr>
     <tr><td>주차</td><td>특정 주차 선택</td><td>+3주 후 해당 주차</td></tr>
@@ -274,6 +274,7 @@ document.addEventListener('DOMContentLoaded', function() {
   <p>EN/KO 토글: 헤더의 <code>EN</code> 버튼으로 한/영 전환 가능</p>
   <h3>필터 해석 기준</h3>
   <ul>
+    <li><strong>선적지/선적포트/도착지/도착포트</strong>는 체크박스로 여러 값을 동시에 선택할 수 있습니다. 선택값이 없으면 전체로 처리됩니다.</li>
     <li><strong>팀/선적지/선적포트/도착지/도착포트</strong>는 물리적인 운송 루트 범위를 좁히는 필터입니다. 지역별, 소석률, 수익성 화면에 모두 큰 영향을 줍니다.</li>
     <li><strong>보기</strong>는 지역을 묶는 축을 바꿉니다. 도착지별은 시장/수요 관점, 선적지별은 영업/공급 출발지 관점으로 읽으면 됩니다.</li>
     <li><strong>주차</strong>를 선택하면 선택 월은 해당 주 실적, 과거 월 비교는 주평균으로 표시됩니다. 특정 주의 상황을 과거 월 평균과 비교할 때 사용합니다.</li>
@@ -285,8 +286,8 @@ document.addEventListener('DOMContentLoaded', function() {
   <table>
     <tr><th>Filter</th><th>Description</th><th>Default</th></tr>
     <tr><td>Team</td><td>OBT / EST / IST / JBT</td><td>All</td></tr>
-    <tr><td>Origin / Port</td><td>POR country + port</td><td>All</td></tr>
-    <tr><td>Dest / Port</td><td>DLY country + port</td><td>All</td></tr>
+    <tr><td>Origin / Port</td><td>POR country + port, multi-select supported</td><td>All</td></tr>
+    <tr><td>Dest / Port</td><td>DLY country + port, multi-select supported. Destinations are shown by country, not grouped region</td><td>All</td></tr>
     <tr><td>View</td><td>By Destination / By Origin</td><td>By Dest</td></tr>
     <tr><td>Month</td><td>445 calendar month</td><td>Current +3 weeks</td></tr>
     <tr><td>Week</td><td>Specific week selection</td><td>+3 weeks target week</td></tr>
@@ -297,6 +298,7 @@ document.addEventListener('DOMContentLoaded', function() {
   <p>EN/KO toggle available in header</p>
   <h3>How to Interpret Filters</h3>
   <ul>
+    <li><strong>Origin/origin port/destination/destination port</strong> support selecting multiple values with checkboxes. No selected value means All.</li>
     <li><strong>Team/origin/origin port/destination/destination port</strong> narrow the physical route scope and affect occupancy, trend, and profitability views.</li>
     <li><strong>View</strong> changes the regional grouping axis. Destination view is useful for market demand; origin view is useful for sales/supply origin management.</li>
     <li><strong>Week</strong> changes the selected month to actual weekly data while past months are shown as weekly averages. Use it to compare one target week against historical monthly averages.</li>
