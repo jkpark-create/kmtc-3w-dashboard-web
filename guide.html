@@ -844,6 +844,7 @@ document.addEventListener('DOMContentLoaded', function() {
   </table>
   <h3>BSA</h3>
   <p>Tableau BSA raw 뷰 | 팀별(OBT/EST/IST/JBT) | WW 주차별 필터 가능</p>
+  <p>BSA의 팀 기준은 Tableau 원천의 <code>Sales Team</code> 필드를 사용합니다. 부킹 데이터의 팀은 선적지/도착지 기준으로 계산되지만, BSA는 Tableau 화면의 팀 필드와 같은 기준으로 연결됩니다.</p>
 </div>
 <div class="card en" style="display:none">
   <h3>445 Calendar</h3>
@@ -873,6 +874,7 @@ document.addEventListener('DOMContentLoaded', function() {
   <p>1) Cancel within 3 days of booking → exclude</p>
   <p>2) Cancel + booked 21+ days before + cancelled within 7 days → exclude</p>
   <h3>BSA: Tableau BSA raw view, per team, WW weekly filter available</h3>
+  <p>BSA uses Tableau's source <code>Sales Team</code> field as the team basis. Booking teams are calculated from origin/destination, while BSA is linked by the same team field used in the Tableau view.</p>
 </div>
 
 <!-- UPDATE -->
