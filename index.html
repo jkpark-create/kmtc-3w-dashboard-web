@@ -30,6 +30,9 @@ body{font-family:'Segoe UI',sans-serif;background:#f0f2f5;color:#202124}
 .multi-select.open .multi-menu{display:block}
 .multi-actions{display:flex;justify-content:space-between;gap:6px;padding:6px;border-bottom:1px solid #edf0f2;background:#f8fafd}
 .multi-actions button{border:1px solid #dadce0;background:#fff;border-radius:4px;padding:3px 8px;font-size:12px;cursor:pointer}
+.multi-actions button:disabled{opacity:.45;cursor:default}
+.multi-select.dirty .multi-toggle{border-color:#1a73e8;box-shadow:0 0 0 1px rgba(26,115,232,.18)}
+.multi-apply{background:#1a73e8!important;color:#fff;border-color:#1a73e8!important;font-weight:600}
 .multi-options{max-height:226px;overflow:auto;padding:4px 0}
 .multi-option{display:flex;align-items:center;gap:7px;padding:5px 8px;font-size:13px;line-height:1.2;cursor:pointer}
 .multi-option:hover{background:#f5f8ff}
@@ -374,7 +377,7 @@ function initFilters() {
   ['fTeam','fView','fProfit','fGrade','fSales'].forEach(id =>
     document.getElementById(id).addEventListener('change', () => { updateCascade(); render(); }));
   MULTI_FILTER_IDS.forEach(id =>
-    document.getElementById(id).addEventListener('change', e => { scheduleCascadeRender(e.detail && e.detail.keepOpen); }));
+    document.getElementById(id).addEventListener('change', e => { updateCascade(e.detail && e.detail.keepOpen); render(); }));
   document.getElementById('fMonth').addEventListener('change', () => { updateWeekOpts(); updateCascade(); render(); });
   document.getElementById('fWeek').addEventListener('change', () => { render(); });
 }
@@ -411,6 +414,7 @@ function fillMultiSelect(id, vals, def) {
   const allowed = new Set(vals);
   el._values = vals;
   el._selected = cleanVals(cur).filter(v => allowed.has(v));
+  el._pending = [...el._selected];
   renderMultiSelect(id, el.classList.contains('open'));
 }
 
@@ -418,15 +422,16 @@ function renderMultiSelect(id, keepOpen) {
   const el = document.getElementById(id);
   const vals = el._values || [];
   const selectedVals = gvList(id);
-  const selected = new Set(selectedVals);
+  const pendingVals = pendingList(id);
+  const pending = new Set(pendingVals);
   const label = multiSelectLabel(selectedVals);
   const options = vals.length
-    ? vals.map(v => `<label class="multi-option"><input type="checkbox" value="${escAttr(v)}"${selected.has(v) ? ' checked' : ''}><span>${escHtml(v)}</span></label>`).join('')
+    ? vals.map(v => `<label class="multi-option"><input type="checkbox" value="${escAttr(v)}"${pending.has(v) ? ' checked' : ''}><span>${escHtml(v)}</span></label>`).join('')
     : `<div class="multi-empty">${L('없음','None')}</div>`;
   el.innerHTML = `
     <button type="button" class="multi-toggle" title="${escAttr(label)}"><span>${escHtml(label)}</span><span class="multi-caret">v</span></button>
     <div class="multi-menu">
-      <div class="multi-actions"><button type="button" class="multi-clear">${L('전체','All')}</button><button type="button" class="multi-close">${L('닫기','Close')}</button></div>
+      <div class="multi-actions"><button type="button" class="multi-clear">${L('전체','All')}</button><button type="button" class="multi-apply">${L('적용','Apply')}</button><button type="button" class="multi-close">${L('닫기','Close')}</button></div>
       <div class="multi-options">${options}</div>
     </div>`;
   el.classList.toggle('open', !!keepOpen);
@@ -438,25 +443,38 @@ function renderMultiSelect(id, keepOpen) {
   });
   el.querySelector('.multi-clear').addEventListener('click', e => {
     e.stopPropagation();
-    el._selected = [];
+    el._pending = [];
     renderMultiSelect(id, true);
-    dispatchMultiChange(id);
+  });
+  el.querySelector('.multi-apply').addEventListener('click', e => {
+    e.stopPropagation();
+    applyMultiSelect(id);
   });
   el.querySelector('.multi-close').addEventListener('click', e => {
     e.stopPropagation();
+    el._pending = [...(el._selected || [])];
     el.classList.remove('open');
   });
-  el.querySelectorAll('input[type="checkbox"]').forEach(input => {
-    input.addEventListener('change', e => {
-      const next = new Set(gvList(id));
-      if (e.target.checked) next.add(e.target.value);
-      else next.delete(e.target.value);
-      const allowedNow = new Set(el._values || []);
-      el._selected = [...next].filter(v => allowedNow.has(v));
-      updateMultiSelectLabel(id);
-      dispatchMultiChange(id);
+  el.querySelectorAll('.multi-option').forEach(option => {
+    const input = option.querySelector('input[type="checkbox"]');
+    const togglePending = e => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!input) return;
+      const nextChecked = !pendingList(id).includes(input.value);
+      input.checked = nextChecked;
+      setPendingValue(id, input.value, nextChecked);
+    };
+    option.addEventListener('pointerdown', togglePending);
+    option.addEventListener('click', e => {
+      e.preventDefault();
+      e.stopPropagation();
+    });
+    if (input) input.addEventListener('keydown', e => {
+      if (e.key === ' ' || e.key === 'Enter') togglePending(e);
     });
   });
+  updateMultiSelectPendingState(id);
 }
 
 function updateMultiSelectLabel(id) {
@@ -467,6 +485,47 @@ function updateMultiSelectLabel(id) {
   const toggle = el.querySelector('.multi-toggle');
   if (labelEl) labelEl.textContent = label;
   if (toggle) toggle.title = label;
+}
+
+function updateMultiSelectPendingState(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const dirty = pendingKey(id) !== selectedKey(id);
+  el.classList.toggle('dirty', dirty);
+  const applyBtn = el.querySelector('.multi-apply');
+  if (applyBtn) applyBtn.disabled = !dirty;
+}
+
+function setPendingValue(id, value, checked) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const next = new Set(pendingList(id));
+  if (checked) next.add(value);
+  else next.delete(value);
+  const allowedNow = new Set(el._values || []);
+  el._pending = [...next].filter(v => allowedNow.has(v));
+  updateMultiSelectPendingState(id);
+}
+
+function pendingList(id) {
+  const el = document.getElementById(id);
+  if (!el) return [];
+  if (!Array.isArray(el._pending)) el._pending = [...(el._selected || [])];
+  const allowed = new Set(el._values || []);
+  return el._pending.filter(v => allowed.has(v));
+}
+
+function selectedKey(id) { return gvList(id).join('\u0001'); }
+function pendingKey(id) { return pendingList(id).join('\u0001'); }
+
+function applyMultiSelect(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el._selected = pendingList(id);
+  updateMultiSelectLabel(id);
+  updateMultiSelectPendingState(id);
+  el.classList.remove('open');
+  dispatchMultiChange(id, false);
 }
 
 function multiSelectLabel(vals) {
@@ -489,12 +548,15 @@ function bindMultiSelectClose() {
 function closeAllMultiSelects() {
   MULTI_FILTER_IDS.forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.classList.remove('open');
+    if (el) {
+      el._pending = [...(el._selected || [])];
+      el.classList.remove('open');
+    }
   });
 }
 
-function dispatchMultiChange(id) {
-  document.getElementById(id).dispatchEvent(new CustomEvent('change', {detail: {keepOpen: id}}));
+function dispatchMultiChange(id, keepOpen=true) {
+  document.getElementById(id).dispatchEvent(new CustomEvent('change', {detail: keepOpen ? {keepOpen: id} : {}}));
 }
 
 function scheduleRender(delay=80) {
