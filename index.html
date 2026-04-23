@@ -1179,10 +1179,24 @@ function groupByKey(arr, key) {
 function buildSummaryTable(months) {
   const vk = viewKey(), vl = viewLabel(), bk = bsaViewKey();
   const allFd = filterMonthly(null);
-  const items = [...new Set(allFd.map(r=>r[vk]))].sort((a,b) => {
-    const sa = sum(allFd.filter(r=>r[vk]===a),'w3_fst'), sb = sum(allFd.filter(r=>r[vk]===b),'w3_fst');
-    return sb - sa;
-  }).slice(0, 15);
+  const allBsa = filterBSA(null, null);
+  const bkgTotals = {}, bsaTotals = {};
+  allFd.forEach(r => {
+    const k = r[vk];
+    if (!k) return;
+    bkgTotals[k] = (bkgTotals[k] || 0) + (r.w3_fst || 0);
+  });
+  allBsa.forEach(r => {
+    const k = r[bk];
+    if (!k) return;
+    bsaTotals[k] = (bsaTotals[k] || 0) + (r.teu_bsa || 0);
+  });
+  const items = [...new Set([...Object.keys(bkgTotals), ...Object.keys(bsaTotals)])]
+    .sort((a,b) =>
+      (bkgTotals[b] || 0) - (bkgTotals[a] || 0) ||
+      (bsaTotals[b] || 0) - (bsaTotals[a] || 0) ||
+      a.localeCompare(b)
+    );
 
   const _ws = gv('fWeek') !== 'ALL';
   const _curMonth = gv('fMonth');
