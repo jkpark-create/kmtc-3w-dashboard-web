@@ -1249,29 +1249,17 @@ function buildSummaryTable(months) {
     return _ws ? sum(b, 'teu_bsa') / (DATA.wpm[m]||4) : sum(b, 'teu_bsa');
   }
 
-  items.forEach(it => {
-    h += `<tr><td class="lbl">${it}</td>`;
+  // Totals are pinned directly under the header; month total appears before week total.
+  const _totalRows = _ws
+    ? [{label:L('합계','Total'), cls:'total', monthly:false}]
+    : [
+        {label:L('합계(월)','Total(Mo)'), cls:'total-m', monthly:true},
+        {label:L('합계(주)','Total(Wk)'), cls:'total', monthly:false},
+      ];
+  _totalRows.forEach(row => {
+    h += `<tr class="${row.cls}"><td class="lbl">${row.label}</td>`;
     months.forEach(m => {
-      const b=_tblData(m,'w3_fst',it), n=_tblData(m,'w3_norm_lst',it);
-      const hb=_tblData(m,'w3_hi_fst',it), hn=_tblData(m,'w3_hi_norm_lst',it);
-      const c1=_tblData(m,'w3_hi_cm1_norm',it), cl=_tblData(m,'w3_hi_norm_lst',it), ct=cl>0?c1/cl:0;
-      const bsa_v=_tblBSA(m,it);
-      h += `<td>${fmt(Math.round(b))}</td><td>${fmt(Math.round(bsa_v))}</td><td>${pct(b,bsa_v)}</td><td>${fmt(Math.round(n))}</td><td>${pct(n,b)}</td>`;
-      h += `<td>${fmt(Math.round(hb))}</td><td>${pct(hb,b)}</td><td>${fmt(Math.round(hn))}</td><td>${pct(hn,hb)}</td>`;
-      h += `<td>${fmt(Math.round(c1))}</td><td>${fmt(Math.round(ct))}</td>`;
-    });
-    h += '</tr>';
-  });
-
-  // Totals: 주차 선택 시 합계(주)=합계(월) 동일
-  const _totalLabels = _ws
-    ? [L('합계','Total'), L('합계','Total')]  // 주차 선택: 동일
-    : [L('합계(주)','Total(Wk)'), L('합계(월)','Total(Mo)')];
-  _totalLabels.forEach((lbl,ti) => {
-    if (_ws && ti === 1) return;  // 주차 선택 시 합계 1행만
-    h += `<tr class="${ti===0?'total':'total-m'}"><td class="lbl">${lbl}</td>`;
-    months.forEach(m => {
-      const isMonthlyTotal = ti === 1 && !_ws;
+      const isMonthlyTotal = row.monthly && !_ws;
       const b = isMonthlyTotal ? sum(filterMonthly(m),'w3_fst') : _tblData(m,'w3_fst');
       const n = isMonthlyTotal ? sum(filterMonthly(m),'w3_norm_lst') : _tblData(m,'w3_norm_lst');
       const hb = isMonthlyTotal ? sum(filterMonthly(m),'w3_hi_fst') : _tblData(m,'w3_hi_fst');
@@ -1280,6 +1268,20 @@ function buildSummaryTable(months) {
       const cl = isMonthlyTotal ? sum(filterMonthly(m),'w3_hi_norm_lst') : _tblData(m,'w3_hi_norm_lst');
       const ct = cl>0?c1/cl:0;
       const bsa_v = isMonthlyTotal ? sum(filterBSA(m,null),'teu_bsa') : _tblBSA(m);
+      h += `<td>${fmt(Math.round(b))}</td><td>${fmt(Math.round(bsa_v))}</td><td>${pct(b,bsa_v)}</td><td>${fmt(Math.round(n))}</td><td>${pct(n,b)}</td>`;
+      h += `<td>${fmt(Math.round(hb))}</td><td>${pct(hb,b)}</td><td>${fmt(Math.round(hn))}</td><td>${pct(hn,hb)}</td>`;
+      h += `<td>${fmt(Math.round(c1))}</td><td>${fmt(Math.round(ct))}</td>`;
+    });
+    h += '</tr>';
+  });
+
+  items.forEach(it => {
+    h += `<tr><td class="lbl">${it}</td>`;
+    months.forEach(m => {
+      const b=_tblData(m,'w3_fst',it), n=_tblData(m,'w3_norm_lst',it);
+      const hb=_tblData(m,'w3_hi_fst',it), hn=_tblData(m,'w3_hi_norm_lst',it);
+      const c1=_tblData(m,'w3_hi_cm1_norm',it), cl=_tblData(m,'w3_hi_norm_lst',it), ct=cl>0?c1/cl:0;
+      const bsa_v=_tblBSA(m,it);
       h += `<td>${fmt(Math.round(b))}</td><td>${fmt(Math.round(bsa_v))}</td><td>${pct(b,bsa_v)}</td><td>${fmt(Math.round(n))}</td><td>${pct(n,b)}</td>`;
       h += `<td>${fmt(Math.round(hb))}</td><td>${pct(hb,b)}</td><td>${fmt(Math.round(hn))}</td><td>${pct(hn,hb)}</td>`;
       h += `<td>${fmt(Math.round(c1))}</td><td>${fmt(Math.round(ct))}</td>`;
