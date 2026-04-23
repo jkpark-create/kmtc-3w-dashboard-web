@@ -352,6 +352,10 @@ function deriveHighProfitMetrics(data, section) {
 // ═══════════════════════════════════════════════
 const MULTI_FILTER_IDS = ['fOri','fOriP','fDst','fDstP'];
 let _multiSelectCloseBound = false;
+let _cascadeTimer = null;
+let _renderTimer = null;
+let _filterMemoKey = '';
+let _filterMemo = {monthly:new Map(), weekly:new Map(), shipper:new Map(), bsa:new Map()};
 
 function initFilters() {
   const teams = [...new Set(DATA.monthly.map(r=>r.team))].sort();
@@ -370,7 +374,7 @@ function initFilters() {
   ['fTeam','fView','fProfit','fGrade','fSales'].forEach(id =>
     document.getElementById(id).addEventListener('change', () => { updateCascade(); render(); }));
   MULTI_FILTER_IDS.forEach(id =>
-    document.getElementById(id).addEventListener('change', e => { updateCascade(e.detail && e.detail.keepOpen); render(); }));
+    document.getElementById(id).addEventListener('change', e => { scheduleCascadeRender(e.detail && e.detail.keepOpen); }));
   document.getElementById('fMonth').addEventListener('change', () => { updateWeekOpts(); updateCascade(); render(); });
   document.getElementById('fWeek').addEventListener('change', () => { render(); });
 }
@@ -449,10 +453,20 @@ function renderMultiSelect(id, keepOpen) {
       else next.delete(e.target.value);
       const allowedNow = new Set(el._values || []);
       el._selected = [...next].filter(v => allowedNow.has(v));
-      renderMultiSelect(id, true);
+      updateMultiSelectLabel(id);
       dispatchMultiChange(id);
     });
   });
+}
+
+function updateMultiSelectLabel(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const label = multiSelectLabel(gvList(id));
+  const labelEl = el.querySelector('.multi-toggle span:first-child');
+  const toggle = el.querySelector('.multi-toggle');
+  if (labelEl) labelEl.textContent = label;
+  if (toggle) toggle.title = label;
 }
 
 function multiSelectLabel(vals) {
@@ -481,6 +495,24 @@ function closeAllMultiSelects() {
 
 function dispatchMultiChange(id) {
   document.getElementById(id).dispatchEvent(new CustomEvent('change', {detail: {keepOpen: id}}));
+}
+
+function scheduleRender(delay=80) {
+  if (_renderTimer) clearTimeout(_renderTimer);
+  _renderTimer = setTimeout(() => {
+    _renderTimer = null;
+    render();
+  }, delay);
+}
+
+function scheduleCascadeRender(keepOpenId, delay=100) {
+  if (_cascadeTimer) clearTimeout(_cascadeTimer);
+  if (_renderTimer) clearTimeout(_renderTimer);
+  _cascadeTimer = setTimeout(() => {
+    _cascadeTimer = null;
+    updateCascade(keepOpenId);
+    render();
+  }, delay);
 }
 
 function fmtMonth(v) {
@@ -513,8 +545,35 @@ function gvList(id) {
   return el._selected.filter(v => allowed.has(v));
 }
 
+function selectedSet(id) {
+  return new Set(gvList(id));
+}
+
 function matchAny(value, selected) {
-  return !selected.length || selected.includes(String(value || '').trim());
+  return !selected || selected.size === 0 || selected.has(String(value || '').trim());
+}
+
+function filterStateKey() {
+  return [
+    gv('fTeam'), gvList('fOri').join(','), gvList('fOriP').join(','),
+    gvList('fDst').join(','), gvList('fDstP').join(','),
+    gv('fMonth'), gv('fWeek'), gv('fProfit'), gv('fGrade'), gv('fSales')
+  ].join('|');
+}
+
+function resetFilterMemo() {
+  _filterMemoKey = filterStateKey();
+  _filterMemo = {monthly:new Map(), weekly:new Map(), shipper:new Map(), bsa:new Map()};
+}
+
+function memoizedFilter(section, key, build) {
+  const stateKey = filterStateKey();
+  if (_filterMemoKey !== stateKey) resetFilterMemo();
+  const bucket = _filterMemo[section];
+  if (bucket.has(key)) return bucket.get(key);
+  const value = build();
+  bucket.set(key, value);
+  return value;
 }
 
 function updateCascade(keepOpenId) {
@@ -524,57 +583,61 @@ function updateCascade(keepOpenId) {
   if(team!=='ALL') d=d.filter(r=>r.team===team);
   fillSelect('fOri', [...new Set(d.map(r=>r.origin))].sort(), ori);
   ori = gvList('fOri');
-  if(ori.length) d=d.filter(r=>matchAny(r.origin, ori));
+  let oriSet = new Set(ori);
+  if(oriSet.size) d=d.filter(r=>matchAny(r.origin, oriSet));
   
   // 선적포트 옵션: Monthly + BSA 데이터 모두에서 추출
   let oriPOpts = [...new Set(d.map(r=>r.ori_port))];
   if(DATA.bsa) {
     let b = DATA.bsa;
     if(team!=='ALL') b=b.filter(r=>r.team===team);
-    if(ori.length) b=b.filter(r=>matchAny(r.origin, ori));
+    if(oriSet.size) b=b.filter(r=>matchAny(r.origin, oriSet));
     const bsaOriPorts = [...new Set(b.map(r=>r.POR_PORT))];
     oriPOpts = [...new Set([...oriPOpts, ...bsaOriPorts])];
   }
   fillSelect('fOriP', oriPOpts.sort(), oriP);
   oriP = gvList('fOriP');
-  if(oriP.length) d=d.filter(r=>matchAny(r.ori_port, oriP));
+  let oriPSet = new Set(oriP);
+  if(oriPSet.size) d=d.filter(r=>matchAny(r.ori_port, oriPSet));
   
   // 도착지 옵션: Monthly + BSA 데이터 모두에서 추출
   let dstOpts = [...new Set(d.map(r=>r.dest))];
   if(DATA.bsa) {
     let b = DATA.bsa;
     if(team!=='ALL') b=b.filter(r=>r.team===team);
-    if(ori.length) b=b.filter(r=>matchAny(r.origin, ori));
-    if(oriP.length) b=b.filter(r=>matchAny(r.POR_PORT, oriP));
+    if(oriSet.size) b=b.filter(r=>matchAny(r.origin, oriSet));
+    if(oriPSet.size) b=b.filter(r=>matchAny(r.POR_PORT, oriPSet));
     const bsaDests = [...new Set(b.map(r=>r.dest))];
     dstOpts = [...new Set([...dstOpts, ...bsaDests])];
   }
   fillSelect('fDst', dstOpts.sort(), dst);
   dst = gvList('fDst');
-  if(dst.length) d=d.filter(r=>matchAny(r.dest, dst));
+  let dstSet = new Set(dst);
+  if(dstSet.size) d=d.filter(r=>matchAny(r.dest, dstSet));
   
   // 도착포트 옵션: Monthly + BSA 데이터 모두에서 추출
   let dstPOpts = [...new Set(d.map(r=>r.dst_port))];
   if(DATA.bsa) {
     let b = DATA.bsa;
     if(team!=='ALL') b=b.filter(r=>r.team===team);
-    if(ori.length) b=b.filter(r=>matchAny(r.origin, ori));
-    if(oriP.length) b=b.filter(r=>matchAny(r.POR_PORT, oriP));
-    if(dst.length) b=b.filter(r=>matchAny(r.dest, dst));
+    if(oriSet.size) b=b.filter(r=>matchAny(r.origin, oriSet));
+    if(oriPSet.size) b=b.filter(r=>matchAny(r.POR_PORT, oriPSet));
+    if(dstSet.size) b=b.filter(r=>matchAny(r.dest, dstSet));
     const bsaDstPorts = [...new Set(b.map(r=>r.DLY_PORT))];
     dstPOpts = [...new Set([...dstPOpts, ...bsaDstPorts])];
   }
   fillSelect('fDstP', dstPOpts.sort(), dstP);
   dstP = gvList('fDstP');
+  let dstPSet = new Set(dstP);
   
   // 영업사원 옵션 (shipper 데이터에서)
   if (DATA.shipper) {
     let sd = DATA.shipper;
     if(gv('fTeam')!=='ALL') sd=sd.filter(r=>r.team===gv('fTeam'));
-    if(ori.length) sd=sd.filter(r=>matchAny(r.origin, ori));
-    if(oriP.length) sd=sd.filter(r=>matchAny(r.ori_port, oriP));
-    if(dst.length) sd=sd.filter(r=>matchAny(r.dest, dst));
-    if(dstP.length) sd=sd.filter(r=>matchAny(r.dst_port, dstP));
+    if(oriSet.size) sd=sd.filter(r=>matchAny(r.origin, oriSet));
+    if(oriPSet.size) sd=sd.filter(r=>matchAny(r.ori_port, oriPSet));
+    if(dstSet.size) sd=sd.filter(r=>matchAny(r.dest, dstSet));
+    if(dstPSet.size) sd=sd.filter(r=>matchAny(r.dst_port, dstPSet));
     const salesList = [...new Set(sd.map(r=>r.Salesman_POR).filter(s=>s&&s!==''))].sort();
     fillSelect('fSales', salesList, sales);
   }
@@ -598,16 +661,16 @@ function updateWeekOpts() {
 }
 
 function applyGlobalFilter(d, isMonthly) {
-  const team=gv('fTeam'),ori=gvList('fOri'),dst=gvList('fDst');
+  const team=gv('fTeam'),ori=selectedSet('fOri'),dst=selectedSet('fDst');
   if(team!=='ALL') d=d.filter(r=>r.team===team);
-  if(ori.length) d=d.filter(r=>matchAny(r.origin, ori));
+  if(ori.size) d=d.filter(r=>matchAny(r.origin, ori));
   if(isMonthly) {
-    const oriP=gvList('fOriP'),dstP=gvList('fDstP');
-    if(oriP.length) d=d.filter(r=>matchAny(r.ori_port, oriP));
-    if(dst.length) d=d.filter(r=>matchAny(r.dest, dst));
-    if(dstP.length) d=d.filter(r=>matchAny(r.dst_port, dstP));
+    const oriP=selectedSet('fOriP'),dstP=selectedSet('fDstP');
+    if(oriP.size) d=d.filter(r=>matchAny(r.ori_port, oriP));
+    if(dst.size) d=d.filter(r=>matchAny(r.dest, dst));
+    if(dstP.size) d=d.filter(r=>matchAny(r.dst_port, dstP));
   } else {
-    if(dst.length) d=d.filter(r=>matchAny(r.dest, dst));
+    if(dst.size) d=d.filter(r=>matchAny(r.dest, dst));
   }
   return d;
 }
@@ -629,9 +692,12 @@ function filterMonthlyWithSales(month) {
 }
 
 function filterMonthly(month) {
-  let d = applyGlobalFilter([...DATA.monthly], true);
-  if(month) d=d.filter(r=>r.YYYYMM===month);
-  return d;
+  const key = month || 'ALL';
+  return memoizedFilter('monthly', key, () => {
+    let d = applyGlobalFilter(DATA.monthly, true);
+    if(month) d=d.filter(r=>r.YYYYMM===month);
+    return d;
+  });
 }
 
 // week_start_date → WW 변환 (445 calendar)
@@ -667,46 +733,55 @@ function weekToWW(weekStr) {
 }
 
 function filterBSA(month, week) {
-  let b = DATA.bsa;
-  const team=gv('fTeam'),ori=gvList('fOri'),oriP=gvList('fOriP'),dst=gvList('fDst'),dstP=gvList('fDstP');
-  if(team!=='ALL') b=b.filter(r=>r.team===team);
-  if(ori.length) b=b.filter(r=>matchAny(r.origin, ori));
-  if(oriP.length) b=b.filter(r=>matchAny(r.POR_PORT, oriP));
-  if(dst.length) b=b.filter(r=>matchAny(r.dest, dst));
-  if(dstP.length) b=b.filter(r=>matchAny(r.DLY_PORT, dstP));
-  if(month) b=b.filter(r=>r.YYYYMM===month);
-  // 주차 필터: week=null이면 전체 월, week=undefined이면 gv 사용
   const wk = week === null ? 'ALL' : (week !== undefined ? week : gv('fWeek'));
-  if(wk && wk!=='ALL') {
-    const ww = weekToWW(wk);
-    if(ww) b=b.filter(r=>r.WW===ww);
-  }
-  return b;
+  const key = `${month || ''}|${wk || ''}`;
+  return memoizedFilter('bsa', key, () => {
+    let b = DATA.bsa;
+    const team=gv('fTeam'),ori=selectedSet('fOri'),oriP=selectedSet('fOriP'),dst=selectedSet('fDst'),dstP=selectedSet('fDstP');
+    if(team!=='ALL') b=b.filter(r=>r.team===team);
+    if(ori.size) b=b.filter(r=>matchAny(r.origin, ori));
+    if(oriP.size) b=b.filter(r=>matchAny(r.POR_PORT, oriP));
+    if(dst.size) b=b.filter(r=>matchAny(r.dest, dst));
+    if(dstP.size) b=b.filter(r=>matchAny(r.DLY_PORT, dstP));
+    if(month) b=b.filter(r=>r.YYYYMM===month);
+    // 주차 필터: week=null이면 전체 월, week=undefined이면 gv 사용
+    if(wk && wk!=='ALL') {
+      const ww = weekToWW(wk);
+      if(ww) b=b.filter(r=>r.WW===ww);
+    }
+    return b;
+  });
 }
 
 function filterWeekly(month) {
-  let d = applyGlobalFilter([...DATA.weekly], true);
-  if(month) d=d.filter(r=>r.YYYYMM===month);
   const week = gv('fWeek');
-  if(week!=='ALL') d=d.filter(r=>r.week_start_date===week);
-  return d;
+  const key = `${month || 'ALL'}|${week}`;
+  return memoizedFilter('weekly', key, () => {
+    let d = applyGlobalFilter(DATA.weekly, true);
+    if(month) d=d.filter(r=>r.YYYYMM===month);
+    if(week!=='ALL') d=d.filter(r=>r.week_start_date===week);
+    return d;
+  });
 }
 
 function filterShipper(month) {
   if (!DATA.shipper) return [];
-  let d = applyGlobalFilter([...DATA.shipper], true);
-  if(month) d=d.filter(r=>r.YYYYMM===month);
   const week = gv('fWeek');
-  if(week!=='ALL' && d.length>0 && d[0].week_start_date) d=d.filter(r=>r.week_start_date===week);
-  const sales = gv('fSales');
-  if(sales!=='ALL') d=d.filter(r=>r.Salesman_POR===sales);
-  const profit = gv('fProfit');
-  if(profit==='hi') d=d.filter(r=>r['\uace0\uc218\uc775\ud0dc\uadf8']==='고수익화주');
-  if(profit==='lo') d=d.filter(r=>r['\uace0\uc218\uc775\ud0dc\uadf8']==='저수익화주');
-  const grade = gv('fGrade');
-  if(grade==='ab') d=d.filter(r=>r.grade==='A+B');
-  if(grade==='cd') d=d.filter(r=>r.grade==='C+D');
-  return d;
+  const key = `${month || 'ALL'}|${week}`;
+  return memoizedFilter('shipper', key, () => {
+    let d = applyGlobalFilter(DATA.shipper, true);
+    if(month) d=d.filter(r=>r.YYYYMM===month);
+    if(week!=='ALL' && d.length>0 && d[0].week_start_date) d=d.filter(r=>r.week_start_date===week);
+    const sales = gv('fSales');
+    if(sales!=='ALL') d=d.filter(r=>r.Salesman_POR===sales);
+    const profit = gv('fProfit');
+    if(profit==='hi') d=d.filter(r=>r['\uace0\uc218\uc775\ud0dc\uadf8']==='고수익화주');
+    if(profit==='lo') d=d.filter(r=>r['\uace0\uc218\uc775\ud0dc\uadf8']==='저수익화주');
+    const grade = gv('fGrade');
+    if(grade==='ab') d=d.filter(r=>r.grade==='A+B');
+    if(grade==='cd') d=d.filter(r=>r.grade==='C+D');
+    return d;
+  });
 }
 
 // ═══════════════════════════════════════════════
@@ -765,6 +840,7 @@ function switchTab(tab) {
 
 function render() {
   if (!DATA) return;
+  resetFilterMemo();
   const fn = {t1: renderTab1, t2: renderTab2, t3: renderTab3, t4: renderTab4, t5: renderTab5};
   fn[activeTab]();
 }
