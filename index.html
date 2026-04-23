@@ -26,14 +26,17 @@ body{font-family:'Segoe UI',sans-serif;background:#f0f2f5;color:#202124}
 .multi-toggle{width:100%;height:28px;padding:4px 24px 4px 8px;border:1px solid #dadce0;border-radius:4px;background:#fff;color:#202124;font-size:13px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px}
 .multi-toggle span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .multi-caret{font-size:10px;color:#5f6368}
-.multi-menu{display:none;position:absolute;top:32px;left:0;z-index:50;width:210px;max-height:280px;background:#fff;border:1px solid #dadce0;border-radius:6px;box-shadow:0 6px 18px rgba(32,33,36,.18);overflow:hidden}
+.multi-menu{display:none;position:absolute;top:32px;left:0;z-index:50;width:210px;max-height:340px;background:#fff;border:1px solid #dadce0;border-radius:6px;box-shadow:0 6px 18px rgba(32,33,36,.18);overflow:hidden}
 .multi-select.open .multi-menu{display:block}
 .multi-actions{display:flex;justify-content:space-between;gap:6px;padding:6px;border-bottom:1px solid #edf0f2;background:#f8fafd}
 .multi-actions button{border:1px solid #dadce0;background:#fff;border-radius:4px;padding:3px 8px;font-size:12px;cursor:pointer}
 .multi-actions button:disabled{opacity:.45;cursor:default}
 .multi-select.dirty .multi-toggle{border-color:#1a73e8;box-shadow:0 0 0 1px rgba(26,115,232,.18)}
 .multi-apply{background:#1a73e8!important;color:#fff;border-color:#1a73e8!important;font-weight:600}
-.multi-options{max-height:226px;overflow:auto;padding:4px 0}
+.multi-search-wrap{padding:6px;border-bottom:1px solid #edf0f2;background:#fff}
+.multi-search{width:100%;height:28px;border:1px solid #dadce0;border-radius:4px;padding:4px 8px;font-size:13px;outline:none}
+.multi-search:focus{border-color:#1a73e8;box-shadow:0 0 0 1px rgba(26,115,232,.18)}
+.multi-options{max-height:220px;overflow:auto;padding:4px 0}
 .multi-option{display:flex;align-items:center;gap:7px;padding:5px 8px;font-size:13px;line-height:1.2;cursor:pointer}
 .multi-option:hover{background:#f5f8ff}
 .multi-option input{width:14px;height:14px;flex:0 0 auto}
@@ -377,7 +380,11 @@ function initFilters() {
   ['fTeam','fView','fProfit','fGrade','fSales'].forEach(id =>
     document.getElementById(id).addEventListener('change', () => { updateCascade(); render(); }));
   MULTI_FILTER_IDS.forEach(id =>
-    document.getElementById(id).addEventListener('change', e => { updateCascade(e.detail && e.detail.keepOpen); render(); }));
+    document.getElementById(id).addEventListener('change', e => {
+      if (!e.detail || e.detail.source !== 'multi-select') return;
+      updateCascade(e.detail.keepOpen);
+      render();
+    }));
   document.getElementById('fMonth').addEventListener('change', () => { updateWeekOpts(); updateCascade(); render(); });
   document.getElementById('fWeek').addEventListener('change', () => { render(); });
 }
@@ -421,16 +428,21 @@ function fillMultiSelect(id, vals, def) {
 function renderMultiSelect(id, keepOpen) {
   const el = document.getElementById(id);
   const vals = el._values || [];
+  const searchText = el._search || '';
+  const query = normalizeSearchText(searchText);
+  const visibleVals = query ? vals.filter(v => normalizeSearchText(v).includes(query)) : vals;
   const selectedVals = gvList(id);
   const pendingVals = pendingList(id);
   const pending = new Set(pendingVals);
   const label = multiSelectLabel(selectedVals);
-  const options = vals.length
-    ? vals.map(v => `<label class="multi-option"><input type="checkbox" value="${escAttr(v)}"${pending.has(v) ? ' checked' : ''}><span>${escHtml(v)}</span></label>`).join('')
-    : `<div class="multi-empty">${L('없음','None')}</div>`;
+  const emptyLabel = vals.length ? L('\uac80\uc0c9 \uacb0\uacfc \uc5c6\uc74c','No matches') : L('\uc5c6\uc74c','None');
+  const options = visibleVals.length
+    ? visibleVals.map(v => `<label class="multi-option"><input type="checkbox" value="${escAttr(v)}"${pending.has(v) ? ' checked' : ''}><span>${escHtml(v)}</span></label>`).join('')
+    : `<div class="multi-empty">${emptyLabel}</div>`;
   el.innerHTML = `
     <button type="button" class="multi-toggle" title="${escAttr(label)}"><span>${escHtml(label)}</span><span class="multi-caret">v</span></button>
     <div class="multi-menu">
+      <div class="multi-search-wrap"><input type="search" class="multi-search" value="${escAttr(searchText)}" placeholder="${escAttr(L('\uac80\uc0c9','Search'))}" autocomplete="off"></div>
       <div class="multi-actions"><button type="button" class="multi-clear">${L('전체','All')}</button><button type="button" class="multi-apply">${L('적용','Apply')}</button><button type="button" class="multi-close">${L('닫기','Close')}</button></div>
       <div class="multi-options">${options}</div>
     </div>`;
@@ -439,12 +451,34 @@ function renderMultiSelect(id, keepOpen) {
     e.stopPropagation();
     const willOpen = !el.classList.contains('open');
     closeAllMultiSelects();
-    el.classList.toggle('open', willOpen);
+    if (willOpen) {
+      el._search = '';
+      renderMultiSelect(id, true);
+      focusMultiSearch(id);
+    }
   });
+  const searchInput = el.querySelector('.multi-search');
+  if (searchInput) {
+    searchInput.addEventListener('pointerdown', e => e.stopPropagation());
+    searchInput.addEventListener('click', e => e.stopPropagation());
+    searchInput.addEventListener('keydown', e => {
+      e.stopPropagation();
+      if (e.key === 'Escape') closeAllMultiSelects();
+      if (e.key === 'Enter' && !el.querySelector('.multi-apply').disabled) applyMultiSelect(id);
+    });
+    searchInput.addEventListener('input', e => {
+      e.stopPropagation();
+      el._search = e.target.value;
+      const cursor = e.target.selectionStart;
+      renderMultiSelect(id, true);
+      focusMultiSearch(id, cursor);
+    });
+  }
   el.querySelector('.multi-clear').addEventListener('click', e => {
     e.stopPropagation();
     el._pending = [];
     renderMultiSelect(id, true);
+    focusMultiSearch(id);
   });
   el.querySelector('.multi-apply').addEventListener('click', e => {
     e.stopPropagation();
@@ -453,6 +487,8 @@ function renderMultiSelect(id, keepOpen) {
   el.querySelector('.multi-close').addEventListener('click', e => {
     e.stopPropagation();
     el._pending = [...(el._selected || [])];
+    el._search = '';
+    updateMultiSelectPendingState(id);
     el.classList.remove('open');
   });
   el.querySelectorAll('.multi-option').forEach(option => {
@@ -475,6 +511,21 @@ function renderMultiSelect(id, keepOpen) {
     });
   });
   updateMultiSelectPendingState(id);
+}
+
+function normalizeSearchText(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function focusMultiSearch(id, cursor) {
+  requestAnimationFrame(() => {
+    const el = document.getElementById(id);
+    const input = el && el.querySelector('.multi-search');
+    if (!input) return;
+    input.focus();
+    const pos = Number.isFinite(cursor) ? cursor : input.value.length;
+    try { input.setSelectionRange(pos, pos); } catch(e) {}
+  });
 }
 
 function updateMultiSelectLabel(id) {
@@ -522,6 +573,7 @@ function applyMultiSelect(id) {
   const el = document.getElementById(id);
   if (!el) return;
   el._selected = pendingList(id);
+  el._search = '';
   updateMultiSelectLabel(id);
   updateMultiSelectPendingState(id);
   el.classList.remove('open');
@@ -550,13 +602,17 @@ function closeAllMultiSelects() {
     const el = document.getElementById(id);
     if (el) {
       el._pending = [...(el._selected || [])];
+      el._search = '';
+      updateMultiSelectPendingState(id);
       el.classList.remove('open');
     }
   });
 }
 
 function dispatchMultiChange(id, keepOpen=true) {
-  document.getElementById(id).dispatchEvent(new CustomEvent('change', {detail: keepOpen ? {keepOpen: id} : {}}));
+  const detail = {source: 'multi-select'};
+  if (keepOpen) detail.keepOpen = id;
+  document.getElementById(id).dispatchEvent(new CustomEvent('change', {detail}));
 }
 
 function scheduleRender(delay=80) {
