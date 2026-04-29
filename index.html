@@ -108,6 +108,7 @@ table.summary tr.total-m td.lbl{background:#fff8d7}
     <h1>-3W Booking Dashboard</h1>
     <button onclick="toggleLang()" id="langBtn" style="background:rgba(255,255,255,.25);color:#fff;border:1px solid rgba(255,255,255,.5);padding:4px 12px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600">EN</button>
     <a href="guide.html" style="background:rgba(255,255,255,.15);color:#fff;font-size:12px;text-decoration:none;padding:4px 12px;border-radius:4px;border:1px solid rgba(255,255,255,.3)" id="guideLink">📖 Guide</a>
+    <a href="obt-exception-monitor/" style="background:rgba(255,255,255,.15);color:#fff;font-size:12px;text-decoration:none;padding:4px 12px;border-radius:4px;border:1px solid rgba(255,255,255,.3)" id="exceptionLink">OBT Monitor</a>
   </div>
   <div style="display:flex;align-items:center;gap:12px">
     <select id="dataDateSel" onchange="loadHistoricalData()" style="padding:3px 6px;border-radius:4px;font-size:11px;border:1px solid rgba(255,255,255,.4);background:rgba(255,255,255,.15);color:#fff">
@@ -194,6 +195,12 @@ function handleRedirect() {
     gUser = {email: info.email, name: info.name, picture: info.picture};
     sessionStorage.setItem('gtoken', token);
     sessionStorage.setItem('guser', JSON.stringify(gUser));
+    const returnPath = sessionStorage.getItem('obtReturnPath');
+    if (returnPath && returnPath !== location.pathname) {
+      sessionStorage.removeItem('obtReturnPath');
+      location.href = returnPath;
+      return;
+    }
     showApp();
   }).catch(e => {
     document.getElementById('loginErr').style.display = 'block';
