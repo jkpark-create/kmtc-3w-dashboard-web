@@ -392,7 +392,7 @@ document.addEventListener('DOMContentLoaded', function() {
   </table>
   <h3>월별 BKG vs BSA 차트</h3>
   <p>보라 바=3주전BKG, 파란 바=실선적(Normal), 회색 바=BSA</p>
-  <p>빨간 실선=소석률(Normal/BSA), 노란 점선=3주전BKG/BSA, 보라 점선=고수익화주부킹비중(고수익화주3주전BKG/3주전BKG)</p>
+  <p>빨간 실선=소석률(Normal/BSA), 노란 점선=3주전BKG/BSA, 보라 점선=구간별고수익비중(구간별고수익3주전BKG/3주전BKG)</p>
   <p>실제 계산 결과가 100%를 넘으면 그대로 표시합니다. BKG/BSA는 BSA보다 부킹이 큰 경우, 실선적률은 최종 LST_TEU가 최초 FST_TEU보다 커진 경우 100%를 넘을 수 있습니다.</p>
   <h3>소석률 바 차트 (토글)</h3>
   <p><strong>3주전BKG/BSA</strong>와 <strong>Normal/BSA</strong> 두 모드를 버튼으로 전환하여 볼 수 있습니다.</p>
@@ -773,7 +773,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <li>Grade C+D → 고수익, A+B → 저수익</li>
   </ol>
   <p>동일 선적지+화주 조합에 <strong>하나의 태그만</strong> 부여됩니다 (최신월 기준).</p>
-  <p>대시보드의 <strong>고수익화주 3주전BKG</strong>와 <strong>고수익화주부킹비중</strong>은 이 고수익태그 기준으로 계산합니다.</p>
+  <p>대시보드의 <strong>고수익화주</strong> 항목은 이 고수익태그 기준입니다. Tab 1 소석률 현황의 <strong>구간별고수익비중</strong>과 <strong>3주전 BKG (구간별고수익)</strong>은 루트별 고/저 분류 기준으로 계산합니다.</p>
   <h3>구간별 고수익 부킹분류</h3>
   <p>POR Port + DLY Port 루트별 평균 CM1/TEU 대비 화주별 비교로 개별 부킹을 분류합니다.</p>
   <table>

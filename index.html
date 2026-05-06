@@ -1134,12 +1134,12 @@ function renderTab1() {
   const occM = ms.map((m,i) => ratio(shipM[i],bsaM[i]));
   const xl = ms.map(fmtMonth);
 
-  // 3주전 BKG 바 + 3주전BKG/BSA 라인 + 고수익화주부킹비중(w3_hi_fst/w3_fst)
+  // 3주전 BKG 바 + 3주전BKG/BSA 라인 + 구간별고수익비중(w3_route_hi_fst/w3_fst)
   const w3bkgM = ms.map(m => _getMonthData(m, 'w3_fst'));
   const w3bkgBsaM = ms.map((m,i) => ratio(w3bkgM[i],bsaM[i]));
   const w3TotalBkgM = ms.map(m => _getMonthMetric(m, 'w3_fst'));
-  const w3HiBkgM = ms.map(m => _getMonthMetric(m, 'w3_hi_fst'));
-  const hiBkgShareM = ms.map((m,i) => ratio(w3HiBkgM[i],w3TotalBkgM[i]));
+  const w3RouteHiBkgM = ms.map(m => _getMonthMetric(m, 'w3_route_hi_fst'));
+  const hiBkgShareM = ms.map((m,i) => ratio(w3RouteHiBkgM[i],w3TotalBkgM[i]));
 
   // --- 월별 BKG vs BSA: smart label positioning (2D overlap) ---
   const _axisRange = (vals, fallbackMax, minSpanRatio, lowPad, highPad) => {
@@ -1183,7 +1183,7 @@ function renderTab1() {
      text:occM.map(v=>v?v.toFixed(0)+'%':''), textposition:_oP, line:{color:'#ea4335',width:2}, marker:{size:8}},
     {x:xl, y:w3bkgBsaM, type:'scatter', mode:'lines+markers+text', name:L('3주전BKG/BSA','WOS-3 BKG/BSA'), yaxis:'y2',
      text:w3bkgBsaM.map(v=>v?v.toFixed(0)+'%':''), textposition:_wbP, line:{color:'#f9ab00',width:2,dash:'dot'}, marker:{size:6,symbol:'square'}},
-    {x:xl, y:hiBkgShareM, type:'scatter', mode:'lines+markers+text', name:L('고수익화주부킹비중','Hi-Shipper WOS-3 BKG Share'), yaxis:'y2',
+    {x:xl, y:hiBkgShareM, type:'scatter', mode:'lines+markers+text', name:L('구간별고수익비중','Route-High WOS-3 BKG Share'), yaxis:'y2',
      text:hiBkgShareM.map(v=>v?v.toFixed(0)+'%':''), textposition:_woP, line:{color:'#6c5ce7',width:2,dash:'dash'}, marker:{size:6,symbol:'diamond'}},
   ], {barmode:'group', margin:{l:50,r:50,t:40,b:30},
     yaxis:{title:'TEU',gridcolor:'#f0f0f0',range:[_y1min,_y1m]},
@@ -1296,7 +1296,7 @@ function buildSummaryTable(months) {
   });
   h += '</tr><tr>';
   months.forEach(() => {
-    h += `<th colspan="5">${L('3주전 BKG (물량 및 실선적률)','WOS-3 BKG (Volume & LFT Rate)')}</th><th colspan="6">${L('3주전 BKG (고수익화주)','WOS-3 BKG (Hi-Shipper)')}</th>`;
+    h += `<th colspan="5">${L('3주전 BKG (물량 및 실선적률)','WOS-3 BKG (Volume & LFT Rate)')}</th><th colspan="6">${L('3주전 BKG (구간별고수익)','WOS-3 BKG (Route High)')}</th>`;
   });
   h += '</tr><tr>';
   months.forEach(() => {
@@ -1348,10 +1348,10 @@ function buildSummaryTable(months) {
     months.forEach(m => {
       const b = row.mode === 'selected' ? _tblData(m,'w3_fst') : _tblTotalData(m,'w3_fst',row.mode);
       const n = row.mode === 'selected' ? _tblData(m,'w3_norm_lst') : _tblTotalData(m,'w3_norm_lst',row.mode);
-      const hb = row.mode === 'selected' ? _tblData(m,'w3_hi_fst') : _tblTotalData(m,'w3_hi_fst',row.mode);
-      const hn = row.mode === 'selected' ? _tblData(m,'w3_hi_norm_lst') : _tblTotalData(m,'w3_hi_norm_lst',row.mode);
-      const c1 = row.mode === 'selected' ? _tblData(m,'w3_hi_cm1_norm') : _tblTotalData(m,'w3_hi_cm1_norm',row.mode);
-      const cl = row.mode === 'selected' ? _tblData(m,'w3_hi_norm_lst') : _tblTotalData(m,'w3_hi_norm_lst',row.mode);
+      const hb = row.mode === 'selected' ? _tblData(m,'w3_route_hi_fst') : _tblTotalData(m,'w3_route_hi_fst',row.mode);
+      const hn = row.mode === 'selected' ? _tblData(m,'w3_route_hi_norm_lst') : _tblTotalData(m,'w3_route_hi_norm_lst',row.mode);
+      const c1 = row.mode === 'selected' ? _tblData(m,'w3_route_hi_cm1_norm') : _tblTotalData(m,'w3_route_hi_cm1_norm',row.mode);
+      const cl = row.mode === 'selected' ? _tblData(m,'w3_route_hi_norm_lst') : _tblTotalData(m,'w3_route_hi_norm_lst',row.mode);
       const ct = cl>0?c1/cl:0;
       const bsa_v = row.mode === 'selected' ? _tblBSA(m) : _tblTotalBSA(m,row.mode);
       h += `<td>${fmt(Math.round(b))}</td><td>${fmt(Math.round(bsa_v))}</td><td>${pct(b,bsa_v)}</td><td>${fmt(Math.round(n))}</td><td>${pct(n,b)}</td>`;
@@ -1365,8 +1365,8 @@ function buildSummaryTable(months) {
     h += `<tr><td class="lbl">${it}</td>`;
     months.forEach(m => {
       const b=_tblData(m,'w3_fst',it), n=_tblData(m,'w3_norm_lst',it);
-      const hb=_tblData(m,'w3_hi_fst',it), hn=_tblData(m,'w3_hi_norm_lst',it);
-      const c1=_tblData(m,'w3_hi_cm1_norm',it), cl=_tblData(m,'w3_hi_norm_lst',it), ct=cl>0?c1/cl:0;
+      const hb=_tblData(m,'w3_route_hi_fst',it), hn=_tblData(m,'w3_route_hi_norm_lst',it);
+      const c1=_tblData(m,'w3_route_hi_cm1_norm',it), cl=_tblData(m,'w3_route_hi_norm_lst',it), ct=cl>0?c1/cl:0;
       const bsa_v=_tblBSA(m,it);
       h += `<td>${fmt(Math.round(b))}</td><td>${fmt(Math.round(bsa_v))}</td><td>${pct(b,bsa_v)}</td><td>${fmt(Math.round(n))}</td><td>${pct(n,b)}</td>`;
       h += `<td>${fmt(Math.round(hb))}</td><td>${pct(hb,b)}</td><td>${fmt(Math.round(hn))}</td><td>${pct(hn,hb)}</td>`;
