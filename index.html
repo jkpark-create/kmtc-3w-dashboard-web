@@ -24,6 +24,7 @@ body{font-family:'Segoe UI',sans-serif;background:#f0f2f5;color:#202124}
 .filters label{font-size:12px;color:#5f6368;white-space:nowrap}
 .filters select{padding:4px 8px;border:1px solid #dadce0;border-radius:4px;font-size:13px;min-width:70px}
 .multi-select{position:relative;min-width:86px}
+.week-select{min-width:128px}
 .multi-toggle{width:100%;height:28px;padding:4px 24px 4px 8px;border:1px solid #dadce0;border-radius:4px;background:#fff;color:#202124;font-size:13px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px}
 .multi-toggle span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .multi-caret{font-size:10px;color:#5f6368}
@@ -127,7 +128,7 @@ table.summary tr.total-m td.lbl{background:#fff8d7}
   <div class="sep"></div>
   <label>보기</label><select id="fView"><option value="dest">도착지별</option><option value="origin">선적지별</option></select>
   <label>월</label><select id="fMonth"></select>
-  <label>주차</label><select id="fWeek"><option value="ALL">전체</option></select>
+  <label>주차</label><div id="fWeek" class="multi-select week-select" aria-label="주차"></div>
   <label>화주구분</label><select id="fProfit"><option value="ALL">전체</option><option value="hi">고수익화주</option><option value="lo">저수익화주</option></select>
   <label>등급</label><select id="fGrade"><option value="ALL">전체</option><option value="ab">A+B</option><option value="cd">C+D</option></select>
   <label>영업사원</label><select id="fSales"><option value="ALL">전체</option></select>
@@ -366,14 +367,16 @@ function deriveHighProfitMetrics(data, section) {
 // ═══════════════════════════════════════════════
 // Filters
 // ═══════════════════════════════════════════════
-const MULTI_FILTER_IDS = ['fOri','fOriP','fDst','fDstP'];
+const MULTI_FILTER_IDS = ['fOri','fOriP','fDst','fDstP','fWeek'];
 let _multiSelectCloseBound = false;
 let _cascadeTimer = null;
 let _renderTimer = null;
 let _filterMemoKey = '';
 let _filterMemo = {monthly:new Map(), weekly:new Map(), shipper:new Map(), bsa:new Map()};
+let _monthWeeksCache = new Map();
 
 function initFilters() {
+  _monthWeeksCache = new Map();
   const teams = [...new Set(DATA.monthly.map(r=>r.team))].sort();
   fillSelect('fTeam', teams);
   // 기본 월: 현재 주 + 3주 후의 월
@@ -392,11 +395,14 @@ function initFilters() {
   MULTI_FILTER_IDS.forEach(id =>
     document.getElementById(id).addEventListener('change', e => {
       if (!e.detail || e.detail.source !== 'multi-select') return;
+      if (id === 'fWeek') {
+        render();
+        return;
+      }
       updateCascade(e.detail.keepOpen);
       render();
     }));
   document.getElementById('fMonth').addEventListener('change', () => { updateWeekOpts(); updateCascade(); render(); });
-  document.getElementById('fWeek').addEventListener('change', () => { render(); });
 }
 
 function fillSelect(id, vals, def) {
@@ -440,14 +446,14 @@ function renderMultiSelect(id, keepOpen) {
   const vals = el._values || [];
   const searchText = el._search || '';
   const query = normalizeSearchText(searchText);
-  const visibleVals = query ? vals.filter(v => normalizeSearchText(v).includes(query)) : vals;
+  const visibleVals = query ? vals.filter(v => normalizeSearchText(v).includes(query) || normalizeSearchText(multiDisplayValue(id, v)).includes(query)) : vals;
   const selectedVals = gvList(id);
   const pendingVals = pendingList(id);
   const pending = new Set(pendingVals);
-  const label = multiSelectLabel(selectedVals);
+  const label = multiSelectLabel(selectedVals, id);
   const emptyLabel = vals.length ? L('\uac80\uc0c9 \uacb0\uacfc \uc5c6\uc74c','No matches') : L('\uc5c6\uc74c','None');
   const options = visibleVals.length
-    ? visibleVals.map(v => `<label class="multi-option"><input type="checkbox" value="${escAttr(v)}"${pending.has(v) ? ' checked' : ''}><span>${escHtml(v)}</span></label>`).join('')
+    ? visibleVals.map(v => `<label class="multi-option"><input type="checkbox" value="${escAttr(v)}"${pending.has(v) ? ' checked' : ''}><span>${escHtml(multiDisplayValue(id, v))}</span></label>`).join('')
     : `<div class="multi-empty">${emptyLabel}</div>`;
   el.innerHTML = `
     <button type="button" class="multi-toggle" title="${escAttr(label)}"><span>${escHtml(label)}</span><span class="multi-caret">v</span></button>
@@ -541,7 +547,7 @@ function focusMultiSearch(id, cursor) {
 function updateMultiSelectLabel(id) {
   const el = document.getElementById(id);
   if (!el) return;
-  const label = multiSelectLabel(gvList(id));
+  const label = multiSelectLabel(gvList(id), id);
   const labelEl = el.querySelector('.multi-toggle span:first-child');
   const toggle = el.querySelector('.multi-toggle');
   if (labelEl) labelEl.textContent = label;
@@ -564,7 +570,7 @@ function setPendingValue(id, value, checked) {
   if (checked) next.add(value);
   else next.delete(value);
   const allowedNow = new Set(el._values || []);
-  el._pending = [...next].filter(v => allowedNow.has(v));
+  el._pending = (el._values || []).filter(v => allowedNow.has(v) && next.has(v));
   updateMultiSelectPendingState(id);
 }
 
@@ -590,10 +596,16 @@ function applyMultiSelect(id) {
   dispatchMultiChange(id, false);
 }
 
-function multiSelectLabel(vals) {
+function multiDisplayValue(id, value) {
+  const el = document.getElementById(id);
+  return (el && el._labels && el._labels[value]) || value;
+}
+
+function multiSelectLabel(vals, id) {
   if (!vals.length) return L('전체','All');
-  if (vals.length <= 2) return vals.join(', ');
-  return `${vals[0]} +${vals.length - 1}`;
+  const labels = vals.map(v => multiDisplayValue(id, v));
+  if (labels.length <= 2) return labels.join(', ');
+  return `${labels[0]} +${labels.length - 1}`;
 }
 
 function bindMultiSelectClose() {
@@ -685,7 +697,7 @@ function filterStateKey() {
   return [
     gv('fTeam'), gvList('fOri').join(','), gvList('fOriP').join(','),
     gvList('fDst').join(','), gvList('fDstP').join(','),
-    gv('fMonth'), gv('fWeek'), gv('fProfit'), gv('fGrade'), gv('fSales')
+    gv('fMonth'), gvList('fWeek').join(','), gv('fProfit'), gv('fGrade'), gv('fSales')
   ].join('|');
 }
 
@@ -774,18 +786,57 @@ function updateCascade(keepOpenId) {
   }
 }
 
+function monthWeeks(month) {
+  if (!month || !DATA) return [];
+  if (_monthWeeksCache.has(month)) return _monthWeeksCache.get(month);
+  const weeks = [...new Set((DATA.weekly || [])
+    .filter(r => r.YYYYMM === month)
+    .map(r => r.week_start_date)
+    .filter(Boolean))].sort();
+  _monthWeeksCache.set(month, weeks);
+  return weeks;
+}
+
+function selectedWeeks() {
+  return gvList('fWeek');
+}
+
+function hasWeekSelection() {
+  return selectedWeeks().length > 0;
+}
+
+function selectedWeekCount() {
+  return selectedWeeks().length;
+}
+
+function weekScaleForMonth(month) {
+  const weeks = DATA.wpm[month] || monthWeeks(month).length || 4;
+  return hasWeekSelection() ? selectedWeekCount() / weeks : 1;
+}
+
+function selectedWeekHeaderLabel() {
+  const labels = selectedWeeks().map(w => multiDisplayValue('fWeek', w));
+  if (!labels.length) return '';
+  if (labels.length <= 2) return labels.join(', ');
+  return `${labels[0]} +${labels.length - 1}`;
+}
+
 function updateWeekOpts() {
   const month = gv('fMonth');
-  const weeks = [...new Set(DATA.weekly.filter(r=>r.YYYYMM===month).map(r=>r.week_start_date))].sort();
+  const weeks = monthWeeks(month);
   const el = document.getElementById('fWeek');
-  const cur = el.value;
-  let opts = `<option value="ALL">${L('전체','All')}</option>`;
+  const cur = gvList('fWeek');
+  const labels = {};
   weeks.forEach((w,i) => {
     const lbl = w.replace(/\D+/g,'-').replace(/-$/,'').slice(5);
-    opts += `<option value="${w}">${i+1}${L('주차','wk')} (${lbl})</option>`;
+    labels[w] = `${i+1}${L('주차','wk')} (${lbl})`;
   });
-  el.innerHTML = opts;
-  el.value = weeks.includes(cur) ? cur : 'ALL';
+  const allowed = new Set(weeks);
+  el._values = weeks;
+  el._labels = labels;
+  el._selected = cleanVals(cur).filter(v => allowed.has(v));
+  el._pending = [...el._selected];
+  renderMultiSelect('fWeek', el.classList.contains('open'));
 }
 
 function applyGlobalFilter(d, isMonthly) {
@@ -861,8 +912,12 @@ function weekToWW(weekStr) {
 }
 
 function filterBSA(month, week) {
-  const wk = week === null ? 'ALL' : (week !== undefined ? week : gv('fWeek'));
-  const key = `${month || ''}|${wk || ''}`;
+  const weeks = week === null
+    ? []
+    : Array.isArray(week)
+      ? cleanVals(week)
+      : (week !== undefined ? (week && week !== 'ALL' ? [week] : []) : selectedWeeks());
+  const key = `${month || ''}|${weeks.join(',') || 'ALL'}`;
   return memoizedFilter('bsa', key, () => {
     let b = DATA.bsa;
     const team=gv('fTeam'),ori=selectedSet('fOri'),oriP=selectedSet('fOriP'),dst=selectedSet('fDst'),dstP=selectedSet('fDstP');
@@ -873,33 +928,39 @@ function filterBSA(month, week) {
     if(dstP.size) b=b.filter(r=>matchAny(r.DLY_PORT, dstP));
     if(month) b=b.filter(r=>r.YYYYMM===month);
     // 주차 필터: week=null이면 전체 월, week=undefined이면 gv 사용
-    if(wk && wk!=='ALL') {
-      const ww = weekToWW(wk);
-      if(ww) b=b.filter(r=>r.WW===ww);
+    if(weeks.length) {
+      const wwSet = new Set(weeks.map(weekToWW).filter(Boolean));
+      if(wwSet.size) b=b.filter(r=>wwSet.has(String(r.WW)));
     }
     return b;
   });
 }
 
 function filterWeekly(month) {
-  const week = gv('fWeek');
-  const key = `${month || 'ALL'}|${week}`;
+  const weeks = selectedWeeks();
+  const key = `${month || 'ALL'}|${weeks.join(',') || 'ALL'}`;
   return memoizedFilter('weekly', key, () => {
     let d = applyGlobalFilter(DATA.weekly, true);
     if(month) d=d.filter(r=>r.YYYYMM===month);
-    if(week!=='ALL') d=d.filter(r=>r.week_start_date===week);
+    if(weeks.length) {
+      const weekSet = new Set(weeks);
+      d=d.filter(r=>weekSet.has(r.week_start_date));
+    }
     return d;
   });
 }
 
 function filterShipper(month) {
   if (!DATA.shipper) return [];
-  const week = gv('fWeek');
-  const key = `${month || 'ALL'}|${week}`;
+  const weeks = selectedWeeks();
+  const key = `${month || 'ALL'}|${weeks.join(',') || 'ALL'}`;
   return memoizedFilter('shipper', key, () => {
     let d = applyGlobalFilter(DATA.shipper, true);
     if(month) d=d.filter(r=>r.YYYYMM===month);
-    if(week!=='ALL' && d.length>0 && d[0].week_start_date) d=d.filter(r=>r.week_start_date===week);
+    if(weeks.length && d.length>0 && d[0].week_start_date) {
+      const weekSet = new Set(weeks);
+      d=d.filter(r=>weekSet.has(r.week_start_date));
+    }
     const sales = gv('fSales');
     if(sales!=='ALL') d=d.filter(r=>r.Salesman_POR===sales);
     const profit = gv('fProfit');
@@ -980,7 +1041,7 @@ function renderTab1() {
   const month = gv('fMonth');
   const wk = DATA.wpm[month] || 4;
   const vk = viewKey(), vl = viewLabel(), bk = bsaViewKey();
-  const _weekSel = gv('fWeek') !== 'ALL';
+  const _weekSel = hasWeekSelection();
   const fd = _weekSel ? filterWeekly(month) : filterMonthly(month);
   // BSA: 주차 선택 시 해당 주 BSA (WW 필터)
   const bsaTotal = _weekSel ? sum(filterBSA(month), 'teu_bsa') : sum(filterBSA(month, null), 'teu_bsa');
@@ -1023,18 +1084,18 @@ function renderTab1() {
 
   document.getElementById('tabContent').innerHTML = html;
 
-  // Bar chart (주차 선택: 해당월=해당주 실적, 과거월=주평균, BSA=항상 주평균)
+  // Bar chart (주차 선택: 해당월=선택주 합계, 과거월=주평균 x 선택주수)
   const ms = DATA.months.filter(m => m <= month);
-  const isWeekSelected = gv('fWeek') !== 'ALL';
+  const isWeekSelected = hasWeekSelection();
 
-  // 데이터 소스: 해당월은 weekly(해당주), 과거월은 monthly/주수
+  // 데이터 소스: 해당월은 weekly 선택주 합계, 과거월은 monthly/주수 x 선택주수
   function _getMonthData(m, key) {
     if (isWeekSelected && m === month) {
       // 해당월: weekly 데이터 (해당 주만)
       return profitSum(filterWeekly(m), key);
     } else if (isWeekSelected) {
-      // 과거월: monthly / 주수 (주평균)
-      return profitSum(filterMonthly(m), key) / (DATA.wpm[m]||4);
+      // 과거월: monthly / 주수 x 선택주수
+      return profitSum(filterMonthly(m), key) * weekScaleForMonth(m);
     } else {
       return profitSum(filterMonthly(m), key);
     }
@@ -1044,16 +1105,16 @@ function renderTab1() {
       return sum(filterWeekly(m), key);
     }
     const v = sum(filterMonthly(m), key);
-    return isWeekSelected ? v / (DATA.wpm[m]||4) : v;
+    return isWeekSelected ? v * weekScaleForMonth(m) : v;
   }
   function _getBSA(m) {
     if (isWeekSelected && m === month) {
       return sum(filterBSA(m), 'teu_bsa');  // 해당월: 해당 주 BSA
     }
     const v = sum(filterBSA(m, null), 'teu_bsa');
-    return isWeekSelected ? v / (DATA.wpm[m]||4) : v;  // 과거월: 주평균
+    if (isWeekSelected) return v * weekScaleForMonth(m);
+    return v;
   }
-
   const shipM = ms.map(m => _getMonthData(m, 'norm_lst'));
   const bsaM = ms.map(m => _getBSA(m));
   const occM = ms.map((m,i) => ratio(shipM[i],bsaM[i]));
@@ -1205,18 +1266,16 @@ function buildSummaryTable(months) {
       a.localeCompare(b)
     );
 
-  const _ws = gv('fWeek') !== 'ALL';
+  const _ws = hasWeekSelection();
   const _curMonth = gv('fMonth');
-  const _selWeek = gv('fWeek');
+  const _selWeek = selectedWeekHeaderLabel();
   let h = `<table class="summary"><tr><th rowspan="3">${vl}</th>`;
   months.forEach(m => {
     const wk = DATA.wpm[m]||4;
     if (_ws && m === _curMonth) {
-      const mWeeks = [...new Set(DATA.weekly.filter(r=>r.YYYYMM===m).map(r=>r.week_start_date))].sort();
-      const wkIdx = mWeeks.indexOf(_selWeek) + 1;
-      h += `<th colspan="11">${fmtMonth(m)} ${L('실적','Perf')} (${wkIdx}${L('주차','wk')})</th>`;
+      h += `<th colspan="11">${fmtMonth(m)} ${L('실적','Perf')} (${_selWeek})</th>`;
     } else if (_ws) {
-      h += `<th colspan="11">${fmtMonth(m)} ${L('실적','Perf')} (${L('주평균','Wk Avg')})</th>`;
+      h += `<th colspan="11">${fmtMonth(m)} ${L('실적','Perf')} (${L('주평균','Wk Avg')} x ${selectedWeekCount()})</th>`;
     } else {
       h += `<th colspan="11">${fmtMonth(m)} ${L('실적','Perf')} (${wk}${L('주','wk')})</th>`;
     }
@@ -1231,7 +1290,7 @@ function buildSummaryTable(months) {
   });
   h += '</tr>';
 
-  // 주차 선택: 해당월=해당주, 과거월=주평균, BSA=해당주/주평균
+  // 주차 선택: 해당월=선택주 합계, 과거월=주평균 x 선택주수
   function _tblData(m, key, byItem) {
     if (_ws && m === _curMonth) {
       // 선택된 주차: 해당 주 실적
@@ -1240,8 +1299,7 @@ function buildSummaryTable(months) {
     }
     const d = filterMonthly(m);
     const v = byItem ? sum(d.filter(r=>r[vk]===byItem), key) : sum(d, key);
-    // 주차 선택 시 과거월은 주평균, 미선택 시 월합계
-    return _ws ? v / (DATA.wpm[m]||4) : v;
+    return _ws ? v * weekScaleForMonth(m) : v;
   }
   function _tblBSA(m, byItem) {
     if (_ws && m === _curMonth) {
@@ -1252,8 +1310,8 @@ function buildSummaryTable(months) {
     }
     let b = filterBSA(m, null);
     if (byItem) b = b.filter(r=>r[bk]===byItem);
-    // 주차 선택 시 과거월은 주평균, 미선택 시 월합계
-    return _ws ? sum(b, 'teu_bsa') / (DATA.wpm[m]||4) : sum(b, 'teu_bsa');
+    const bTotal = sum(b, 'teu_bsa');
+    return _ws ? bTotal * weekScaleForMonth(m) : bTotal;
   }
   function _tblTotalData(m, key, mode) {
     const v = sum(filterMonthly(m), key);
