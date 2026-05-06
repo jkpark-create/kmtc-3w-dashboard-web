@@ -1050,14 +1050,17 @@ function routeHiDisplayVal(r, key, fallbackKey) {
 function routeHiDisplaySum(arr, key, fallbackKey) {
   return gv('fProfit') === 'lo' ? 0 : sumMetric(arr, key, fallbackKey);
 }
-function routeMetricVal(r, totalKey, routeKey, shortKey, fallbackKey) {
+function routeMetricVal(r, totalKey, routeKey, shortKey, fallbackKey, clampLow=true) {
   const total = r[totalKey] || 0;
   const hi = Object.prototype.hasOwnProperty.call(r, shortKey)
     ? (r[shortKey] || 0)
     : metricVal(r, routeKey, fallbackKey);
   const p = gv('fProfit');
   if (p === 'hi') return hi;
-  if (p === 'lo') return Math.max(0, total - hi);
+  if (p === 'lo') {
+    const low = total - hi;
+    return clampLow ? Math.max(0, low) : low;
+  }
   return total;
 }
 
@@ -1654,7 +1657,7 @@ function renderShipperTable(month) {
     const s = byShpr[k];
     s.bkg += r.w3_fst||0; s.ship += r.w3_norm_lst||0;
     s.hi += routeHiDisplayVal(r,'w3_route_hi_fst','w3_hi_fst');
-    s.cm1 += routeMetricVal(r,'w3_cm1_norm','w3_route_hi_cm1_norm','rhc','w3_hi_cm1_norm');
+    s.cm1 += routeMetricVal(r,'w3_cm1_norm','w3_route_hi_cm1_norm','rhc','w3_hi_cm1_norm', false);
     s.cm1l += routeMetricVal(r,'w3_norm_lst','w3_route_hi_norm_lst','rhn','w3_hi_norm_lst');
     if (r.Salesman_POR) s._sales.add(r.Salesman_POR);
     if (r['\uace0\uc218\uc775\ud0dc\uadf8']) s._tags.add(r['\uace0\uc218\uc775\ud0dc\uadf8']);
@@ -1703,7 +1706,7 @@ function buildSalesDestRows(month) {
     s.ship += r.w3_norm_lst||0;
     s.cancel += r.w3_canc_fst||0;
     s.hi += routeHiDisplayVal(r,'w3_route_hi_fst','w3_hi_fst');
-    s.cm1 += routeMetricVal(r,'w3_cm1_norm','w3_route_hi_cm1_norm','rhc','w3_hi_cm1_norm');
+    s.cm1 += routeMetricVal(r,'w3_cm1_norm','w3_route_hi_cm1_norm','rhc','w3_hi_cm1_norm', false);
     s.cm1l += routeMetricVal(r,'w3_norm_lst','w3_route_hi_norm_lst','rhn','w3_hi_norm_lst');
     if (r.BKG_SHPR_CST_NO) s.custs.add(r.BKG_SHPR_CST_NO);
   });
@@ -1803,7 +1806,7 @@ function renderSalesmanTable(month) {
     const s = bySM[sm];
     s.bkg += r.w3_fst||0; s.ship += r.w3_norm_lst||0;
     s.hi += routeHiDisplayVal(r,'w3_route_hi_fst','w3_hi_fst');
-    s.cm1 += routeMetricVal(r,'w3_cm1_norm','w3_route_hi_cm1_norm','rhc','w3_hi_cm1_norm');
+    s.cm1 += routeMetricVal(r,'w3_cm1_norm','w3_route_hi_cm1_norm','rhc','w3_hi_cm1_norm', false);
     s.cm1l += routeMetricVal(r,'w3_norm_lst','w3_route_hi_norm_lst','rhn','w3_hi_norm_lst');
     if (r.BKG_SHPR_CST_NO) s.custs.add(r.BKG_SHPR_CST_NO);
   });
@@ -1949,7 +1952,7 @@ function renderTab4() {
     if (!byShpr[k]) byShpr[k] = {bkg:0,cm1:0,cm1l:0,_sales:new Set()};
     const s = byShpr[k];
     s.bkg += r.w3_fst||0;
-    s.cm1 += routeMetricVal(r,'w3_cm1_norm','w3_route_hi_cm1_norm','rhc','w3_hi_cm1_norm');
+    s.cm1 += routeMetricVal(r,'w3_cm1_norm','w3_route_hi_cm1_norm','rhc','w3_hi_cm1_norm', false);
     s.cm1l += routeMetricVal(r,'w3_norm_lst','w3_route_hi_norm_lst','rhn','w3_hi_norm_lst');
     if (r.Salesman_POR) s._sales.add(r.Salesman_POR);
   });
