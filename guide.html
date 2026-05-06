@@ -267,7 +267,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <tr><td>보기</td><td>도착지별 / 선적지별 뷰 전환</td><td>도착지별</td></tr>
     <tr><td>월</td><td>조회 월 (445 캘린더)</td><td>현재 주 +3주 후</td></tr>
     <tr><td>주차</td><td>특정 주차 선택</td><td>+3주 후 해당 주차</td></tr>
-    <tr><td>화주구분</td><td>고수익 / 저수익 (고수익태그 기준)</td><td>전체</td></tr>
+    <tr><td>구간수익</td><td>구간별고수익 / 구간별저수익 (루트별 고/저 기준)</td><td>전체</td></tr>
     <tr><td>등급</td><td>A+B(대형화주) / C+D(중소화주)</td><td>전체</td></tr>
     <tr><td>영업사원</td><td>특정 영업사원 필터</td><td>전체</td></tr>
   </table>
@@ -280,7 +280,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <li><strong>팀/선적지/선적포트/도착지/도착포트</strong>는 물리적인 운송 루트 범위를 좁히는 필터입니다. 지역별, 소석률, 수익성 화면에 모두 큰 영향을 줍니다.</li>
     <li><strong>보기</strong>는 지역을 묶는 축을 바꿉니다. 도착지별은 시장/수요 관점, 선적지별은 영업/공급 출발지 관점으로 읽으면 됩니다.</li>
     <li><strong>주차</strong>를 선택하면 선택 월은 해당 주 실적, 과거 월 비교는 주평균으로 표시됩니다. 특정 주의 상황을 과거 월 평균과 비교할 때 사용합니다.</li>
-    <li><strong>화주구분/등급/영업사원</strong>은 주로 화주 기반 데이터에 강하게 적용됩니다. 영업사원 필터는 `shipper` 데이터 기반 화면에서 가장 정확합니다.</li>
+    <li><strong>구간수익/등급/영업사원</strong>은 주로 화주 기반 데이터에 강하게 적용됩니다. 구간수익은 루트별 고/저 분류 기준이며, 영업사원 필터는 `shipper` 데이터 기반 화면에서 가장 정확합니다.</li>
   </ul>
   <div class="tip"><strong>추천:</strong> 처음에는 팀+월만 선택해서 전체 구조를 보고, 이상치가 보이면 도착국가/도착포트/영업사원 순서로 좁히는 방식이 가장 빠릅니다.</div>
 </div>
@@ -293,7 +293,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <tr><td>View</td><td>By Destination / By Origin</td><td>By Dest</td></tr>
     <tr><td>Month</td><td>445 calendar month</td><td>Current +3 weeks</td></tr>
     <tr><td>Week</td><td>Specific week selection</td><td>+3 weeks target week</td></tr>
-    <tr><td>Profit</td><td>High / Low (by profit tag)</td><td>All</td></tr>
+    <tr><td>Route Profit</td><td>Route High / Route Low (by route profitability)</td><td>All</td></tr>
     <tr><td>Grade</td><td>A+B (large shippers) / C+D (SME)</td><td>All</td></tr>
     <tr><td>Salesperson</td><td>Filter by salesperson</td><td>All</td></tr>
   </table>
@@ -306,7 +306,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <li><strong>Team/origin/origin port/destination/destination port</strong> narrow the physical route scope and affect occupancy, trend, and profitability views.</li>
     <li><strong>View</strong> changes the regional grouping axis. Destination view is useful for market demand; origin view is useful for sales/supply origin management.</li>
     <li><strong>Week</strong> changes the selected month to actual weekly data while past months are shown as weekly averages. Use it to compare one target week against historical monthly averages.</li>
-    <li><strong>Profit/grade/salesperson</strong> are most precise in shipper-based views because those fields live in the shipper dataset.</li>
+    <li><strong>Route profit/grade/salesperson</strong> are most precise in shipper-based views. Route profit uses the route high/low classification.</li>
   </ul>
   <div class="tip"><strong>Recommended:</strong> Start with team + month, then narrow by destination country, destination port, and salesperson only after you see an abnormal pattern.</div>
 </div>
@@ -773,7 +773,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <li>Grade C+D → 고수익, A+B → 저수익</li>
   </ol>
   <p>동일 선적지+화주 조합에 <strong>하나의 태그만</strong> 부여됩니다 (최신월 기준).</p>
-  <p>대시보드의 <strong>고수익화주</strong> 항목은 이 고수익태그 기준입니다. Tab 1 소석률 현황의 <strong>구간별고수익비중</strong>과 <strong>3주전 BKG (구간별고수익)</strong>은 루트별 고/저 분류 기준으로 계산합니다.</p>
+  <p>대시보드의 <strong>고수익화주</strong> 항목은 이 고수익태그 기준입니다. 글로벌 <strong>구간수익</strong> 필터, Tab 1 소석률 현황의 <strong>구간별고수익비중</strong>, <strong>3주전 BKG (구간별고수익)</strong>은 루트별 고/저 분류 기준으로 계산합니다.</p>
   <h3>구간별 고수익 부킹분류</h3>
   <p>POR Port + DLY Port 루트별 평균 CM1/TEU 대비 화주별 비교로 개별 부킹을 분류합니다.</p>
   <table>

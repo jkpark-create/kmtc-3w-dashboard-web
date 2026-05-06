@@ -129,7 +129,7 @@ table.summary tr.total-m td.lbl{background:#fff8d7}
   <label>보기</label><select id="fView"><option value="dest">도착지별</option><option value="origin">선적지별</option></select>
   <label>월</label><select id="fMonth"></select>
   <label>주차</label><div id="fWeek" class="multi-select week-select" aria-label="주차"></div>
-  <label>화주구분</label><select id="fProfit"><option value="ALL">전체</option><option value="hi">고수익화주</option><option value="lo">저수익화주</option></select>
+  <label>구간수익</label><select id="fProfit"><option value="ALL">전체</option><option value="hi">구간별고수익</option><option value="lo">구간별저수익</option></select>
   <label>등급</label><select id="fGrade"><option value="ALL">전체</option><option value="ab">A+B</option><option value="cd">C+D</option></select>
   <label>영업사원</label><select id="fSales"><option value="ALL">전체</option></select>
 </div>
@@ -965,8 +965,8 @@ function filterShipper(month) {
     const sales = gv('fSales');
     if(sales!=='ALL') d=d.filter(r=>r.Salesman_POR===sales);
     const profit = gv('fProfit');
-    if(profit==='hi') d=d.filter(r=>r['\uace0\uc218\uc775\ud0dc\uadf8']==='고수익화주');
-    if(profit==='lo') d=d.filter(r=>r['\uace0\uc218\uc775\ud0dc\uadf8']==='저수익화주');
+    if(profit==='hi') d=d.filter(r=>routeProfitVal(r,'fst') > 0);
+    if(profit==='lo') d=d.filter(r=>routeProfitVal(r,'fst') > 0);
     const grade = gv('fGrade');
     if(grade==='ab') d=d.filter(r=>r.grade==='A+B');
     if(grade==='cd') d=d.filter(r=>r.grade==='C+D');
@@ -1012,23 +1012,47 @@ function viewLabel() { return gv('fView') === 'origin' ? L('선적지','Origin')
 function bsaViewKey() { return gv('fView') === 'origin' ? 'origin' : 'dest'; }
 function tagLabel(t) { return (t||'').split(', ').map(v => v==='고수익화주'?L('고수익화주','High'):v==='저수익화주'?L('저수익화주','Low'):v).join(', '); }
 
-// 화주구분 필터: 고수익/저수익에 따라 BKG/실선적 수치 조정
+const ROUTE_PROFIT_MAP = {
+  'fst': ['route_hi_fst', 'hi_fst'],
+  'norm_lst': ['route_hi_norm_lst', 'hi_norm_lst'],
+  'cm1_norm': ['route_hi_cm1_norm', 'hi_cm1_norm'],
+  'lst_norm': ['route_hi_norm_lst', 'hi_lst_norm'],
+  'w3_fst': ['w3_route_hi_fst', 'w3_hi_fst'],
+  'w3_norm_lst': ['w3_route_hi_norm_lst', 'w3_hi_norm_lst'],
+  'w3_canc_fst': ['w3_route_hi_canc_fst', null],
+  'w3_cm1_norm': ['w3_route_hi_cm1_norm', 'w3_hi_cm1_norm'],
+  'w2_fst': ['w2_route_hi_fst', null],
+  'w1_fst': ['w1_route_hi_fst', null],
+  'wos_fst': ['wos_route_hi_fst', null],
+};
+function routeHighVal(r, key) {
+  if (key === 'fst' && Object.prototype.hasOwnProperty.call(r, 'rh')) {
+    return r.rh ? (r.fst || 0) : 0;
+  }
+  const mapped = ROUTE_PROFIT_MAP[key];
+  if (!mapped) return r[key] || 0;
+  return metricVal(r, mapped[0], mapped[1]);
+}
+function routeProfitVal(r, key) {
+  const total = r[key] || 0;
+  const hi = routeHighVal(r, key);
+  const p = gv('fProfit');
+  if (p === 'hi') return hi;
+  if (p === 'lo') return Math.max(0, total - hi);
+  return total;
+}
+function routeHiDisplayVal(r, key, fallbackKey) {
+  return gv('fProfit') === 'lo' ? 0 : metricVal(r, key, fallbackKey);
+}
+function routeHiDisplaySum(arr, key, fallbackKey) {
+  return gv('fProfit') === 'lo' ? 0 : sumMetric(arr, key, fallbackKey);
+}
+
+// 구간수익 필터: 구간별 고수익/저수익에 따라 BKG/실선적 수치 조정
 function profitSum(arr, key) {
   const p = gv('fProfit');
   if (p === 'ALL') return sum(arr, key);
-  // w3_fst → hi면 w3_hi_fst, lo면 w3_fst - w3_hi_fst
-  const mapping = {
-    'w3_fst': ['w3_hi_fst', r=>(r.w3_fst||0)-(r.w3_hi_fst||0)],
-    'w3_norm_lst': ['w3_hi_norm_lst', r=>(r.w3_norm_lst||0)-(r.w3_hi_norm_lst||0)],
-    'w3_canc_fst': ['w3_hi_fst', r=>0],
-    'fst': ['hi_fst', r=>(r.fst||0)-(r.hi_fst||0)],
-    'norm_lst': ['hi_norm_lst', r=>(r.norm_lst||0)-(r.hi_norm_lst||0)],
-  };
-  if (mapping[key]) {
-    if (p==='hi') return sum(arr, mapping[key][0]);
-    if (p==='lo') return arr.reduce((s,r) => s + mapping[key][1](r), 0);
-  }
-  return sum(arr, key);
+  return arr.reduce((s,r) => s + routeProfitVal(r, key), 0);
 }
 
 // ═══════════════════════════════════════════════
@@ -1064,7 +1088,7 @@ function renderTab1() {
   const w3Bkg = profitSum(fd,'w3_fst'), w3Ship = profitSum(fd,'w3_norm_lst');
   const occ = ratio(shipped,bsaTotal) ?? 0;
   const sr = ratio(w3Ship,w3Bkg) ?? 0;
-  const cm1 = sum(fd,'cm1_norm'), cm1l = sum(fd,'lst_norm');
+  const cm1 = profitSum(fd,'cm1_norm'), cm1l = profitSum(fd,'lst_norm');
   const cm1teu = cm1l>0 ? cm1/cm1l : 0;
 
   let html = `<div class="row">
@@ -1116,9 +1140,9 @@ function renderTab1() {
   }
   function _getMonthMetric(m, key) {
     if (isWeekSelected && m === month) {
-      return sum(filterWeekly(m), key);
+      return profitSum(filterWeekly(m), key);
     }
-    const v = sum(filterMonthly(m), key);
+    const v = profitSum(filterMonthly(m), key);
     return isWeekSelected ? v * weekScaleForMonth(m) : v;
   }
   function _getBSA(m) {
@@ -1309,10 +1333,10 @@ function buildSummaryTable(months) {
     if (_ws && m === _curMonth) {
       // 선택된 주차: 해당 주 실적
       const d = filterWeekly(m);
-      return byItem ? sum(d.filter(r=>r[vk]===byItem), key) : sum(d, key);
+      return byItem ? profitSum(d.filter(r=>r[vk]===byItem), key) : profitSum(d, key);
     }
     const d = filterMonthly(m);
-    const v = byItem ? sum(d.filter(r=>r[vk]===byItem), key) : sum(d, key);
+    const v = byItem ? profitSum(d.filter(r=>r[vk]===byItem), key) : profitSum(d, key);
     return _ws ? v * weekScaleForMonth(m) : v;
   }
   function _tblBSA(m, byItem) {
@@ -1328,7 +1352,7 @@ function buildSummaryTable(months) {
     return _ws ? bTotal * weekScaleForMonth(m) : bTotal;
   }
   function _tblTotalData(m, key, mode) {
-    const v = sum(filterMonthly(m), key);
+    const v = profitSum(filterMonthly(m), key);
     return mode === 'weekAvg' ? v / (DATA.wpm[m]||4) : v;
   }
   function _tblTotalBSA(m, mode) {
@@ -1453,7 +1477,7 @@ function renderTab2() {
     const bsaByR = {};
     _bsaR.forEach(r => { const k = r[useBk]; bsaByR[k] = (bsaByR[k]||0) + (r.teu_bsa||0); });
     let rows = Object.entries(items).map(([k,r]) => ({
-      name:k, bkg:profitSum(r,'w3_fst'), ship:profitSum(r,'w3_norm_lst'), hi:sumMetric(r,'w3_route_hi_fst','w3_hi_fst'), bsa:bsaByR[k]||0
+      name:k, bkg:profitSum(r,'w3_fst'), ship:profitSum(r,'w3_norm_lst'), hi:routeHiDisplaySum(r,'w3_route_hi_fst','w3_hi_fst'), bsa:bsaByR[k]||0
     })).sort((a,b)=>b.bkg-a.bkg).slice(0,15);
 
     html += `<div class="chart-card"><h3>${L('3주전 BKG 현황','WOS-3 BKG Status')} - ${useVl} (${fmtMonth(month)})</h3>
@@ -1469,7 +1493,7 @@ function renderTab2() {
     const weeks = [...new Set(wkData.map(r=>r.week_start_date))].sort();
     const wkKey = useVk;
     const topDests = Object.entries(groupByKey(wkData, wkKey))
-      .sort((a,b)=>sum(b[1],'w3_fst')-sum(a[1],'w3_fst')).slice(0,8).map(e=>e[0]);
+      .sort((a,b)=>profitSum(b[1],'w3_fst')-profitSum(a[1],'w3_fst')).slice(0,8).map(e=>e[0]);
     html += `<div class="chart-card"><h3>${L('주차별 3주전 BKG','Weekly WOS-3 BKG')}</h3><div id="ch2wk" style="height:290px"></div></div>`;
 
     // 고수익 vs 저수익 리드타임 비교 + 고수익 비중 추이
@@ -1483,7 +1507,7 @@ function renderTab2() {
     // Weekly BKG chart
     const traces = topDests.map((d,i) => ({
       x: weeks.map(w=>fmtWeekLabel(w)),
-      y: weeks.map(w => sum(wkData.filter(r=>r[wkKey]===d&&r.week_start_date===w), 'w3_fst')),
+      y: weeks.map(w => profitSum(wkData.filter(r=>r[wkKey]===d&&r.week_start_date===w), 'w3_fst')),
       type:'bar', name:d
     }));
     const wkLabels = weeks.map(w=>fmtWeekLabel(w));
@@ -1616,7 +1640,7 @@ function renderShipperTable(month) {
     if (!byShpr[k]) byShpr[k] = {bkg:0,ship:0,hi:0,cm1:0,cm1l:0,_sales:new Set(),_tags:new Set(),_grades:new Set()};
     const s = byShpr[k];
     s.bkg += r.w3_fst||0; s.ship += r.w3_norm_lst||0;
-    s.hi += metricVal(r,'w3_route_hi_fst','w3_hi_fst');
+    s.hi += routeHiDisplayVal(r,'w3_route_hi_fst','w3_hi_fst');
     s.cm1 += r.w3_cm1_norm||0; s.cm1l += r.w3_norm_lst||0;
     if (r.Salesman_POR) s._sales.add(r.Salesman_POR);
     if (r['\uace0\uc218\uc775\ud0dc\uadf8']) s._tags.add(r['\uace0\uc218\uc775\ud0dc\uadf8']);
@@ -1664,7 +1688,7 @@ function buildSalesDestRows(month) {
     s.bkg += r.w3_fst||0;
     s.ship += r.w3_norm_lst||0;
     s.cancel += r.w3_canc_fst||0;
-    s.hi += metricVal(r,'w3_route_hi_fst','w3_hi_fst');
+    s.hi += routeHiDisplayVal(r,'w3_route_hi_fst','w3_hi_fst');
     s.cm1 += r.w3_cm1_norm||0;
     s.cm1l += r.w3_norm_lst||0;
     if (r.BKG_SHPR_CST_NO) s.custs.add(r.BKG_SHPR_CST_NO);
@@ -1764,7 +1788,7 @@ function renderSalesmanTable(month) {
     if (!bySM[sm]) bySM[sm] = {bkg:0,ship:0,hi:0,cm1:0,cm1l:0,custs:new Set()};
     const s = bySM[sm];
     s.bkg += r.w3_fst||0; s.ship += r.w3_norm_lst||0;
-    s.hi += metricVal(r,'w3_route_hi_fst','w3_hi_fst');
+    s.hi += routeHiDisplayVal(r,'w3_route_hi_fst','w3_hi_fst');
     s.cm1 += r.w3_cm1_norm||0; s.cm1l += r.w3_norm_lst||0;
     if (r.BKG_SHPR_CST_NO) s.custs.add(r.BKG_SHPR_CST_NO);
   });
@@ -1855,7 +1879,7 @@ function renderTab3() {
 
   // 실선적률 추이
   const topItems = Object.entries(groupByKey(fd, vk))
-    .sort((a,b)=>sum(b[1],'w3_fst')-sum(a[1],'w3_fst')).slice(0,8).map(e=>e[0]);
+    .sort((a,b)=>profitSum(b[1],'w3_fst')-profitSum(a[1],'w3_fst')).slice(0,8).map(e=>e[0]);
   Plotly.newPlot('ch3tr', topItems.map(it => ({
     x: DATA.months.map(fmtMonth),
     y: DATA.months.map(m => {
@@ -1894,7 +1918,7 @@ function renderTab4() {
   const week = gv('fWeek');
   const fd = week !== 'ALL' ? filterWeekly(month) : filterMonthly(month);
   const items = Object.entries(groupByKey(fd, vk)).map(([k,r]) => ({
-    name:k, bkg:profitSum(r,'w3_fst'), cm1:sum(r,'w3_cm1_norm'), cm1l:sum(r,'w3_norm_lst'), hi:sumMetric(r,'w3_route_hi_fst','w3_hi_fst')
+    name:k, bkg:profitSum(r,'w3_fst'), cm1:profitSum(r,'w3_cm1_norm'), cm1l:profitSum(r,'w3_norm_lst'), hi:routeHiDisplaySum(r,'w3_route_hi_fst','w3_hi_fst')
   })).filter(r=>r.bkg>0).sort((a,b)=>b.bkg-a.bkg).slice(0,10);
 
   let html = `<div class="chart-row">
@@ -1963,7 +1987,7 @@ function renderTab4() {
     x: DATA.months.map(fmtMonth),
     y: DATA.months.map(m => {
       const d = filterMonthly(m).filter(r=>r[vk]===it);
-      const c=sum(d,'w3_cm1_norm'), l=sum(d,'w3_norm_lst');
+      const c=profitSum(d,'w3_cm1_norm'), l=profitSum(d,'w3_norm_lst');
       return l>0 ? Math.round(c/l) : null;
     }), mode:'lines+markers', name:it, connectgaps:true
   })), {margin:{l:50,r:20,t:20,b:30},yaxis:{title:'CM1/TEU',gridcolor:'#f0f0f0'},
@@ -1998,8 +2022,9 @@ function renderTab5() {
   // 1. 지역별 WOS 분포 테이블
   const items = groupByKey(fd, vk);
   let destRows = Object.entries(items).map(([k,r]) => {
-    const total = r.reduce((s,x)=>(wosKeys.forEach(w=>s+=x[w]||0),s),0);
-    return {name:k, total, w3:sum(r,'w3_fst'), w2:sum(r,'w2_fst')||0, w1:sum(r,'w1_fst')||0, wos:sum(r,'wos_fst')||0};
+    const w3=profitSum(r,'w3_fst'), w2=profitSum(r,'w2_fst')||0, w1=profitSum(r,'w1_fst')||0, wos=profitSum(r,'wos_fst')||0;
+    const total = w3 + w2 + w1 + wos;
+    return {name:k, total, w3, w2, w1, wos};
   }).sort((a,b)=>b.total-a.total).slice(0,15);
 
   let html = `<div class="chart-card"><h3>${vl} ${L('부킹 접수 시점 분석','Booking Timing')} (${fmtMonth(month)})</h3>
@@ -2113,8 +2138,8 @@ const T = {
     guide: '사용가이드',
     exceptionMonitor: 'OBT 모니터',
     team: '팀', origin: '선적지', oriPort: '선적포트', dest: '도착지', dstPort: '도착포트',
-    view: '보기', month: '월', week: '주차', profitType: '화주구분', grade: '등급', sales: '영업사원',
-    viewDest: '도착지별', viewOri: '선적지별', all: '전체', hi: '고수익화주', lo: '저수익화주',
+    view: '보기', month: '월', week: '주차', profitType: '구간수익', grade: '등급', sales: '영업사원',
+    viewDest: '도착지별', viewOri: '선적지별', all: '전체', hi: '구간별고수익', lo: '구간별저수익',
     tab1: '① 소석률 현황', tab2: '② 부킹 트렌드', tab3: '③ 전환 분석', tab4: '④ 수익성', tab5: '⑤ 부킹 패턴',
     totalBkg: '전체 BKG', shipment: '실선적(Normal)', w3bkg: '3주전 BKG', w3ship: '3주전 실선적(Normal)',
     bsa: 'BSA', occ: '소석률', shipRate: '실선적률', loading: '데이터 로딩 중...',
@@ -2133,8 +2158,8 @@ const T = {
     guide: 'Guide',
     exceptionMonitor: 'OBT Monitor',
     team: 'Team', origin: 'Origin', oriPort: 'Ori Port', dest: 'Dest', dstPort: 'Dst Port',
-    view: 'View', month: 'Month', week: 'Week', profitType: 'Profit', grade: 'Grade', sales: 'Salesperson',
-    viewDest: 'By Dest', viewOri: 'By Origin', all: 'All', hi: 'High', lo: 'Low',
+    view: 'View', month: 'Month', week: 'Week', profitType: 'Route Profit', grade: 'Grade', sales: 'Salesperson',
+    viewDest: 'By Dest', viewOri: 'By Origin', all: 'All', hi: 'Route High', lo: 'Route Low',
     tab1: '① Occupancy', tab2: '② Trends', tab3: '③ Conversion', tab4: '④ Profitability', tab5: '⑤ Patterns',
     totalBkg: 'Total BKG', shipment: 'LFT(Normal)', w3bkg: 'WOS-3 BKG', w3ship: 'WOS-3 LFT(Normal)',
     bsa: 'BSA', occ: 'Occupancy', shipRate: 'LFT Rate', loading: 'Loading data...',
