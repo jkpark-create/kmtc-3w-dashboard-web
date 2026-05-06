@@ -965,11 +965,16 @@ function filterShipper(month) {
     const sales = gv('fSales');
     if(sales!=='ALL') d=d.filter(r=>r.Salesman_POR===sales);
     const profit = gv('fProfit');
-    if(profit==='hi') d=d.filter(r=>routeProfitVal(r,'fst') > 0);
-    if(profit==='lo') d=d.filter(r=>routeProfitVal(r,'fst') > 0);
     const grade = gv('fGrade');
     if(grade==='ab') d=d.filter(r=>r.grade==='A+B');
     if(grade==='cd') d=d.filter(r=>r.grade==='C+D');
+    if(profit==='hi' || profit==='lo') {
+      const selectedShippers = new Set(d
+        .filter(r => routeProfitVal(r,'w3_fst') > 0)
+        .map(shipperKey)
+        .filter(Boolean));
+      d = d.filter(r => selectedShippers.has(shipperKey(r)));
+    }
     return d;
   });
 }
@@ -1011,6 +1016,7 @@ function viewKey() { return gv('fView') === 'origin' ? 'origin' : 'dest'; }
 function viewLabel() { return gv('fView') === 'origin' ? L('선적지','Origin') : L('도착지','Dest'); }
 function bsaViewKey() { return gv('fView') === 'origin' ? 'origin' : 'dest'; }
 function tagLabel(t) { return (t||'').split(', ').map(v => v==='고수익화주'?L('고수익화주','High'):v==='저수익화주'?L('저수익화주','Low'):v).join(', '); }
+function shipperKey(r) { return r.BKG_SHPR_CST_NO || r.BKG_SHPR_CST_ENM || ''; }
 
 const ROUTE_PROFIT_MAP = {
   'fst': ['route_hi_fst', 'hi_fst'],
@@ -1026,9 +1032,6 @@ const ROUTE_PROFIT_MAP = {
   'wos_fst': ['wos_route_hi_fst', null],
 };
 function routeHighVal(r, key) {
-  if (key === 'fst' && Object.prototype.hasOwnProperty.call(r, 'rh')) {
-    return r.rh ? (r.fst || 0) : 0;
-  }
   const mapped = ROUTE_PROFIT_MAP[key];
   if (!mapped) return r[key] || 0;
   return metricVal(r, mapped[0], mapped[1]);
@@ -1046,6 +1049,16 @@ function routeHiDisplayVal(r, key, fallbackKey) {
 }
 function routeHiDisplaySum(arr, key, fallbackKey) {
   return gv('fProfit') === 'lo' ? 0 : sumMetric(arr, key, fallbackKey);
+}
+function routeMetricVal(r, totalKey, routeKey, shortKey, fallbackKey) {
+  const total = r[totalKey] || 0;
+  const hi = Object.prototype.hasOwnProperty.call(r, shortKey)
+    ? (r[shortKey] || 0)
+    : metricVal(r, routeKey, fallbackKey);
+  const p = gv('fProfit');
+  if (p === 'hi') return hi;
+  if (p === 'lo') return Math.max(0, total - hi);
+  return total;
 }
 
 // 구간수익 필터: 구간별 고수익/저수익에 따라 BKG/실선적 수치 조정
@@ -1641,7 +1654,8 @@ function renderShipperTable(month) {
     const s = byShpr[k];
     s.bkg += r.w3_fst||0; s.ship += r.w3_norm_lst||0;
     s.hi += routeHiDisplayVal(r,'w3_route_hi_fst','w3_hi_fst');
-    s.cm1 += r.w3_cm1_norm||0; s.cm1l += r.w3_norm_lst||0;
+    s.cm1 += routeMetricVal(r,'w3_cm1_norm','w3_route_hi_cm1_norm','rhc','w3_hi_cm1_norm');
+    s.cm1l += routeMetricVal(r,'w3_norm_lst','w3_route_hi_norm_lst','rhn','w3_hi_norm_lst');
     if (r.Salesman_POR) s._sales.add(r.Salesman_POR);
     if (r['\uace0\uc218\uc775\ud0dc\uadf8']) s._tags.add(r['\uace0\uc218\uc775\ud0dc\uadf8']);
     if (r.grade) s._grades.add(r.grade);
@@ -1689,8 +1703,8 @@ function buildSalesDestRows(month) {
     s.ship += r.w3_norm_lst||0;
     s.cancel += r.w3_canc_fst||0;
     s.hi += routeHiDisplayVal(r,'w3_route_hi_fst','w3_hi_fst');
-    s.cm1 += r.w3_cm1_norm||0;
-    s.cm1l += r.w3_norm_lst||0;
+    s.cm1 += routeMetricVal(r,'w3_cm1_norm','w3_route_hi_cm1_norm','rhc','w3_hi_cm1_norm');
+    s.cm1l += routeMetricVal(r,'w3_norm_lst','w3_route_hi_norm_lst','rhn','w3_hi_norm_lst');
     if (r.BKG_SHPR_CST_NO) s.custs.add(r.BKG_SHPR_CST_NO);
   });
 
@@ -1789,7 +1803,8 @@ function renderSalesmanTable(month) {
     const s = bySM[sm];
     s.bkg += r.w3_fst||0; s.ship += r.w3_norm_lst||0;
     s.hi += routeHiDisplayVal(r,'w3_route_hi_fst','w3_hi_fst');
-    s.cm1 += r.w3_cm1_norm||0; s.cm1l += r.w3_norm_lst||0;
+    s.cm1 += routeMetricVal(r,'w3_cm1_norm','w3_route_hi_cm1_norm','rhc','w3_hi_cm1_norm');
+    s.cm1l += routeMetricVal(r,'w3_norm_lst','w3_route_hi_norm_lst','rhn','w3_hi_norm_lst');
     if (r.BKG_SHPR_CST_NO) s.custs.add(r.BKG_SHPR_CST_NO);
   });
 
@@ -1933,7 +1948,9 @@ function renderTab4() {
     const k = r.BKG_SHPR_CST_ENM || r.BKG_SHPR_CST_NO;
     if (!byShpr[k]) byShpr[k] = {bkg:0,cm1:0,cm1l:0,_sales:new Set()};
     const s = byShpr[k];
-    s.bkg += r.w3_fst||0; s.cm1 += r.w3_cm1_norm||0; s.cm1l += r.w3_norm_lst||0;
+    s.bkg += r.w3_fst||0;
+    s.cm1 += routeMetricVal(r,'w3_cm1_norm','w3_route_hi_cm1_norm','rhc','w3_hi_cm1_norm');
+    s.cm1l += routeMetricVal(r,'w3_norm_lst','w3_route_hi_norm_lst','rhn','w3_hi_norm_lst');
     if (r.Salesman_POR) s._sales.add(r.Salesman_POR);
   });
   let shprRows = Object.entries(byShpr).map(([k,s]) => {
