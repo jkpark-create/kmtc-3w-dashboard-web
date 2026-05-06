@@ -317,6 +317,7 @@ async function loadHistoricalData() {
 }
 
 function normalizeMetricKeys(data) {
+  _metricKeyCache.clear();
   const renameMap = {
     norm_fst: 'norm_lst',
     w3_norm_fst: 'w3_norm_lst',
@@ -980,12 +981,25 @@ function sum(arr, key) { return arr.reduce((s,r) => s + (r[key]||0), 0); }
 function fmt(v) { return v.toLocaleString('ko-KR', {maximumFractionDigits:0}); }
 function pct(a,b) { return b>0 ? `${(a/b*100).toFixed(0)}%` : '-'; }
 function ratio(a,b) { return b>0 ? a/b*100 : null; }
+const _metricKeyCache = new Map();
+function dataHasMetricKey(key) {
+  if (_metricKeyCache.has(key)) return _metricKeyCache.get(key);
+  const found = !!DATA && (
+    (Array.isArray(DATA.metric_keys) && DATA.metric_keys.includes(key)) ||
+    ['monthly','weekly','shipper','bsa'].some(name =>
+      Array.isArray(DATA[name]) && DATA[name].some(r => Object.prototype.hasOwnProperty.call(r, key))
+    )
+  );
+  _metricKeyCache.set(key, found);
+  return found;
+}
 function sumMetric(arr, key, fallbackKey) {
-  const hasKey = arr.some(r => Object.prototype.hasOwnProperty.call(r, key));
+  const hasKey = dataHasMetricKey(key) || arr.some(r => Object.prototype.hasOwnProperty.call(r, key));
   return sum(arr, hasKey ? key : fallbackKey);
 }
 function metricVal(r, key, fallbackKey) {
-  return Object.prototype.hasOwnProperty.call(r, key) ? (r[key]||0) : (r[fallbackKey]||0);
+  const hasKey = dataHasMetricKey(key) || Object.prototype.hasOwnProperty.call(r, key);
+  return hasKey ? (r[key]||0) : (r[fallbackKey]||0);
 }
 
 function fmtWeekLabel(w) {
