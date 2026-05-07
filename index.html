@@ -342,6 +342,10 @@ function normalizeMetricKeys(data) {
   deriveHighProfitMetrics(data, 'weekly');
 }
 
+function shipperTag(row) {
+  return row.tag ?? row['\uace0\uc218\uc775\ud0dc\uadf8'] ?? '';
+}
+
 function deriveHighProfitMetrics(data, section) {
   if (!Array.isArray(data[section])) return;
   const needsHiFst = data[section].some(row => !Object.prototype.hasOwnProperty.call(row, 'hi_fst'));
@@ -353,7 +357,7 @@ function deriveHighProfitMetrics(data, section) {
   const hiFstByKey = {};
   const hiNormLstByKey = {};
   (data.shipper || []).forEach(row => {
-    if (row['\uace0\uc218\uc775\ud0dc\uadf8'] !== '고수익화주') return;
+    if (shipperTag(row) !== '고수익화주') return;
     const k = keyFields.map(f => row[f] ?? '').join('|');
     hiFstByKey[k] = (hiFstByKey[k] || 0) + (row.fst || 0);
     hiNormLstByKey[k] = (hiNormLstByKey[k] || 0) + (row.norm_lst || 0);
@@ -1534,8 +1538,8 @@ function renderTab2() {
 
     // 고수익 vs 저수익 리드타임 비교 (shipper 데이터 기반)
     const sd = filterShipper(month);
-    const hiSD = sd.filter(r => r['\uace0\uc218\uc775\ud0dc\uadf8'] === '고수익화주');
-    const loSD = sd.filter(r => r['\uace0\uc218\uc775\ud0dc\uadf8'] === '저수익화주');
+    const hiSD = sd.filter(r => shipperTag(r) === '고수익화주');
+    const loSD = sd.filter(r => shipperTag(r) === '저수익화주');
     const wosKeys = ['w3_fst','w2_fst','w1_fst','wos_fst'];
     const wosLabels = ['WOS-3','WOS-2','WOS-1','WOS'];
     const hiTotal = wosKeys.reduce((s,k) => s + sum(hiSD,k), 0);
@@ -1557,7 +1561,7 @@ function renderTab2() {
       const msd = filterShipper(m);
       if (!msd.length) return null;
       const total = sum(msd, 'w3_fst');
-      const hi = sum(msd.filter(r => r['\uace0\uc218\uc775\ud0dc\uadf8'] === '고수익화주'), 'w3_fst');
+      const hi = sum(msd.filter(r => shipperTag(r) === '고수익화주'), 'w3_fst');
       return ratio(hi,total);
     });
     Plotly.newPlot('ch2hi', [{
@@ -1660,7 +1664,7 @@ function renderShipperTable(month) {
     s.cm1 += routeMetricVal(r,'w3_cm1_norm','w3_route_hi_cm1_norm','rhc','w3_hi_cm1_norm', false);
     s.cm1l += routeMetricVal(r,'w3_norm_lst','w3_route_hi_norm_lst','rhn','w3_hi_norm_lst');
     if (r.Salesman_POR) s._sales.add(r.Salesman_POR);
-    if (r['\uace0\uc218\uc775\ud0dc\uadf8']) s._tags.add(r['\uace0\uc218\uc775\ud0dc\uadf8']);
+    if (shipperTag(r)) s._tags.add(shipperTag(r));
     if (r.grade) s._grades.add(r.grade);
   });
 
@@ -2073,7 +2077,7 @@ function renderTab5() {
     const s = byShpr[k];
     s.w3 += r.w3_fst||0; s.w2 += r.w2_fst||0; s.w1 += r.w1_fst||0; s.wos += r.wos_fst||0;
     if (r.Salesman_POR) s.sm.add(r.Salesman_POR);
-    if (r['\uace0\uc218\uc775\ud0dc\uadf8']) s.tags.add(r['\uace0\uc218\uc775\ud0dc\uadf8']);
+    if (shipperTag(r)) s.tags.add(shipperTag(r));
   });
   let custRows = Object.entries(byShpr).map(([k,s]) => {
     const total = s.w3+s.w2+s.w1+s.wos;
@@ -2116,8 +2120,8 @@ function renderTab5() {
     legend:{orientation:'h',y:1.1},plot_bgcolor:'#fff',paper_bgcolor:'#fff'}, {displayModeBar:false});
 
   // 고수익 vs 저수익 리드타임 비교
-  const hiSD5 = sd.filter(r => r['\uace0\uc218\uc775\ud0dc\uadf8'] === '고수익화주');
-  const loSD5 = sd.filter(r => r['\uace0\uc218\uc775\ud0dc\uadf8'] === '저수익화주');
+  const hiSD5 = sd.filter(r => shipperTag(r) === '고수익화주');
+  const loSD5 = sd.filter(r => shipperTag(r) === '저수익화주');
   const hiT5 = wosKeys.reduce((s,k) => s + sum(hiSD5,k), 0);
   const loT5 = wosKeys.reduce((s,k) => s + sum(loSD5,k), 0);
   Plotly.newPlot('ch5lt', [
@@ -2136,7 +2140,7 @@ function renderTab5() {
     const msd = filterShipper(m);
     if (!msd.length) return null;
     const total = sum(msd, 'w3_fst');
-    const hi = sum(msd.filter(r => r['\uace0\uc218\uc775\ud0dc\uadf8'] === '고수익화주'), 'w3_fst');
+    const hi = sum(msd.filter(r => shipperTag(r) === '고수익화주'), 'w3_fst');
     return ratio(hi,total);
   });
   Plotly.newPlot('ch5hi', [{
