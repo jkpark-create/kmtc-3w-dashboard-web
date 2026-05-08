@@ -20,6 +20,7 @@ body{font-family:'Segoe UI',sans-serif;background:#f0f2f5;color:#202124}
 .header .info{font-size:12px;opacity:.7}
 .header .user{font-size:12px;cursor:pointer;opacity:.8}
 .header .user:hover{opacity:1}
+#dataDateSel option{background:#fff;color:#202124}
 .filters{background:#fff;padding:8px 20px;border-bottom:1px solid #dadce0;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .filters label{font-size:12px;color:#5f6368;white-space:nowrap}
 .filters select{padding:4px 8px;border:1px solid #dadce0;border-radius:4px;font-size:13px;min-width:70px}
@@ -155,7 +156,8 @@ table.summary tr.total-m td.lbl{background:#fff8d7}
 // ═══════════════════════════════════════════════
 const GOOGLE_CLIENT_ID = '409330651463-giie223egsskdq10etn642gjtron1hq5.apps.googleusercontent.com';
 const ALLOWED_DOMAINS = ['ekmtc.com'];
-const SCOPES = 'email profile openid';
+const DRIVE_READONLY_SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
+const SCOPES = `email profile openid ${DRIVE_READONLY_SCOPE}`;
 const DRIVE_FOLDER_ID = '1JIxg6Y-_gRfI1HueXZ1Q9j4-Z5bxvNgv';
 const REDIRECT_URI = location.origin + '/kmtc-3w-dashboard-web/';
 
