@@ -332,6 +332,7 @@ function normalizeMetricKeys(data) {
   };
   ['monthly', 'weekly', 'shipper'].forEach(section => {
     (data[section] || []).forEach(row => {
+      if (row.week !== undefined && row.week_start_date === undefined) row.week_start_date = row.week;
       Object.entries(renameMap).forEach(([oldKey, newKey]) => {
         if (Object.prototype.hasOwnProperty.call(row, oldKey)) {
           if (!Object.prototype.hasOwnProperty.call(row, newKey)) row[newKey] = row[oldKey];
