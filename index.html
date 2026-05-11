@@ -1109,8 +1109,9 @@ function renderTab1() {
 
   const totalBkg = profitSum(fd,'fst'), shipped = profitSum(fd,'norm_lst');
   const w3Bkg = profitSum(fd,'w3_fst'), w3Ship = profitSum(fd,'w3_norm_lst');
-  const w3Cancel = profitSum(fd,'w3_canc_fst');
-  const w3BkgNotCancel = w3Bkg - w3Cancel;
+  const w3Lst = profitSum(fd,'w3l');
+  const w3CancelLst = profitSum(fd,'w3cl');
+  const w3BkgNotCancel = w3Lst - w3CancelLst;
   const occ = ratio(shipped,bsaTotal) ?? 0;
   const sr = ratio(w3Ship,w3Bkg) ?? 0;
   const cm1 = profitSum(fd,'cm1_norm'), cm1l = profitSum(fd,'lst_norm');
