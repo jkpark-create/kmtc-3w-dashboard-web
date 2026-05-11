@@ -382,12 +382,13 @@ document.addEventListener('DOMContentLoaded', function() {
 <h2 class="ko">① 소석률 현황</h2><h2 class="en" style="display:none">① Occupancy Status</h2>
 <div class="card ko">
   <h3>KPI 카드</h3>
-  <p>전체BKG | 실선적(Normal) | 3주전BKG | 3주전실선적(Normal) | BSA | 소석률 | 실선적률 | CM1/TEU</p>
+  <p>전체BKG | 실선적(Normal) | 3주전BKG | <strong>3주전 BKG (not cancel)</strong> | 3주전실선적(Normal) | BSA | 소석률 | 실선적률 | CM1/TEU</p>
   <table>
     <tr><th>지표</th><th>의미</th><th>높거나 낮을 때 해석</th></tr>
     <tr><td><strong>전체BKG</strong></td><td>조회 범위 전체 부킹 TEU</td><td>시장 전체 물량 규모를 봅니다. BSA와 함께 봐야 과부족 판단이 가능합니다.</td></tr>
     <tr><td><strong>실선적(Normal)</strong></td><td>Normal 상태로 실제 선적된 TEU</td><td>BSA 대비 실질 소석 기여 물량입니다.</td></tr>
-    <tr><td><strong>3주전BKG</strong></td><td>WOS-3 단계에서 확보된 부킹 TEU</td><td>조기 확보 물량입니다. 높을수록 선복 계획이 안정적입니다.</td></tr>
+    <tr><td><strong>3주전BKG</strong></td><td>WOS-3 단계에서 확보된 부킹 TEU (Cancel 포함)</td><td>조기 확보 물량입니다. 높을수록 선복 계획이 안정적입니다.</td></tr>
+    <tr><td><strong>3주전 BKG (not cancel)</strong></td><td><code>w3_fst − w3_canc_fst</code>. 3주전 부킹 중 Cancel 상태로 전환된 TEU를 제외한 값</td><td>실제 선적으로 이어질 가능성이 높은 선행 부킹 규모입니다. 3주전BKG와 차이가 클수록 그 사이 Cancel로 빠진 물량이 많다는 의미입니다.</td></tr>
     <tr><td><strong>소석률</strong></td><td>실선적(Normal) / BSA</td><td>낮으면 선복 미소진, 높으면 BSA 초과 또는 강한 수요를 의미합니다.</td></tr>
     <tr><td><strong>실선적률</strong></td><td>3주전실선적 / 3주전BKG</td><td>낮으면 캔슬/노쇼/변경 리스크를 의심합니다.</td></tr>
     <tr><td><strong>CM1/TEU</strong></td><td>CM1 / LST_TEU</td><td>물량의 수익성을 판단합니다. 물량이 커도 이 값이 낮으면 믹스 점검이 필요합니다.</td></tr>
@@ -409,12 +410,13 @@ document.addEventListener('DOMContentLoaded', function() {
 </div>
 <div class="card en" style="display:none">
   <h3>KPI Cards</h3>
-  <p>Total BKG | LFT(Normal) | WOS-3 BKG | WOS-3 LFT | BSA | Occupancy | LFT Rate | CM1/TEU</p>
+  <p>Total BKG | LFT(Normal) | WOS-3 BKG | <strong>WOS-3 BKG (not cancel)</strong> | WOS-3 LFT | BSA | Occupancy | LFT Rate | CM1/TEU</p>
   <table>
     <tr><th>Metric</th><th>Meaning</th><th>How to Interpret</th></tr>
     <tr><td><strong>Total BKG</strong></td><td>Total booking TEU in the selected scope</td><td>Read with BSA to judge shortage or excess.</td></tr>
     <tr><td><strong>LFT(Normal)</strong></td><td>Actually loaded Normal TEU</td><td>Represents the volume that consumed capacity.</td></tr>
-    <tr><td><strong>WOS-3 BKG</strong></td><td>Booking TEU secured at WOS-3</td><td>Higher means earlier volume capture and more stable planning.</td></tr>
+    <tr><td><strong>WOS-3 BKG</strong></td><td>Booking TEU secured at WOS-3 (includes Cancel)</td><td>Higher means earlier volume capture and more stable planning.</td></tr>
+    <tr><td><strong>WOS-3 BKG (not cancel)</strong></td><td><code>w3_fst − w3_canc_fst</code>. Removes the W-3 bookings that have since flipped to Cancel.</td><td>Represents advance volume likely to convert to actual loading. A large gap from WOS-3 BKG means many cancellations after the W-3 checkpoint.</td></tr>
     <tr><td><strong>Occupancy</strong></td><td>LFT(Normal) / BSA</td><td>Low means under-utilization; high means strong demand or BSA excess.</td></tr>
     <tr><td><strong>LFT Rate</strong></td><td>WOS-3 LFT / WOS-3 BKG</td><td>Low suggests cancel/no-show/change risk.</td></tr>
     <tr><td><strong>CM1/TEU</strong></td><td>CM1 / LST_TEU</td><td>Profitability per TEU. Large volume with low CM1/TEU needs mix review.</td></tr>
