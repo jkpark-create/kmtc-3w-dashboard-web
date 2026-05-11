@@ -1109,6 +1109,8 @@ function renderTab1() {
 
   const totalBkg = profitSum(fd,'fst'), shipped = profitSum(fd,'norm_lst');
   const w3Bkg = profitSum(fd,'w3_fst'), w3Ship = profitSum(fd,'w3_norm_lst');
+  const w3Cancel = profitSum(fd,'w3_canc_fst');
+  const w3BkgNotCancel = w3Bkg - w3Cancel;
   const occ = ratio(shipped,bsaTotal) ?? 0;
   const sr = ratio(w3Ship,w3Bkg) ?? 0;
   const cm1 = profitSum(fd,'cm1_norm'), cm1l = profitSum(fd,'lst_norm');
@@ -1118,6 +1120,7 @@ function renderTab1() {
     ${kpi(T[_lang].totalBkg, fmt(totalBkg), '#1a73e8')}
     ${kpi(T[_lang].shipment, fmt(shipped), '#34a853')}
     ${kpi(T[_lang].w3bkg, fmt(w3Bkg), '#6c5ce7')}
+    ${kpi(T[_lang].w3bkgNotCancel, fmt(w3BkgNotCancel), '#6c5ce7')}
     ${kpi(T[_lang].w3ship, fmt(w3Ship), '#00b894')}
     ${kpi(T[_lang].bsa, fmt(bsaTotal), '#5f6368')}
     ${kpi(T[_lang].occ, occ.toFixed(1)+'%', occ<=120?'#34a853':'#ea4335')}
@@ -2168,7 +2171,7 @@ const T = {
     view: '보기', month: '월', week: '주차', profitType: '구간수익', grade: '등급', sales: '영업사원',
     viewDest: '도착지별', viewOri: '선적지별', all: '전체', hi: '구간별고수익', lo: '구간별저수익',
     tab1: '① 소석률 현황', tab2: '② 부킹 트렌드', tab3: '③ 전환 분석', tab4: '④ 수익성', tab5: '⑤ 부킹 패턴',
-    totalBkg: '전체 BKG', shipment: '실선적(Normal)', w3bkg: '3주전 BKG', w3ship: '3주전 실선적(Normal)',
+    totalBkg: '전체 BKG', shipment: '실선적(Normal)', w3bkg: '3주전 BKG', w3bkgNotCancel: '3주전 BKG (not cancel)', w3ship: '3주전 실선적(Normal)',
     bsa: 'BSA', occ: '소석률', shipRate: '실선적률', loading: '데이터 로딩 중...',
     login: '회사 Google 계정으로 로그인하세요', loginBtn: 'Google 계정으로 로그인',
     monthlyChart: '월별 BKG vs BSA', occChart: '소석률', byRegion: '지역별',
@@ -2188,7 +2191,7 @@ const T = {
     view: 'View', month: 'Month', week: 'Week', profitType: 'Route Profit', grade: 'Grade', sales: 'Salesperson',
     viewDest: 'By Dest', viewOri: 'By Origin', all: 'All', hi: 'Route High', lo: 'Route Low',
     tab1: '① Occupancy', tab2: '② Trends', tab3: '③ Conversion', tab4: '④ Profitability', tab5: '⑤ Patterns',
-    totalBkg: 'Total BKG', shipment: 'LFT(Normal)', w3bkg: 'WOS-3 BKG', w3ship: 'WOS-3 LFT(Normal)',
+    totalBkg: 'Total BKG', shipment: 'LFT(Normal)', w3bkg: 'WOS-3 BKG', w3bkgNotCancel: 'WOS-3 BKG (not cancel)', w3ship: 'WOS-3 LFT(Normal)',
     bsa: 'BSA', occ: 'Occupancy', shipRate: 'LFT Rate', loading: 'Loading data...',
     login: 'Sign in with company Google account', loginBtn: 'Sign in with Google',
     monthlyChart: 'Monthly BKG vs BSA', occChart: 'Occupancy', byRegion: 'By Region',
