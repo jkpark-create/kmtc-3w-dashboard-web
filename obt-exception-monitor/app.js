@@ -951,6 +951,7 @@ function toRecordArray(value) {
     : null;
   const columns = Array.isArray(value.columns) ? value.columns : schemaColumns;
 
+  if (Array.isArray(value.c) && Array.isArray(value.r)) return rowsToRecords(value.r, value.c);
   if (Array.isArray(value.records)) return toRecordArray(value.records);
   if (Array.isArray(value.rows)) return columns ? rowsToRecords(value.rows, columns) : toRecordArray(value.rows);
   if (Array.isArray(value.data)) {
