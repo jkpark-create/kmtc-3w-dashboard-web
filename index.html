@@ -1356,20 +1356,20 @@ function buildSummaryTable(months) {
   months.forEach(m => {
     const wk = DATA.wpm[m]||4;
     if (_ws && m === _curMonth) {
-      h += `<th colspan="11">${fmtMonth(m)} ${L('실적','Perf')} (${_selWeek})</th>`;
+      h += `<th colspan="13">${fmtMonth(m)} ${L('실적','Perf')} (${_selWeek})</th>`;
     } else if (_ws) {
-      h += `<th colspan="11">${fmtMonth(m)} ${L('실적','Perf')} (${L('주평균','Wk Avg')} x ${selectedWeekCount()})</th>`;
+      h += `<th colspan="13">${fmtMonth(m)} ${L('실적','Perf')} (${L('주평균','Wk Avg')} x ${selectedWeekCount()})</th>`;
     } else {
-      h += `<th colspan="11">${fmtMonth(m)} ${L('실적','Perf')} (${wk}${L('주','wk')})</th>`;
+      h += `<th colspan="13">${fmtMonth(m)} ${L('실적','Perf')} (${wk}${L('주','wk')})</th>`;
     }
   });
   h += '</tr><tr>';
   months.forEach(() => {
-    h += `<th colspan="5">${L('3주전 BKG (물량 및 실선적률)','WOS-3 BKG (Volume & LFT Rate)')}</th><th colspan="6">${L('3주전 BKG (구간별고수익)','WOS-3 BKG (Route High)')}</th>`;
+    h += `<th colspan="2">${L('화주수','Shippers')}</th><th colspan="5">${L('3주전 BKG (물량 및 실선적률)','WOS-3 BKG (Volume & LFT Rate)')}</th><th colspan="6">${L('3주전 BKG (구간별고수익)','WOS-3 BKG (Route High)')}</th>`;
   });
   h += '</tr><tr>';
   months.forEach(() => {
-    h += `<th>BKG</th><th>BSA</th><th>${L('비중','Ratio')}</th><th>${L('실선적','LFT')}</th><th>${L('실선적률','Rate')}</th><th>BKG</th><th>${L('비중','Ratio')}</th><th>${L('실선적','LFT')}</th><th>${L('실선적률','Rate')}</th><th>CM1</th><th>CM1/TEU</th>`;
+    h += `<th>${L('전체','Total')}</th><th>${L('3주전','WOS-3')}</th><th>BKG</th><th>BSA</th><th>${L('비중','Ratio')}</th><th>${L('실선적','LFT')}</th><th>${L('실선적률','Rate')}</th><th>BKG</th><th>${L('비중','Ratio')}</th><th>${L('실선적','LFT')}</th><th>${L('실선적률','Rate')}</th><th>CM1</th><th>CM1/TEU</th>`;
   });
   h += '</tr>';
 
@@ -1383,6 +1383,39 @@ function buildSummaryTable(months) {
     const d = filterMonthly(m);
     const v = byItem ? profitSum(d.filter(r=>r[vk]===byItem), key) : profitSum(d, key);
     return _ws ? v * weekScaleForMonth(m) : v;
+  }
+  const _shipperCountCache = new Map();
+  function _tblShipperCountMaps(m) {
+    if (_shipperCountCache.has(m)) return _shipperCountCache.get(m);
+    let d = applyGlobalFilter(DATA.shipper || [], true).filter(r=>r.YYYYMM===m);
+    if (_ws && m === _curMonth) {
+      const weekSet = new Set(selectedWeeks());
+      d = d.filter(r=>weekSet.has(r.week_start_date));
+    }
+    const maps = {total:{fst:new Set(), w3:new Set()}, byItem:{}};
+    d.forEach(r => {
+      const shpr = shipperKey(r);
+      if (!shpr) return;
+      const item = r[vk];
+      if (item && !maps.byItem[item]) maps.byItem[item] = {fst:new Set(), w3:new Set()};
+      const targets = item ? [maps.total, maps.byItem[item]] : [maps.total];
+      targets.forEach(t => {
+        if ((r.fst || 0) > 0) t.fst.add(shpr);
+        if ((r.w3_fst || 0) > 0) t.w3.add(shpr);
+      });
+    });
+    _shipperCountCache.set(m, maps);
+    return maps;
+  }
+  function _tblShipperCount(m, key, byItem) {
+    if (_ws && m !== _curMonth) return null;
+    const maps = _tblShipperCountMaps(m);
+    const bucket = byItem ? maps.byItem[byItem] : maps.total;
+    if (!bucket) return 0;
+    return key === 'w3_fst' ? bucket.w3.size : bucket.fst.size;
+  }
+  function _fmtShipperCount(v) {
+    return v == null ? '-' : fmt(v);
   }
   function _tblBSA(m, byItem) {
     if (_ws && m === _curMonth) {
@@ -1415,6 +1448,8 @@ function buildSummaryTable(months) {
   _totalRows.forEach(row => {
     h += `<tr class="${row.cls}"><td class="lbl">${row.label}</td>`;
     months.forEach(m => {
+      const fstShippers = row.mode === 'weekAvg' ? '-' : _fmtShipperCount(_tblShipperCount(m, 'fst'));
+      const w3Shippers = row.mode === 'weekAvg' ? '-' : _fmtShipperCount(_tblShipperCount(m, 'w3_fst'));
       const b = row.mode === 'selected' ? _tblData(m,'w3_fst') : _tblTotalData(m,'w3_fst',row.mode);
       const n = row.mode === 'selected' ? _tblData(m,'w3_norm_lst') : _tblTotalData(m,'w3_norm_lst',row.mode);
       const hb = row.mode === 'selected' ? _tblData(m,'w3_route_hi_fst') : _tblTotalData(m,'w3_route_hi_fst',row.mode);
@@ -1423,6 +1458,7 @@ function buildSummaryTable(months) {
       const cl = row.mode === 'selected' ? _tblData(m,'w3_route_hi_norm_lst') : _tblTotalData(m,'w3_route_hi_norm_lst',row.mode);
       const ct = cl>0?c1/cl:0;
       const bsa_v = row.mode === 'selected' ? _tblBSA(m) : _tblTotalBSA(m,row.mode);
+      h += `<td>${fstShippers}</td><td>${w3Shippers}</td>`;
       h += `<td>${fmt(Math.round(b))}</td><td>${fmt(Math.round(bsa_v))}</td><td>${pct(b,bsa_v)}</td><td>${fmt(Math.round(n))}</td><td>${pct(n,b)}</td>`;
       h += `<td>${fmt(Math.round(hb))}</td><td>${pct(hb,b)}</td><td>${fmt(Math.round(hn))}</td><td>${pct(hn,hb)}</td>`;
       h += `<td>${fmt(Math.round(c1))}</td><td>${fmt(Math.round(ct))}</td>`;
@@ -1433,10 +1469,13 @@ function buildSummaryTable(months) {
   items.forEach(it => {
     h += `<tr><td class="lbl">${it}</td>`;
     months.forEach(m => {
+      const fstShippers = _tblShipperCount(m, 'fst', it);
+      const w3Shippers = _tblShipperCount(m, 'w3_fst', it);
       const b=_tblData(m,'w3_fst',it), n=_tblData(m,'w3_norm_lst',it);
       const hb=_tblData(m,'w3_route_hi_fst',it), hn=_tblData(m,'w3_route_hi_norm_lst',it);
       const c1=_tblData(m,'w3_route_hi_cm1_norm',it), cl=_tblData(m,'w3_route_hi_norm_lst',it), ct=cl>0?c1/cl:0;
       const bsa_v=_tblBSA(m,it);
+      h += `<td>${_fmtShipperCount(fstShippers)}</td><td>${_fmtShipperCount(w3Shippers)}</td>`;
       h += `<td>${fmt(Math.round(b))}</td><td>${fmt(Math.round(bsa_v))}</td><td>${pct(b,bsa_v)}</td><td>${fmt(Math.round(n))}</td><td>${pct(n,b)}</td>`;
       h += `<td>${fmt(Math.round(hb))}</td><td>${pct(hb,b)}</td><td>${fmt(Math.round(hn))}</td><td>${pct(hn,hb)}</td>`;
       h += `<td>${fmt(Math.round(c1))}</td><td>${fmt(Math.round(ct))}</td>`;
