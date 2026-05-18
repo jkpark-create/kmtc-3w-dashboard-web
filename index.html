@@ -61,6 +61,12 @@ body{font-family:'Segoe UI',sans-serif;background:#f0f2f5;color:#202124}
 .chart-card{background:#fff;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.08);padding:16px;max-width:100%;min-width:0;overflow-x:auto}
 .chart-card h3{font-size:14px;font-weight:600;margin-bottom:8px}
 .chart-card .sub{font-size:11px;color:#5f6368}
+.summary-header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;flex-wrap:wrap}
+.summary-header h3{margin-bottom:0}
+.summary-tools{display:flex;align-items:center;gap:8px;min-width:220px}
+.summary-search{width:220px;max-width:100%;height:28px;border:1px solid #dadce0;border-radius:4px;padding:4px 8px;font-size:13px;outline:none}
+.summary-search:focus{border-color:#1a73e8;box-shadow:0 0 0 1px rgba(26,115,232,.18)}
+.summary-search-count{font-size:12px;color:#5f6368;white-space:nowrap}
 table.summary{width:100%;min-width:100%;table-layout:fixed;border-collapse:collapse;font-size:11px}
 table.summary th{background:#e8f0fe;padding:4px 6px;text-align:center;border:1px solid #dadce0;font-weight:600;white-space:nowrap}
 table.summary td{padding:4px 6px;text-align:center;border:1px solid #dadce0;white-space:nowrap}
@@ -73,6 +79,15 @@ table.summary.matrix-table{table-layout:auto;width:max-content;min-width:100%}
 table.summary.matrix-table th, table.summary.matrix-table td{min-width:64px}
 table.summary.matrix-table th.matrix-sales, table.summary.matrix-table td.matrix-sales{width:110px;min-width:110px;max-width:110px;white-space:normal !important;word-break:break-word;line-height:1.3}
 table.summary.matrix-table th.total-col, table.summary.matrix-table td.total-col{background:#f8fafd;font-weight:700}
+table.summary.monthly-summary-table{table-layout:auto;width:max-content;min-width:100%}
+table.summary.monthly-summary-table th, table.summary.monthly-summary-table td{min-width:58px}
+table.summary.monthly-summary-table th[rowspan], table.summary.monthly-summary-table td.lbl{min-width:50px;width:50px}
+table.summary.monthly-summary-table th.month-head{background:#d7e7ff;color:#174ea6}
+table.summary.monthly-summary-table th.month-subhead{background:#e4efff}
+table.summary.monthly-summary-table th.month-alt{background:#eef4ff}
+table.summary.monthly-summary-table td.month-alt{background:#fbfdff}
+table.summary.monthly-summary-table th.month-start, table.summary.monthly-summary-table td.month-start{border-left:2px solid #8ab4f8!important}
+table.summary.monthly-summary-table th.month-head.month-start{border-left-color:#1a73e8!important}
 table.summary tr.total{font-weight:700;background:#f0f4ff}
 table.summary tr.total-m{font-weight:700;background:#fff8d7}
 table.summary td.lbl{text-align:left;font-weight:600;background:#fafafa}
@@ -80,6 +95,8 @@ table.summary td.lbl{position:sticky;left:0;z-index:2;box-shadow:1px 0 0 #dadce0
 table.summary th[rowspan]{position:sticky;left:0;z-index:3;box-shadow:1px 0 0 #dadce0}
 table.summary tr.total td.lbl{background:#f0f4ff}
 table.summary tr.total-m td.lbl{background:#fff8d7}
+table.summary.monthly-summary-table tr.summary-data-row:hover td{background:#fff4ce}
+table.summary.monthly-summary-table tr.summary-data-row:hover td.lbl{background:#fff4ce}
 @media (max-width:900px){
   .content{padding:12px 10px}
   .chart-card{padding:12px}
@@ -1163,7 +1180,16 @@ function renderTab1() {
   </div>`;
 
   // Summary table
-  html += `<div class="chart-card"><h3>${vl} ${L('월간 실적','Monthly Performance')}</h3><div id="summaryTbl"></div></div>`;
+  html += `<div class="chart-card">
+    <div class="summary-header">
+      <h3>${vl} ${L('월간 실적','Monthly Performance')}</h3>
+      <div class="summary-tools">
+        <input id="summaryRowSearch" class="summary-search" type="search" placeholder="${vl} ${L('검색','Search')}" oninput="filterSummaryRows()">
+        <span id="summarySearchCount" class="summary-search-count"></span>
+      </div>
+    </div>
+    <div id="summaryTbl"></div>
+  </div>`;
 
   document.getElementById('tabContent').innerHTML = html;
 
@@ -1352,24 +1378,35 @@ function buildSummaryTable(months) {
   const _ws = hasWeekSelection();
   const _curMonth = gv('fMonth');
   const _selWeek = selectedWeekHeaderLabel();
-  let h = `<table class="summary"><tr><th rowspan="3">${vl}</th>`;
-  months.forEach(m => {
+  function _monthClass(mi, first, extra) {
+    const cls = [mi % 2 ? 'month-alt' : 'month-base'];
+    if (first) cls.push('month-start');
+    if (extra) cls.push(extra);
+    return cls.join(' ');
+  }
+  function _mcell(tag, mi, value, first, extra) {
+    return `<${tag} class="${_monthClass(mi, first, extra)}">${value}</${tag}>`;
+  }
+  let h = `<table class="summary monthly-summary-table"><tr><th rowspan="3">${vl}</th>`;
+  months.forEach((m, mi) => {
     const wk = DATA.wpm[m]||4;
     if (_ws && m === _curMonth) {
-      h += `<th colspan="13">${fmtMonth(m)} ${L('실적','Perf')} (${_selWeek})</th>`;
+      h += `<th class="${_monthClass(mi, true, 'month-head')}" colspan="13">${fmtMonth(m)} ${L('실적','Perf')} (${_selWeek})</th>`;
     } else if (_ws) {
-      h += `<th colspan="13">${fmtMonth(m)} ${L('실적','Perf')} (${L('주평균','Wk Avg')} x ${selectedWeekCount()})</th>`;
+      h += `<th class="${_monthClass(mi, true, 'month-head')}" colspan="13">${fmtMonth(m)} ${L('실적','Perf')} (${L('주평균','Wk Avg')} x ${selectedWeekCount()})</th>`;
     } else {
-      h += `<th colspan="13">${fmtMonth(m)} ${L('실적','Perf')} (${wk}${L('주','wk')})</th>`;
+      h += `<th class="${_monthClass(mi, true, 'month-head')}" colspan="13">${fmtMonth(m)} ${L('실적','Perf')} (${wk}${L('주','wk')})</th>`;
     }
   });
   h += '</tr><tr>';
-  months.forEach(() => {
-    h += `<th colspan="2">${L('화주수','Shippers')}</th><th colspan="5">${L('3주전 BKG (물량 및 실선적률)','WOS-3 BKG (Volume & LFT Rate)')}</th><th colspan="6">${L('3주전 BKG (구간별고수익)','WOS-3 BKG (Route High)')}</th>`;
+  months.forEach((m, mi) => {
+    const shipperHead = _ws && m !== _curMonth ? L('화주수(주평균)','Shippers(Wk Avg)') : L('화주수','Shippers');
+    h += `<th class="${_monthClass(mi, true, 'month-subhead')}" colspan="2">${shipperHead}</th><th class="${_monthClass(mi, false, 'month-subhead')}" colspan="5">${L('3주전 BKG (물량 및 실선적률)','WOS-3 BKG (Volume & LFT Rate)')}</th><th class="${_monthClass(mi, false, 'month-subhead')}" colspan="6">${L('3주전 BKG (구간별고수익)','WOS-3 BKG (Route High)')}</th>`;
   });
   h += '</tr><tr>';
-  months.forEach(() => {
-    h += `<th>${L('전체','Total')}</th><th>${L('3주전','WOS-3')}</th><th>BKG</th><th>BSA</th><th>${L('비중','Ratio')}</th><th>${L('실선적','LFT')}</th><th>${L('실선적률','Rate')}</th><th>BKG</th><th>${L('비중','Ratio')}</th><th>${L('실선적','LFT')}</th><th>${L('실선적률','Rate')}</th><th>CM1</th><th>CM1/TEU</th>`;
+  const _leafHeads = [L('전체','Total'), L('3주전','WOS-3'), 'BKG', 'BSA', L('비중','Ratio'), L('실선적','LFT'), L('실선적률','Rate'), 'BKG', L('비중','Ratio'), L('실선적','LFT'), L('실선적률','Rate'), 'CM1', 'CM1/TEU'];
+  months.forEach((m, mi) => {
+    _leafHeads.forEach((txt, ci) => { h += _mcell('th', mi, txt, ci === 0); });
   });
   h += '</tr>';
 
@@ -1385,6 +1422,23 @@ function buildSummaryTable(months) {
     return _ws ? v * weekScaleForMonth(m) : v;
   }
   const _shipperCountCache = new Map();
+  function _newShipperBucket() {
+    return {fst:new Set(), w3:new Set(), fstWeeks:{}, w3Weeks:{}};
+  }
+  function _addWeeklyShipper(bucket, week, key, shpr) {
+    const mapKey = key === 'w3_fst' ? 'w3Weeks' : 'fstWeeks';
+    if (!week) return;
+    if (!bucket[mapKey][week]) bucket[mapKey][week] = new Set();
+    bucket[mapKey][week].add(shpr);
+  }
+  function _avgWeeklyShippers(bucket, key, m) {
+    const weekMap = key === 'w3_fst' ? bucket.w3Weeks : bucket.fstWeeks;
+    const weeks = monthWeeks(m);
+    const keys = weeks.length ? weeks : Object.keys(weekMap);
+    const denom = keys.length || DATA.wpm[m] || 4;
+    if (!denom) return 0;
+    return keys.reduce((s,w) => s + (weekMap[w] ? weekMap[w].size : 0), 0) / denom;
+  }
   function _tblShipperCountMaps(m) {
     if (_shipperCountCache.has(m)) return _shipperCountCache.get(m);
     let d = applyGlobalFilter(DATA.shipper || [], true).filter(r=>r.YYYYMM===m);
@@ -1392,30 +1446,37 @@ function buildSummaryTable(months) {
       const weekSet = new Set(selectedWeeks());
       d = d.filter(r=>weekSet.has(r.week_start_date));
     }
-    const maps = {total:{fst:new Set(), w3:new Set()}, byItem:{}};
+    const maps = {total:_newShipperBucket(), byItem:{}};
     d.forEach(r => {
       const shpr = shipperKey(r);
       if (!shpr) return;
       const item = r[vk];
-      if (item && !maps.byItem[item]) maps.byItem[item] = {fst:new Set(), w3:new Set()};
+      if (item && !maps.byItem[item]) maps.byItem[item] = _newShipperBucket();
       const targets = item ? [maps.total, maps.byItem[item]] : [maps.total];
+      const week = r.week_start_date;
       targets.forEach(t => {
-        if ((r.fst || 0) > 0) t.fst.add(shpr);
-        if ((r.w3_fst || 0) > 0) t.w3.add(shpr);
+        if ((r.fst || 0) > 0) {
+          t.fst.add(shpr);
+          _addWeeklyShipper(t, week, 'fst', shpr);
+        }
+        if ((r.w3_fst || 0) > 0) {
+          t.w3.add(shpr);
+          _addWeeklyShipper(t, week, 'w3_fst', shpr);
+        }
       });
     });
     _shipperCountCache.set(m, maps);
     return maps;
   }
   function _tblShipperCount(m, key, byItem) {
-    if (_ws && m !== _curMonth) return null;
     const maps = _tblShipperCountMaps(m);
     const bucket = byItem ? maps.byItem[byItem] : maps.total;
     if (!bucket) return 0;
+    if (_ws && m !== _curMonth) return _avgWeeklyShippers(bucket, key, m);
     return key === 'w3_fst' ? bucket.w3.size : bucket.fst.size;
   }
   function _fmtShipperCount(v) {
-    return v == null ? '-' : fmt(v);
+    return v == null ? '-' : fmt(Math.round(v));
   }
   function _tblBSA(m, byItem) {
     if (_ws && m === _curMonth) {
@@ -1447,7 +1508,7 @@ function buildSummaryTable(months) {
       ];
   _totalRows.forEach(row => {
     h += `<tr class="${row.cls}"><td class="lbl">${row.label}</td>`;
-    months.forEach(m => {
+    months.forEach((m, mi) => {
       const fstShippers = row.mode === 'weekAvg' ? '-' : _fmtShipperCount(_tblShipperCount(m, 'fst'));
       const w3Shippers = row.mode === 'weekAvg' ? '-' : _fmtShipperCount(_tblShipperCount(m, 'w3_fst'));
       const b = row.mode === 'selected' ? _tblData(m,'w3_fst') : _tblTotalData(m,'w3_fst',row.mode);
@@ -1458,33 +1519,51 @@ function buildSummaryTable(months) {
       const cl = row.mode === 'selected' ? _tblData(m,'w3_route_hi_norm_lst') : _tblTotalData(m,'w3_route_hi_norm_lst',row.mode);
       const ct = cl>0?c1/cl:0;
       const bsa_v = row.mode === 'selected' ? _tblBSA(m) : _tblTotalBSA(m,row.mode);
-      h += `<td>${fstShippers}</td><td>${w3Shippers}</td>`;
-      h += `<td>${fmt(Math.round(b))}</td><td>${fmt(Math.round(bsa_v))}</td><td>${pct(b,bsa_v)}</td><td>${fmt(Math.round(n))}</td><td>${pct(n,b)}</td>`;
-      h += `<td>${fmt(Math.round(hb))}</td><td>${pct(hb,b)}</td><td>${fmt(Math.round(hn))}</td><td>${pct(hn,hb)}</td>`;
-      h += `<td>${fmt(Math.round(c1))}</td><td>${fmt(Math.round(ct))}</td>`;
+      h += _mcell('td', mi, fstShippers, true) + _mcell('td', mi, w3Shippers);
+      h += _mcell('td', mi, fmt(Math.round(b))) + _mcell('td', mi, fmt(Math.round(bsa_v))) + _mcell('td', mi, pct(b,bsa_v)) + _mcell('td', mi, fmt(Math.round(n))) + _mcell('td', mi, pct(n,b));
+      h += _mcell('td', mi, fmt(Math.round(hb))) + _mcell('td', mi, pct(hb,b)) + _mcell('td', mi, fmt(Math.round(hn))) + _mcell('td', mi, pct(hn,hb));
+      h += _mcell('td', mi, fmt(Math.round(c1))) + _mcell('td', mi, fmt(Math.round(ct)));
     });
     h += '</tr>';
   });
 
   items.forEach(it => {
-    h += `<tr><td class="lbl">${it}</td>`;
-    months.forEach(m => {
+    h += `<tr class="summary-data-row"><td class="lbl">${it}</td>`;
+    months.forEach((m, mi) => {
       const fstShippers = _tblShipperCount(m, 'fst', it);
       const w3Shippers = _tblShipperCount(m, 'w3_fst', it);
       const b=_tblData(m,'w3_fst',it), n=_tblData(m,'w3_norm_lst',it);
       const hb=_tblData(m,'w3_route_hi_fst',it), hn=_tblData(m,'w3_route_hi_norm_lst',it);
       const c1=_tblData(m,'w3_route_hi_cm1_norm',it), cl=_tblData(m,'w3_route_hi_norm_lst',it), ct=cl>0?c1/cl:0;
       const bsa_v=_tblBSA(m,it);
-      h += `<td>${_fmtShipperCount(fstShippers)}</td><td>${_fmtShipperCount(w3Shippers)}</td>`;
-      h += `<td>${fmt(Math.round(b))}</td><td>${fmt(Math.round(bsa_v))}</td><td>${pct(b,bsa_v)}</td><td>${fmt(Math.round(n))}</td><td>${pct(n,b)}</td>`;
-      h += `<td>${fmt(Math.round(hb))}</td><td>${pct(hb,b)}</td><td>${fmt(Math.round(hn))}</td><td>${pct(hn,hb)}</td>`;
-      h += `<td>${fmt(Math.round(c1))}</td><td>${fmt(Math.round(ct))}</td>`;
+      h += _mcell('td', mi, _fmtShipperCount(fstShippers), true) + _mcell('td', mi, _fmtShipperCount(w3Shippers));
+      h += _mcell('td', mi, fmt(Math.round(b))) + _mcell('td', mi, fmt(Math.round(bsa_v))) + _mcell('td', mi, pct(b,bsa_v)) + _mcell('td', mi, fmt(Math.round(n))) + _mcell('td', mi, pct(n,b));
+      h += _mcell('td', mi, fmt(Math.round(hb))) + _mcell('td', mi, pct(hb,b)) + _mcell('td', mi, fmt(Math.round(hn))) + _mcell('td', mi, pct(hn,hb));
+      h += _mcell('td', mi, fmt(Math.round(c1))) + _mcell('td', mi, fmt(Math.round(ct)));
     });
     h += '</tr>';
   });
 
   h += '</table>';
   document.getElementById('summaryTbl').innerHTML = h;
+  filterSummaryRows();
+}
+
+function filterSummaryRows() {
+  const input = document.getElementById('summaryRowSearch');
+  const table = document.querySelector('#summaryTbl table.monthly-summary-table');
+  const count = document.getElementById('summarySearchCount');
+  if (!input || !table) return;
+  const q = input.value.trim().toLowerCase();
+  const rows = [...table.querySelectorAll('tr.summary-data-row')];
+  let shown = 0;
+  rows.forEach(row => {
+    const label = (row.querySelector('td.lbl')?.textContent || '').toLowerCase();
+    const hit = !q || label.includes(q);
+    row.style.display = hit ? '' : 'none';
+    if (hit) shown += 1;
+  });
+  if (count) count.textContent = q ? `${shown}/${rows.length}` : `${rows.length}`;
 }
 
 // ═══════════════════════════════════════════════
