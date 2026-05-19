@@ -313,7 +313,9 @@ function showError(msg) {
 function readUrlParams() {
   const p = new URLSearchParams(location.search);
   const out = {};
-  for (const k of ['origin', 'sales', 'quarter', 'month', 'grade', 'profit', 'wos', 'view']) {
+  // Include both legacy single-value keys and new multi-select keys so that
+  // ?country=MY&origins=PEN,PGU and ?origin=CN_SHA both work.
+  for (const k of ['origin', 'origins', 'country', 'countries', 'sales', 'quarter', 'month', 'grade', 'profit', 'wos', 'view']) {
     const v = p.get(k);
     if (v) out[k] = v;
   }
@@ -952,10 +954,11 @@ function renderShipperTable(origin, sales, shippers, bookings) {
   };
   const lstRate = safeRatio(totals.w3lst, totals.w3fst);
   const hiShare = safeRatio(totals.w3hi, totals.w3fst);
-  const scopeText = sales ? `${escapeHtml(origin)} · ${escapeHtml(sales)}` : escapeHtml(origin);
 
+  // The breadcrumbs above already display origin + salesperson scope, so the
+  // panel title only needs the month range to avoid the long comma-separated repeat.
   let h = `<div class="panel-header">
-    <div class="panel-title">${cols.shipper} — ${scopeText} (${escapeHtml(monthLabel(monthsForFilter()))})</div>
+    <div class="panel-title">${cols.shipper} (${escapeHtml(monthLabel(monthsForFilter()))})</div>
     <div class="panel-actions">${cols.shipper} ${shippers.length} · BKG ${fmtNum(totals.bkg)} · ${cols.bkgUnique} ${fmtNum(totals.bkgU)}</div>
   </div>
   <table class="dt"><thead><tr>
