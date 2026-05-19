@@ -36,9 +36,11 @@ const STATE = {
   expandedShipperKey: null,
   filters: {
     quarter: 'q1',
-    countries: [],   // [] = no country filter (all whitelist countries)
-    origins: [],     // [] = no port filter (all whitelist ports, narrowed by countries)
-    sales: [],       // [] = all salespeople in current origin scope
+    countries: [],     // [] = no country filter (all whitelist countries)
+    origins: [],       // [] = no port filter (all whitelist ports, narrowed by countries)
+    destCountries: [], // [] = no dest country filter
+    destPorts: [],     // [] = no dest port filter
+    sales: [],         // [] = all salespeople in current origin scope
     month: 'ALL',
     grade: 'ALL',
     profit: 'ALL',
@@ -71,7 +73,9 @@ const I18N = {
     backDash: '← -3W Booking Dashboard',
     workbook: 'Target Workbook ↗',
     guide: '📖 가이드',
-    fQuarter: '분기', fCountry: '국가', fOrigin: '선적포트', fSales: '영업사원', fMonth: '월(상세)',
+    fQuarter: '분기', fCountry: '선적국가', fOrigin: '선적포트',
+    fDestCountry: '도착국가', fDestPort: '도착포트',
+    fSales: '영업사원', fMonth: '월(상세)',
     fGrade: '등급', fProfit: '고수익', fWos: 'WOS',
     btnReset: '필터 초기화',
     all: '전체', msAll: '전체', msNone: '해제', msSearch: '검색...',
@@ -126,7 +130,9 @@ const I18N = {
     backDash: '← -3W Booking Dashboard',
     workbook: 'Target Workbook ↗',
     guide: '📖 Guide',
-    fQuarter: 'Quarter', fCountry: 'Country', fOrigin: 'Origin port', fSales: 'Salesperson', fMonth: 'Month',
+    fQuarter: 'Quarter', fCountry: 'Origin country', fOrigin: 'Origin port',
+    fDestCountry: 'Dest country', fDestPort: 'Dest port',
+    fSales: 'Salesperson', fMonth: 'Month',
     fGrade: 'Grade', fProfit: 'Hi-Profit', fWos: 'WOS',
     btnReset: 'Reset filters',
     all: 'All', msAll: 'Select all', msNone: 'Clear', msSearch: 'Search...',
@@ -313,9 +319,8 @@ function showError(msg) {
 function readUrlParams() {
   const p = new URLSearchParams(location.search);
   const out = {};
-  // Include both legacy single-value keys and new multi-select keys so that
-  // ?country=MY&origins=PEN,PGU and ?origin=CN_SHA both work.
-  for (const k of ['origin', 'origins', 'country', 'countries', 'sales', 'quarter', 'month', 'grade', 'profit', 'wos', 'view']) {
+  // Include legacy single-value keys, multi-select keys, and the destination filters.
+  for (const k of ['origin', 'origins', 'country', 'countries', 'dest_country', 'dest_countries', 'dest_port', 'dest_ports', 'sales', 'quarter', 'month', 'grade', 'profit', 'wos', 'view']) {
     const v = p.get(k);
     if (v) out[k] = v;
   }
@@ -349,6 +354,10 @@ function applyInitialParams() {
   }
   const salesList = (params.sales || '').split(',').map(s => s.trim()).filter(Boolean);
   if (salesList.length) STATE.filters.sales = salesList;
+  const destCountryList = (params.dest_country || params.dest_countries || '').split(',').map(s => s.trim()).filter(Boolean);
+  if (destCountryList.length) STATE.filters.destCountries = destCountryList;
+  const destPortList = (params.dest_port || params.dest_ports || '').split(',').map(s => s.trim()).filter(Boolean);
+  if (destPortList.length) STATE.filters.destPorts = destPortList;
   if (params.view && ['summary', 'drill', 'pivot'].includes(params.view)) STATE.view = params.view;
   document.getElementById('fQuarter').value = STATE.filters.quarter;
   document.getElementById('fMonth').value = STATE.filters.month;
@@ -359,6 +368,9 @@ function applyInitialParams() {
   if (STATE.multiSelect.msCountry) STATE.multiSelect.msCountry.setSelected(STATE.filters.countries);
   refreshPortOptions();
   if (STATE.multiSelect.msPort) STATE.multiSelect.msPort.setSelected(STATE.filters.origins);
+  if (STATE.multiSelect.msDestCountry) STATE.multiSelect.msDestCountry.setSelected(STATE.filters.destCountries);
+  refreshDestPortOptions();
+  if (STATE.multiSelect.msDestPort) STATE.multiSelect.msDestPort.setSelected(STATE.filters.destPorts);
   refreshSalesOptions();
   if (STATE.multiSelect.msSales) STATE.multiSelect.msSales.setSelected(STATE.filters.sales);
   $$('.view-tabs .vtab').forEach(el => el.classList.toggle('active', el.dataset.view === STATE.view));
@@ -527,6 +539,52 @@ function setupFilters() {
   refreshPortOptions();
   refreshSalesOptions();
   refreshMonthOptions();
+  setupDestFilters();
+}
+
+function setupDestFilters() {
+  const dests = STATE.manifest.dest_countries || [];
+  const countryOpts = dests.map(c => ({ value: c, label: c }));
+  buildMultiSelect('msDestCountry', {
+    options: countryOpts,
+    selected: STATE.filters.destCountries,
+    onChange: vals => {
+      STATE.filters.destCountries = vals;
+      refreshDestPortOptions();
+      render();
+    },
+  });
+  refreshDestPortOptions();
+}
+
+function refreshDestPortOptions() {
+  const byCountry = STATE.manifest.dest_ports_by_country || {};
+  let activeCountries = STATE.filters.destCountries;
+  if (!activeCountries.length) activeCountries = Object.keys(byCountry);
+  const portOpts = [];
+  activeCountries.sort().forEach(c => {
+    (byCountry[c] || []).forEach(p => {
+      portOpts.push({ value: `${c}/${p}`, label: p, group: c, groupLabel: c });
+    });
+  });
+  const existing = STATE.multiSelect.msDestPort;
+  if (existing) {
+    const desired = STATE.filters.destPorts || [];
+    const validSet = new Set(portOpts.map(o => o.value));
+    const preserved = desired.filter(v => validSet.has(v));
+    existing.setOptions(portOpts);
+    existing.setSelected(preserved);
+    STATE.filters.destPorts = preserved;
+  } else {
+    buildMultiSelect('msDestPort', {
+      options: portOpts,
+      selected: STATE.filters.destPorts,
+      onChange: vals => {
+        STATE.filters.destPorts = vals;
+        render();
+      },
+    });
+  }
 }
 
 function refreshPortOptions() {
@@ -613,7 +671,7 @@ function setupListeners() {
     });
   });
   document.getElementById('btnReset').addEventListener('click', () => {
-    STATE.filters = { quarter: 'q1', countries: [], origins: [], sales: [], month: 'ALL', grade: 'ALL', profit: 'ALL', wos: 'W3' };
+    STATE.filters = { quarter: 'q1', countries: [], origins: [], destCountries: [], destPorts: [], sales: [], month: 'ALL', grade: 'ALL', profit: 'ALL', wos: 'W3' };
     STATE.expandedKey = null;
     STATE.expandedShipperKey = null;
     document.getElementById('fQuarter').value = 'q1';
@@ -624,6 +682,9 @@ function setupListeners() {
     if (STATE.multiSelect.msCountry) STATE.multiSelect.msCountry.setSelected([]);
     refreshPortOptions();
     if (STATE.multiSelect.msPort) STATE.multiSelect.msPort.setSelected([]);
+    if (STATE.multiSelect.msDestCountry) STATE.multiSelect.msDestCountry.setSelected([]);
+    refreshDestPortOptions();
+    if (STATE.multiSelect.msDestPort) STATE.multiSelect.msDestPort.setSelected([]);
     refreshSalesOptions();
     if (STATE.multiSelect.msSales) STATE.multiSelect.msSales.setSelected([]);
     refreshMonthOptions();
@@ -877,7 +938,9 @@ function mergeChunks(chunks) {
 }
 
 function applyBookingFilters(bookings) {
-  const { grade, profit, wos } = STATE.filters;
+  const { grade, profit, wos, destCountries, destPorts } = STATE.filters;
+  const destCountrySet = destCountries.length ? new Set(destCountries) : null;
+  const destPortSet = destPorts.length ? new Set(destPorts) : null;
   return bookings.filter(b => {
     if (wos === 'W3' && !b.is_w3) return false;
     if (profit === 'HI' && !b.is_hi) return false;
@@ -888,6 +951,8 @@ function applyBookingFilters(bookings) {
       if (grade === 'CD' && !(g === 'C' || g === 'D')) return false;
       if (['A', 'B', 'C', 'D'].includes(grade) && g !== grade) return false;
     }
+    if (destCountrySet && !destCountrySet.has(b.pod_country)) return false;
+    if (destPortSet && !destPortSet.has(`${b.pod_country}/${b.pod}`)) return false;
     return true;
   });
 }
@@ -1043,6 +1108,8 @@ function describeActiveFilters() {
   if (f.month !== 'ALL') parts.push(`${tr('fMonth')} ${formatMonth(f.month)}`);
   if (f.countries.length) parts.push(`${tr('fCountry')} ${f.countries.join(',')}`);
   if (f.origins.length) parts.push(`${tr('fOrigin')} ${f.origins.join(',')}`);
+  if (f.destCountries.length) parts.push(`${tr('fDestCountry')} ${f.destCountries.join(',')}`);
+  if (f.destPorts.length) parts.push(`${tr('fDestPort')} ${f.destPorts.join(',')}`);
   if (f.sales.length) parts.push(`${tr('fSales')} ${f.sales.join(',')}`);
   if (f.grade !== 'ALL') parts.push(`${tr('fGrade')} ${f.grade}`);
   if (f.profit !== 'ALL') parts.push(f.profit === 'HI' ? tr('profitHi') : tr('profitNotHi'));

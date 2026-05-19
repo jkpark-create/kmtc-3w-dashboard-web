@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sales Target &amp; Progress — 사용 가이드</title>
+<title>Sales Target &amp; Progress — User Guide</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:#f8f9fa;color:#202124;line-height:1.7}
@@ -11,6 +11,7 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:#f8f9fa;color:
 .header h1{font-size:18px;font-weight:700}
 .header a{color:rgba(255,255,255,.85);text-decoration:none;font-size:13px;margin-left:14px}
 .header a:hover{color:#fff}
+.header .langBtn{background:rgba(255,255,255,.25);color:#fff;border:1px solid rgba(255,255,255,.5);padding:4px 12px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600;margin-right:10px}
 .container{max-width:980px;margin:0 auto;padding:24px}
 h2{color:#1a73e8;font-size:22px;margin:36px 0 12px;padding-bottom:8px;border-bottom:2px solid #e8f0fe}
 h3{color:#202124;font-size:17px;margin:22px 0 8px}
@@ -32,436 +33,529 @@ li{margin:4px 0}
 .shot img{display:block;width:100%;height:auto;border-bottom:1px solid #dadce0}
 .shot .cap{padding:8px 14px;font-size:12.5px;color:#5f6368;background:#fafbfc}
 .shot .cap b{color:#1a73e8}
-.toc{background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.08);padding:18px 22px;margin:14px 0 26px}
-.toc h4{margin-top:0;color:#1a73e8}
-.toc a{color:#1a73e8;text-decoration:none}
-.toc a:hover{text-decoration:underline}
-.toc ul{list-style:none;margin:0;padding:0;columns:2;column-gap:22px}
-.toc li{padding:3px 0}
-.toc li::before{content:'›  ';color:#1a73e8;font-weight:600}
 .tag{display:inline-block;padding:1px 8px;border-radius:4px;font-size:11px;font-weight:600}
 .tag-ok{background:#e6f4ea;color:#137333}
 .tag-warn{background:#fef7e0;color:#b06000}
 .tag-neg{background:#fce8e6;color:#a50e0e}
 .tag-info{background:#e8f0fe;color:#1967d2}
-.kbd{display:inline-block;background:#fff;border:1px solid #dadce0;border-bottom-width:2px;border-radius:3px;padding:1px 7px;font-family:'Consolas',monospace;font-size:12px;color:#202124}
 hr{border:none;border-top:1px solid #e0e2e5;margin:30px 0}
+
+/* Side TOC (right sidebar) — mirrors the main dashboard guide layout */
+.side-toc{position:fixed;top:62px;right:16px;width:230px;max-height:calc(100vh - 80px);overflow-y:auto;background:#fff;border-radius:8px;box-shadow:0 1px 6px rgba(0,0,0,.12);padding:14px 16px;font-size:12.5px;z-index:50}
+.side-toc h4{font-size:11px;color:#5f6368;text-transform:uppercase;letter-spacing:.5px;margin:0 0 10px;font-weight:700}
+.side-toc ul{list-style:none;margin:0;padding:0}
+.side-toc li{padding:0;margin:0}
+.side-toc a{display:block;padding:4px 0 4px 10px;color:#5f6368;text-decoration:none;border-left:2px solid transparent;transition:all .15s}
+.side-toc a:hover{color:#1a73e8}
+.side-toc a.active{color:#1a73e8;border-left-color:#1a73e8;font-weight:600}
+@media(max-width:1199px){.side-toc{display:none}}
+@media(min-width:1200px){.container{max-width:880px;margin-right:280px}}
+
 .kbd-list{list-style:none;margin:8px 0}
-.kbd-list li{padding:5px 0;display:flex;align-items:center;gap:10px}
 </style>
 </head>
 <body>
 <div class="header">
-  <h1>📖 Sales Target &amp; Progress — 사용 가이드</h1>
   <div>
-    <a href="./">← 화면으로</a>
-    <a href="../guide.html">전체 대시보드 가이드</a>
-    <a href="../index.html">메인 대시보드</a>
+    <h1 class="ko">📖 Sales Target &amp; Progress — 사용 가이드</h1>
+    <h1 class="en" style="display:none">📖 Sales Target &amp; Progress — User Guide</h1>
+  </div>
+  <div>
+    <button class="langBtn" id="langBtn" onclick="toggleLang()" type="button">EN</button>
+    <a href="./" class="ko">← 화면으로</a><a href="./" class="en" style="display:none">← Back to screen</a>
+    <a href="../guide.html" class="ko">전체 대시보드 가이드</a><a href="../guide.html" class="en" style="display:none">Full dashboard guide</a>
+    <a href="../index.html" class="ko">메인 대시보드</a><a href="../index.html" class="en" style="display:none">Main dashboard</a>
   </div>
 </div>
 
-<div class="container">
-
-<div class="toc">
-  <h4>목차</h4>
-  <ul>
+<nav class="side-toc" id="sideToc">
+  <h4 class="ko">목차</h4><h4 class="en" style="display:none">Contents</h4>
+  <ul class="ko">
     <li><a href="#intro">1. 화면 개요</a></li>
     <li><a href="#access">2. 접근 / 진입 경로</a></li>
     <li><a href="#header">3. 헤더 / 언어 전환</a></li>
     <li><a href="#filters">4. 필터 바 사용법</a></li>
-    <li><a href="#multi">5. 국가 / 포트 / 영업사원 다중선택</a></li>
-    <li><a href="#cards">6. 상단 KPI 카드</a></li>
-    <li><a href="#view1">7. ① Target 요약</a></li>
-    <li><a href="#view2">8. ② 영업사원 → 화주 → BKG 상세</a></li>
-    <li><a href="#bkg-panel">9. 전체 매칭 BKG_NO 보기</a></li>
-    <li><a href="#view3">10. ③ 조합 Pivot</a></li>
-    <li><a href="#deep-link">11. 메인 대시보드와의 연동 (Deep link)</a></li>
-    <li><a href="#data-flow">12. 데이터 흐름 / 갱신 주기</a></li>
-    <li><a href="#targets">13. 목표 입력 (Eternal Workbook)</a></li>
-    <li><a href="#faq">14. 자주 묻는 질문</a></li>
+    <li><a href="#multi">5. 다중선택 위젯</a></li>
+    <li><a href="#dest">6. 도착국가 / 도착포트</a></li>
+    <li><a href="#cards">7. 상단 KPI 카드</a></li>
+    <li><a href="#view1">8. ① Target 요약</a></li>
+    <li><a href="#view2">9. ② 영업사원→화주→BKG</a></li>
+    <li><a href="#bkg-panel">10. 전체 매칭 BKG_NO</a></li>
+    <li><a href="#view3">11. ③ 조합 Pivot</a></li>
+    <li><a href="#deep-link">12. Deep link</a></li>
+    <li><a href="#data-flow">13. 데이터 흐름</a></li>
+    <li><a href="#targets">14. 목표 입력 워크북</a></li>
+    <li><a href="#faq">15. 자주 묻는 질문</a></li>
   </ul>
-</div>
+  <ul class="en" style="display:none">
+    <li><a href="#intro">1. Overview</a></li>
+    <li><a href="#access">2. How to open</a></li>
+    <li><a href="#header">3. Header / language</a></li>
+    <li><a href="#filters">4. Filter bar</a></li>
+    <li><a href="#multi">5. Multi-select</a></li>
+    <li><a href="#dest">6. Dest country / port</a></li>
+    <li><a href="#cards">7. KPI cards</a></li>
+    <li><a href="#view1">8. ① Target summary</a></li>
+    <li><a href="#view2">9. ② Drill</a></li>
+    <li><a href="#bkg-panel">10. All matching BKG_NO</a></li>
+    <li><a href="#view3">11. ③ Pivot</a></li>
+    <li><a href="#deep-link">12. Deep link</a></li>
+    <li><a href="#data-flow">13. Data flow</a></li>
+    <li><a href="#targets">14. Target input workbook</a></li>
+    <li><a href="#faq">15. FAQ</a></li>
+  </ul>
+</nav>
 
-<div class="card">
-<h2 id="intro">1. 화면 개요</h2>
+<script>
+let _lang = localStorage.getItem('lang') || 'ko';
+function toggleLang() {
+  _lang = _lang === 'ko' ? 'en' : 'ko';
+  localStorage.setItem('lang', _lang);
+  applyLang();
+}
+function applyLang() {
+  document.querySelectorAll('.ko').forEach(el => el.style.display = _lang === 'ko' ? '' : 'none');
+  document.querySelectorAll('.en').forEach(el => el.style.display = _lang === 'en' ? '' : 'none');
+  document.getElementById('langBtn').textContent = _lang === 'ko' ? 'EN' : 'KO';
+}
+document.addEventListener('DOMContentLoaded', () => {
+  applyLang();
+  // Smooth scroll for TOC links
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+      const id = a.getAttribute('href').slice(1);
+      const el = document.getElementById(id);
+      if (!el) return;
+      e.preventDefault();
+      const y = el.getBoundingClientRect().top + window.pageYOffset - 70;
+      window.scrollTo({ top: y, behavior: 'smooth' });
+    });
+  });
+});
+</script>
+
+<div class="container">
+
+<!-- 1. INTRO -->
+<h2 id="intro" class="ko">1. 화면 개요</h2><h2 id="intro" class="en" style="display:none">1. Overview</h2>
+<div class="card ko">
 <p>Sales Target &amp; Progress 화면은 영업사원들이 본인의 목표 대비 실적을 <b>구간별(선적지) → 영업사원 → 화주 → 부킹번호(BKG_NO)</b> 까지 4단계로 디테일하게 확인할 수 있는 전용 화면입니다. -3W Booking Dashboard와 같은 데이터(매일 갱신되는 부킹 스냅샷)를 사용하지만, 목표(Target) 시트의 수치와 결합하여 <b>Target / Performance / GAP</b> 관점으로 보여줍니다.</p>
-
 <div class="shot">
-  <img src="guide-img/01_landing.png" alt="첫 진입 화면">
-  <div class="cap"><b>화면 1.</b> 첫 진입 화면 — 상단 헤더, 필터 바, 4개의 KPI 카드, 그리고 ① Target 요약 표.</div>
+  <img src="guide-img/01_landing.png" alt="landing">
+  <div class="cap"><b>화면 1.</b> 첫 진입 — 상단 헤더, 필터 바, 4개 KPI 카드, ① Target 요약 표.</div>
 </div>
-
 <h3>3가지 view 모드</h3>
 <table>
-  <tr><th width="22%">View</th><th>용도</th><th>입력</th></tr>
-  <tr><td><b>① Target 요약</b></td><td>선적지 × 영업사원 단위로 3개 KPI의 Target / Perform / GAP을 한 화면에 본다</td><td>아무것도 선택 안 해도 됨</td></tr>
-  <tr><td><b>② Drill (드릴다운)</b></td><td>선택한 영업사원의 화주별 실적과 그 안의 BKG_NO 리스트까지 확인</td><td>국가 또는 포트 + 영업사원 1명 이상 선택</td></tr>
-  <tr><td><b>③ 조합 Pivot</b></td><td>행 × 열 × 측정값을 자유 조합. 셀 클릭 시 매칭 BKG_NO 리스트 표시</td><td>가능한 좁히는 게 응답 빠름</td></tr>
+<tr><th width="22%">View</th><th>용도</th></tr>
+<tr><td><b>① Target 요약</b></td><td>선적지 × 영업사원 매트릭스로 3개 KPI의 Target / Perform / GAP을 본다</td></tr>
+<tr><td><b>② Drill</b></td><td>선택한 영업사원의 화주별 실적과 그 안의 BKG_NO 리스트까지 확인</td></tr>
+<tr><td><b>③ 조합 Pivot</b></td><td>행 × 열 × 측정값 자유 조합. 셀 클릭 시 매칭 BKG_NO 리스트 표시</td></tr>
 </table>
-
 </div>
-
-<div class="card">
-<h2 id="access">2. 접근 / 진입 경로</h2>
-<ul>
-  <li>메인 대시보드 헤더의 <span class="tag tag-info">🎯 Sales Target</span> 버튼 클릭 → 새 탭에서 열림</li>
-  <li>URL: <code>https://jkpark-create.github.io/kmtc-3w-dashboard-web/sales-target/</code></li>
-  <li>메인 대시보드의 <b>② 부킹 트렌드 → 영업사원별</b> 표에서 우측 "→" 링크 클릭 → 해당 영업사원으로 자동 드릴</li>
-</ul>
+<div class="card en" style="display:none">
+<p>The Sales Target &amp; Progress screen lets each salesperson drill into their <b>target-vs-actual performance</b> at four levels — <b>Origin → Salesperson → Shipper → BKG_NO</b>. It uses the same daily booking snapshot as the -3W Booking Dashboard, but joins it with the Target sheet to expose <b>Target / Performance / GAP</b>.</p>
+<div class="shot">
+  <img src="guide-img/01_landing.png" alt="landing">
+  <div class="cap"><b>Fig. 1.</b> Landing — header, filter bar, four KPI cards, ① Target summary table.</div>
 </div>
-
-<div class="card">
-<h2 id="header">3. 헤더 / 언어 전환</h2>
-<p>상단 헤더는 좌측에 제목과 데이터 기준일, 우측에 다음 버튼이 있습니다.</p>
-<ul>
-  <li><b>EN / KO 토글</b> — 화면 전체 언어 전환. 선택 상태는 브라우저에 저장되어 다음 방문 시에도 유지.</li>
-  <li><b>← -3W Booking Dashboard</b> — 메인 대시보드로 돌아감</li>
-  <li><b>Target Workbook ↗</b> — 데이터의 원천이 되는 Google Sheets 워크북 새 탭으로 열기</li>
-  <li><b>📖 가이드</b> — 이 페이지</li>
-</ul>
-</div>
-
-<div class="card">
-<h2 id="filters">4. 필터 바 사용법</h2>
-<p>필터 바는 7개의 그룹으로 구성됩니다. 모두 즉시 반영되며, 변경 시 화면이 자동 갱신됩니다.</p>
+<h3>Three views</h3>
 <table>
-<tr><th width="14%">필터</th><th>역할</th><th>기본값</th></tr>
-<tr><td><b>분기</b></td><td>1Q 2026 (Target vs Perform) 또는 2Q 2026 (Target vs Progress) 선택</td><td>1Q 2026</td></tr>
-<tr><td><b>국가</b></td><td>다중선택. 선택 시 아래 포트 옵션이 그 국가의 포트로 좁아짐</td><td>전체 11개</td></tr>
-<tr><td><b>선적포트</b></td><td>다중선택. 위에서 선택된 국가의 포트만 보임. 시트 화이트리스트 외 포트는 표시되지 않음</td><td>전체</td></tr>
-<tr><td><b>영업사원</b></td><td>다중선택. 위 국가+포트 범위 안의 영업사원만 옵션으로 노출</td><td>전체 (선적지 범위 기준)</td></tr>
-<tr><td><b>월(상세)</b></td><td>분기 합산 또는 단일 월(202601~202606). ②, ③ view에서 영향</td><td>전체 (분기 합산)</td></tr>
-<tr><td><b>등급</b></td><td>화주 등급. <b>전체 / A+B / C+D</b> 3개만 제공</td><td>전체</td></tr>
-<tr><td><b>고수익</b></td><td>전체 / 고수익만 / 고수익 제외 (구간별 고수익 태그 기준)</td><td>전체</td></tr>
-<tr><td><b>WOS</b></td><td>WOS-3 only (기본) 또는 전체 — Target/Performance는 모두 WOS-3 기준</td><td>WOS-3 only</td></tr>
-<tr><td><b>필터 초기화</b></td><td>모든 선택을 기본값으로 리셋</td><td>—</td></tr>
+<tr><th width="22%">View</th><th>Purpose</th></tr>
+<tr><td><b>① Target Summary</b></td><td>Origin × Salesperson matrix; Target / Perform / GAP for 3 KPIs</td></tr>
+<tr><td><b>② Drill</b></td><td>Shipper rollup and BKG_NO list for one or more selected salespeople</td></tr>
+<tr><td><b>③ Pivot</b></td><td>Free row × col × metric pivot; click a cell for the matching BKG list</td></tr>
 </table>
-
-<div class="tip">
-<strong>💡 사용 팁:</strong> 처음에는 아무것도 선택하지 않고 ① 요약을 보면서 관심 영업사원을 찾고, 그 행을 클릭하면 자동으로 ② 드릴 모드로 이동합니다.
-</div>
 </div>
 
-<div class="card">
-<h2 id="multi">5. 국가 / 포트 / 영업사원 다중선택</h2>
-<p>국가, 선적포트, 영업사원 세 필터는 모두 <b>다중선택(체크박스 방식)</b>이며 동일한 동작을 합니다.</p>
+<!-- 2. ACCESS -->
+<h2 id="access" class="ko">2. 접근 / 진입 경로</h2><h2 id="access" class="en" style="display:none">2. How to open</h2>
+<div class="card ko">
+<ul>
+<li>메인 대시보드 헤더의 <span class="tag tag-info">🎯 Sales Target</span> 버튼 (새 탭)</li>
+<li>URL: <code>https://jkpark-create.github.io/kmtc-3w-dashboard-web/sales-target/</code></li>
+<li>메인 대시보드 ②부킹 트렌드 → 영업사원별 표의 우측 "→" — 해당 영업사원으로 자동 드릴</li>
+</ul>
+</div>
+<div class="card en" style="display:none">
+<ul>
+<li>The <span class="tag tag-info">🎯 Sales Target</span> button in the main dashboard header (opens a new tab).</li>
+<li>URL: <code>https://jkpark-create.github.io/kmtc-3w-dashboard-web/sales-target/</code></li>
+<li>The "→" link in the bySales table of the main dashboard's ② Booking Trends tab — auto-drills to that salesperson.</li>
+</ul>
+</div>
 
-<h3>5.1 기본 동작</h3>
+<!-- 3. HEADER -->
+<h2 id="header" class="ko">3. 헤더 / 언어 전환</h2><h2 id="header" class="en" style="display:none">3. Header / language</h2>
+<div class="card ko">
+<ul>
+<li><b>EN/KO 토글</b> — 화면 전체 언어 전환. 브라우저에 저장.</li>
+<li><b>← -3W Booking Dashboard</b> — 메인 대시보드로</li>
+<li><b>Target Workbook ↗</b> — 원천 Google Sheets</li>
+<li><b>📖 가이드</b> — 이 페이지</li>
+</ul>
+</div>
+<div class="card en" style="display:none">
+<ul>
+<li><b>EN/KO toggle</b> — switches the language; preference is saved in localStorage.</li>
+<li><b>← -3W Booking Dashboard</b> — back to the main dashboard.</li>
+<li><b>Target Workbook ↗</b> — opens the source Google Sheets.</li>
+<li><b>📖 Guide</b> — this page.</li>
+</ul>
+</div>
+
+<!-- 4. FILTERS -->
+<h2 id="filters" class="ko">4. 필터 바 사용법</h2><h2 id="filters" class="en" style="display:none">4. Filter bar</h2>
+<div class="card ko">
+<p>필터 바는 9개 그룹으로 구성됩니다. 모두 즉시 반영되며 변경 시 화면이 자동 갱신됩니다.</p>
+<table>
+<tr><th width="14%">필터</th><th>역할</th></tr>
+<tr><td><b>분기</b></td><td>1Q 2026 (Perform) 또는 2Q 2026 (Progress)</td></tr>
+<tr><td><b>월(상세)</b></td><td>분기 합산 또는 단일 월. ② / ③ view에 적용</td></tr>
+<tr><td><b>선적국가</b></td><td>다중선택. 화이트리스트 11개 국가만 노출</td></tr>
+<tr><td><b>선적포트</b></td><td>다중선택. 위 국가에 속한 포트로 좁아짐. 화이트리스트 23개 포트만 노출</td></tr>
+<tr><td><b>도착국가</b></td><td>다중선택. ② / ③ view의 BKG에서 POD 국가 기준 필터</td></tr>
+<tr><td><b>도착포트</b></td><td>다중선택. 위 도착국가에 속한 항구만 보임</td></tr>
+<tr><td><b>영업사원</b></td><td>다중선택. 위 선적지 범위 안의 영업사원만 옵션으로 노출</td></tr>
+<tr><td><b>등급</b></td><td>전체 / A+B / C+D</td></tr>
+<tr><td><b>고수익</b></td><td>전체 / 고수익만 / 고수익 제외</td></tr>
+<tr><td><b>WOS</b></td><td>WOS-3 only (기본) 또는 전체</td></tr>
+<tr><td><b>필터 초기화</b></td><td>모든 선택을 기본값으로 리셋</td></tr>
+</table>
+<div class="tip"><strong>💡 팁:</strong> 처음에는 ① 요약에서 관심 영업사원을 찾고 행을 클릭하면 자동으로 ② 드릴로 이동합니다.</div>
+</div>
+<div class="card en" style="display:none">
+<p>The filter bar has nine groups. All changes apply immediately.</p>
+<table>
+<tr><th width="14%">Filter</th><th>Effect</th></tr>
+<tr><td><b>Quarter</b></td><td>1Q 2026 (Perform) or 2Q 2026 (Progress)</td></tr>
+<tr><td><b>Month</b></td><td>Quarter total or a single YYYYMM. Drives ② and ③ scope.</td></tr>
+<tr><td><b>Origin country</b></td><td>Multi-select. 11 whitelisted countries.</td></tr>
+<tr><td><b>Origin port</b></td><td>Multi-select. Narrowed by country. 23 whitelisted ports.</td></tr>
+<tr><td><b>Dest country</b></td><td>Multi-select. Filters BKG by POD country in ② / ③.</td></tr>
+<tr><td><b>Dest port</b></td><td>Multi-select. Narrowed by dest country.</td></tr>
+<tr><td><b>Salesperson</b></td><td>Multi-select. Only salespeople in the current origin scope.</td></tr>
+<tr><td><b>Grade</b></td><td>All / A+B / C+D</td></tr>
+<tr><td><b>Hi-Profit</b></td><td>All / Only / Exclude</td></tr>
+<tr><td><b>WOS</b></td><td>WOS-3 only (default) or All</td></tr>
+<tr><td><b>Reset</b></td><td>Reset every filter</td></tr>
+</table>
+<div class="tip"><strong>💡 Tip:</strong> Start in ① Summary, find a salesperson, click the row — that auto-drills to ②.</div>
+</div>
+
+<!-- 5. MULTI-SELECT -->
+<h2 id="multi" class="ko">5. 다중선택 위젯 사용법</h2><h2 id="multi" class="en" style="display:none">5. Multi-select widget</h2>
+<div class="card ko">
 <ol>
-  <li>필터 박스(▾ 표시)를 클릭하면 드롭다운 패널이 열립니다.</li>
-  <li>상단의 <b>전체 선택</b> / <b>해제</b> 버튼으로 일괄 조작 가능.</li>
-  <li>검색창에 텍스트를 입력해서 옵션을 빠르게 좁힐 수 있습니다.</li>
-  <li>체크박스 클릭 시 즉시 화면이 갱신됩니다. (패널이 계속 열려 있어 여러 개를 연속해서 선택 가능)</li>
-  <li>패널 바깥을 클릭하면 닫힙니다.</li>
-  <li>0개 선택 = 전체 동일.</li>
+<li>박스(▾)를 클릭하면 패널이 열림</li>
+<li>상단의 <b>전체 선택</b> / <b>해제</b> 일괄 조작</li>
+<li>검색창에 텍스트 입력 → 옵션 빠르게 좁힘</li>
+<li>체크박스 클릭 시 즉시 화면 갱신. 패널은 계속 열려 있어 연속 선택 가능</li>
+<li>패널 바깥 클릭 → 닫힘</li>
+<li>0개 선택 = 전체 동일</li>
 </ol>
-
-<div class="shot">
-  <img src="guide-img/02_filter_country.png" alt="국가 다중선택">
-  <div class="cap"><b>화면 2-a.</b> 국가 필터에서 <b>CN</b>을 선택한 모습. 우측 영업사원 목록이 즉시 China 소속만으로 줄어듭니다.</div>
-</div>
-<div class="shot">
-  <img src="guide-img/02_filter_port.png" alt="포트 다중선택">
-  <div class="cap"><b>화면 2-b.</b> CN_SHA만 추가로 좁힌 모습. 표는 CN_SHA 소속 영업사원 8명만 표시.</div>
-</div>
-
-<h3>5.2 화이트리스트 — 허용된 선적지</h3>
-<p>다음 11개 국가 · 23개 포트만 필터에 노출되고 데이터에 반영됩니다. (Target 시트의 OBT 대상과 일치)</p>
+<h3>화이트리스트 — 선적국가 / 포트 (11 / 23)</h3>
 <table>
 <tr><th>국가</th><th>설명</th><th>포트</th></tr>
-<tr><td>CN</td><td>중국 / China</td><td>CN_SHA, CN_NBO, CN_TAO, CN_XGG, CN_DLC, CN_LYG, CN_SHK_DCB, CN_XMN, CN_NNS</td></tr>
-<tr><td>HK</td><td>홍콩 / Hong Kong</td><td>HK</td></tr>
-<tr><td>TW</td><td>대만 / Taiwan</td><td>TW</td></tr>
-<tr><td>TH</td><td>태국 / Thailand</td><td>TH</td></tr>
-<tr><td>VN</td><td>베트남 / Vietnam</td><td>VN_SGN_CMP, VN_HPH</td></tr>
-<tr><td>PH</td><td>필리핀 / Philippines</td><td>PH</td></tr>
-<tr><td>MY</td><td>말레이시아 / Malaysia</td><td>PKG+PKW, PEN, PGU</td></tr>
-<tr><td>SG</td><td>싱가포르 / Singapore</td><td>SG</td></tr>
-<tr><td>ID</td><td>인도네시아 / Indonesia</td><td>JKT, SUB</td></tr>
-<tr><td>IN</td><td>인도 / India</td><td>IN</td></tr>
+<tr><td>CN</td><td>중국</td><td>CN_SHA, CN_NBO, CN_TAO, CN_XGG, CN_DLC, CN_LYG, CN_SHK_DCB, CN_XMN, CN_NNS</td></tr>
+<tr><td>HK</td><td>홍콩</td><td>HK</td></tr>
+<tr><td>TW</td><td>대만</td><td>TW</td></tr>
+<tr><td>TH</td><td>태국</td><td>TH</td></tr>
+<tr><td>VN</td><td>베트남</td><td>VN_SGN_CMP, VN_HPH</td></tr>
+<tr><td>PH</td><td>필리핀</td><td>PH</td></tr>
+<tr><td>MY</td><td>말레이시아</td><td>PKG+PKW, PEN, PGU</td></tr>
+<tr><td>SG</td><td>싱가포르</td><td>SG</td></tr>
+<tr><td>ID</td><td>인도네시아</td><td>JKT, SUB</td></tr>
+<tr><td>IN</td><td>인도</td><td>IN</td></tr>
 <tr><td>AE</td><td>UAE</td><td>AE</td></tr>
 </table>
-
-<div class="warn">
-<strong>⚠ 영업사원 옵션이 비어 있다면?</strong> 국가/포트가 너무 좁혀져서 매칭되는 영업사원이 없는 경우입니다. 국가 필터를 늘리거나 <b>필터 초기화</b>로 리셋하세요.
 </div>
+<div class="card en" style="display:none">
+<ol>
+<li>Click the toggle (▾) to open the panel</li>
+<li>Use <b>Select all</b> / <b>Clear</b> at the top to bulk-toggle</li>
+<li>Type in the search box to narrow options</li>
+<li>Check a box and the screen updates immediately. The panel stays open so you can pick several</li>
+<li>Click outside to close</li>
+<li>Zero checks = "all" (no filter)</li>
+</ol>
+<h3>Whitelist — origin country / port (11 / 23)</h3>
+<table>
+<tr><th>Country</th><th>Name</th><th>Ports</th></tr>
+<tr><td>CN</td><td>China</td><td>CN_SHA, CN_NBO, CN_TAO, CN_XGG, CN_DLC, CN_LYG, CN_SHK_DCB, CN_XMN, CN_NNS</td></tr>
+<tr><td>HK</td><td>Hong Kong</td><td>HK</td></tr>
+<tr><td>TW</td><td>Taiwan</td><td>TW</td></tr>
+<tr><td>TH</td><td>Thailand</td><td>TH</td></tr>
+<tr><td>VN</td><td>Vietnam</td><td>VN_SGN_CMP, VN_HPH</td></tr>
+<tr><td>PH</td><td>Philippines</td><td>PH</td></tr>
+<tr><td>MY</td><td>Malaysia</td><td>PKG+PKW, PEN, PGU</td></tr>
+<tr><td>SG</td><td>Singapore</td><td>SG</td></tr>
+<tr><td>ID</td><td>Indonesia</td><td>JKT, SUB</td></tr>
+<tr><td>IN</td><td>India</td><td>IN</td></tr>
+<tr><td>AE</td><td>UAE</td><td>AE</td></tr>
+</table>
 </div>
 
-<div class="card">
-<h2 id="cards">6. 상단 KPI 카드</h2>
-<p>화면 상단의 4장 카드는 현재 필터 범위에 대한 요약 수치입니다.</p>
+<!-- 6. DEST -->
+<h2 id="dest" class="ko">6. 도착국가 / 도착포트 필터</h2><h2 id="dest" class="en" style="display:none">6. Dest country / port</h2>
+<div class="card ko">
+<p>BKG의 <b>POD 국가</b> 와 <b>POD 항구</b> 기준으로 좁히는 필터입니다.</p>
+<ul>
+<li>옵션은 매일 일일 빌드에서 부킹 스냅샷에 등장한 모든 도착지를 자동으로 모아 만듭니다.</li>
+<li>도착국가를 먼저 선택하면 도착포트 드롭다운이 그 국가의 항구만 보여줍니다.</li>
+<li>이 필터는 ② Drill의 화주표·BKG 리스트, ③ Pivot 결과에 반영됩니다. ① Target 요약은 시트 기반 집계라 도착지 필터의 영향을 받지 않습니다.</li>
+</ul>
+<div class="tip">예: <b>선적국가 CN</b> + <b>도착국가 KR</b> 으로 한국향 중국 부킹만 보기. <b>도착포트 KR/PUS</b>까지 좁히면 부산향만 필터.</div>
+</div>
+<div class="card en" style="display:none">
+<p>Two extra multi-select filters scoped on each booking's <b>POD country</b> and <b>POD port</b>.</p>
+<ul>
+<li>Options are built automatically from every destination that appears in the daily booking snapshot.</li>
+<li>Selecting a dest country narrows the dest port dropdown.</li>
+<li>These filters affect the ② Drill shipper / BKG views and the ③ Pivot results. ① Target summary is sheet-aggregated and is unaffected.</li>
+</ul>
+<div class="tip">Example: <b>Origin CN</b> + <b>Dest KR</b> → only China-to-Korea bookings. Add <b>Dest port KR/PUS</b> for Busan-only.</div>
+</div>
+
+<!-- 7. CARDS -->
+<h2 id="cards" class="ko">7. 상단 KPI 카드</h2><h2 id="cards" class="en" style="display:none">7. KPI cards</h2>
+<div class="card ko">
 <table>
 <tr><th width="22%">카드</th><th>의미</th></tr>
-<tr><td><b>대상 영업사원</b></td><td>현재 필터 안에 들어오는 <b>선적지 수 / 영업사원 수 / 화주(A/C) 수</b></td></tr>
-<tr><td><b>3W Booking Rate</b></td><td>3W before Booking Rate (vs BSA). Target / Perform / +- (퍼센트 포인트)</td></tr>
-<tr><td><b>Actual Lifting Rate</b></td><td>3W before Actual Lifting Rate. Target / Perform / +-</td></tr>
-<tr><td><b>High-Profit Rate</b></td><td>3W before High-Profit Customer Rate. Target / Perform / +-</td></tr>
+<tr><td><b>대상 영업사원</b></td><td>현재 필터 안의 선적지 수 / 영업사원 수 / 화주(A/C) 수</td></tr>
+<tr><td><b>3W Booking Rate</b></td><td>3W before Booking Rate (vs BSA). Target / Perform / +-</td></tr>
+<tr><td><b>Actual Lifting Rate</b></td><td>3W before Actual Lifting Rate</td></tr>
+<tr><td><b>High-Profit Rate</b></td><td>3W before High-Profit Customer Rate</td></tr>
 </table>
-<p>+- 셀의 색상: <span class="tag tag-ok">달성 (양수)</span> / <span class="tag tag-warn">-2%p 이내</span> / <span class="tag tag-neg">미달</span></p>
-<p>필터를 좁힐수록 카드 수치도 그에 맞게 좁아진 평균치로 다시 계산됩니다.</p>
+<p>+- 색상: <span class="tag tag-ok">달성</span> / <span class="tag tag-warn">-2%p 이내</span> / <span class="tag tag-neg">미달</span></p>
+</div>
+<div class="card en" style="display:none">
+<table>
+<tr><th width="22%">Card</th><th>Meaning</th></tr>
+<tr><td><b>Scope</b></td><td>Origin / Salesperson / Shipper count for the current filter</td></tr>
+<tr><td><b>3W Booking Rate</b></td><td>3W before Booking Rate (vs BSA) — Target / Perform / +-</td></tr>
+<tr><td><b>Actual Lifting Rate</b></td><td>3W before Actual Lifting Rate</td></tr>
+<tr><td><b>High-Profit Rate</b></td><td>3W before High-Profit Customer Rate</td></tr>
+</table>
+<p>+- colors: <span class="tag tag-ok">on target</span> / <span class="tag tag-warn">within -2%p</span> / <span class="tag tag-neg">behind</span></p>
 </div>
 
-<div class="card">
-<h2 id="view1">7. ① Target 요약 (선적지 × 영업사원)</h2>
-<p>가장 기본이 되는 표. 한 행 = 한 영업사원 (또는 선적지 Team Total). 3개 KPI별로 Target / Perform / +- 가 표시됩니다.</p>
-
-<div class="shot">
-  <img src="guide-img/01_landing.png" alt="① Target 요약 화면">
-  <div class="cap"><b>화면 3.</b> Target 요약 화면. 우측의 No. of A/C 컬럼은 Q1 기준 화주 수.</div>
-</div>
-
-<h4>주요 컬럼 의미</h4>
+<!-- 8. VIEW 1 -->
+<h2 id="view1" class="ko">8. ① Target 요약</h2><h2 id="view1" class="en" style="display:none">8. ① Target Summary</h2>
+<div class="card ko">
+<p>한 행 = 한 영업사원 (또는 선적지 Team Total). 3개 KPI별로 Target / Perform / +- 가 표시됩니다.</p>
+<div class="shot"><img src="guide-img/01_landing.png" alt="summary"><div class="cap"><b>화면 3.</b> Target 요약 화면.</div></div>
 <table>
 <tr><th>컬럼</th><th>의미</th></tr>
-<tr><td>'25 비중</td><td>2025년 해당 영업사원의 Total Lifting 비중 (선적지 기준)</td></tr>
+<tr><td>'25 비중</td><td>2025년 해당 영업사원의 Total Lifting 비중</td></tr>
 <tr><td>3W Booking (vs BSA)</td><td>WOS-3 시점 BKG TEU ÷ BSA TEU</td></tr>
-<tr><td>Actual Lifting Rate</td><td>WOS-3 시점 BKG 중 실제 선적된 비율</td></tr>
+<tr><td>Actual Lifting Rate</td><td>WOS-3 BKG 중 실제 선적된 비율</td></tr>
 <tr><td>High-Profit Rate</td><td>WOS-3 BKG 중 고수익 화주 BKG 비중</td></tr>
-<tr><td>Target</td><td>2025_base + Input %p 누적치. 입력은 Target Workbook의 Target_Input/Targets 탭에서</td></tr>
-<tr><td>Perform / Progress</td><td>실제 수행률. 1Q는 Perform(완료된 분기), 2Q는 Progress(진행 중)</td></tr>
-<tr><td>+-</td><td>Perform - Target. 양수=달성, 음수=미달</td></tr>
-<tr><td>No. of A/C — Total / 3W / %</td><td>Q1 화주 수: 전체, WOS-3 단계 도달, 비율</td></tr>
+<tr><td>Target / Perform / +-</td><td>2025_base + Input %p / 실적 / 차이</td></tr>
 </table>
-
-<div class="tip">
-<strong>💡 행 클릭 시:</strong> 해당 영업사원으로 자동 드릴 (② 탭으로 이동, 필터에 해당 국가+포트+영업사원이 자동 설정).
+<div class="tip">행 클릭 → 해당 영업사원으로 자동 드릴.</div>
 </div>
-</div>
-
-<div class="card">
-<h2 id="view2">8. ② 영업사원 → 화주 → BKG 상세 (Drill)</h2>
-<p>특정 영업사원의 실적을 화주 단위까지 분해해 보여줍니다.</p>
-
-<div class="shot">
-  <img src="guide-img/03_drill_shipper.png" alt="화주별 표">
-  <div class="cap"><b>화면 4.</b> CN_SHA · WUXIAOCHEN의 화주별 실적. 31개 화주 행 + 합계.</div>
-</div>
-
-<h4>표 컬럼</h4>
+<div class="card en" style="display:none">
+<p>One row per salesperson (or per-origin Team Total). Each of the 3 KPIs shows Target / Perform / +-.</p>
+<div class="shot"><img src="guide-img/01_landing.png" alt="summary"><div class="cap"><b>Fig. 3.</b> Target summary.</div></div>
 <table>
-<tr><th>컬럼</th><th>의미</th></tr>
-<tr><td>화주 / 등급</td><td>화주명 + (Shipper code) + A/B/C/D 등급</td></tr>
-<tr><td>고유 BKG_NO / BKG 건</td><td>중복 제거된 부킹번호 개수와 row 건수</td></tr>
-<tr><td>FST TEU / LST TEU</td><td>발주된 TEU와 실제 선적된 TEU</td></tr>
-<tr><td>WOS-3 FST / WOS-3 LST</td><td>WOS-3 시점 FST/LST TEU</td></tr>
-<tr><td>실선적률(W3)</td><td>WOS-3 LST ÷ WOS-3 FST</td></tr>
-<tr><td>고수익 비중(W3)</td><td>WOS-3 BKG 중 고수익 태그 비중</td></tr>
-<tr><td>CM1</td><td>해당 화주의 누적 CM1</td></tr>
+<tr><th>Column</th><th>Meaning</th></tr>
+<tr><td>'25 share</td><td>Salesperson's 2025 share of Total Lifting at that origin</td></tr>
+<tr><td>3W Booking (vs BSA)</td><td>WOS-3 BKG TEU ÷ BSA TEU</td></tr>
+<tr><td>Actual Lifting Rate</td><td>Loaded / WOS-3 BKG</td></tr>
+<tr><td>High-Profit Rate</td><td>Hi-profit BKG / WOS-3 BKG</td></tr>
+<tr><td>Target / Perform / +-</td><td>2025 base + Input %p / Actual / Diff</td></tr>
 </table>
-
-<h3>8.1 화주 행 클릭 → BKG_NO 상세 펼치기</h3>
-<p>임의의 화주 행을 클릭하면 그 화주의 BKG_NO 리스트가 펼쳐집니다.</p>
-
-<div class="shot">
-  <img src="guide-img/04_bkg_detail.png" alt="BKG_NO 상세 펼침">
-  <div class="cap"><b>화면 5.</b> 첫 화주(SHANGHAI WANNIANQING) 클릭 → 243건 BKG가 펼쳐짐. POL→POD, VSL/VOY, Booking 일자, FST/LST TEU, CM1, CM1/TEU, WOS 단계, 등급, 고수익, 상태 12개 컬럼.</div>
+<div class="tip">Click a row → auto-drill to that salesperson.</div>
 </div>
 
-<h4>BKG 상세 컬럼</h4>
+<!-- 9. VIEW 2 -->
+<h2 id="view2" class="ko">9. ② 영업사원 → 화주 → BKG 상세</h2><h2 id="view2" class="en" style="display:none">9. ② Drill</h2>
+<div class="card ko">
+<div class="shot"><img src="guide-img/03_drill_shipper.png" alt="shipper"><div class="cap"><b>화면 4.</b> 화주별 실적 — 31개 화주 + 합계.</div></div>
+<p>화주 행 클릭 시 그 화주의 BKG_NO 리스트가 펼쳐집니다.</p>
+<div class="shot"><img src="guide-img/04_bkg_detail.png" alt="bkg"><div class="cap"><b>화면 5.</b> 화주 클릭 → 243건 BKG 펼침. POL→POD, VSL/VOY, Booking 일자, FST/LST TEU, CM1, CM1/TEU, WOS, 등급, 고수익, 상태 12개 컬럼.</div></div>
+<p>BKG 상세 컬럼: BKG_NO / POL→POD / VSL/VOY / Booking 일 / FST TEU / LST TEU / CM1 / CM1/TEU / WOS / 등급 / 고수익(HI) / 상태(실선적·캔슬·진행중)</p>
+</div>
+<div class="card en" style="display:none">
+<div class="shot"><img src="guide-img/03_drill_shipper.png" alt="shipper"><div class="cap"><b>Fig. 4.</b> Shipper rollup — 31 shippers + total.</div></div>
+<p>Click any shipper row to expand its BKG_NO list.</p>
+<div class="shot"><img src="guide-img/04_bkg_detail.png" alt="bkg"><div class="cap"><b>Fig. 5.</b> Click a shipper → 243 BKG rows. Columns: POL→POD, VSL/VOY, Booking date, FST/LST TEU, CM1, CM1/TEU, WOS, grade, hi-profit, status.</div></div>
+</div>
+
+<!-- 10. BKG PANEL -->
+<h2 id="bkg-panel" class="ko">10. 전체 매칭 BKG_NO 보기 + CSV</h2><h2 id="bkg-panel" class="en" style="display:none">10. All matching BKG_NO + CSV</h2>
+<div class="card ko">
+<div class="shot"><img src="guide-img/12_all_bkg.png" alt="all-bkg"><div class="cap"><b>화면 6.</b> 모든 화주의 매칭 BKG를 한 표에. 16개 컬럼.</div></div>
 <ul>
-  <li><b>BKG_NO</b>: 부킹 번호 (KMTC 시스템 ID)</li>
-  <li><b>POL→POD</b>: Port of Load → Port of Discharge (필요 시 final delivery까지)</li>
-  <li><b>VSL/VOY</b>: 본선/항차</li>
-  <li><b>Booking</b>: Booking 등록일</li>
-  <li><b>FST TEU / LST TEU</b>: 발주 / 실선적 TEU</li>
-  <li><b>CM1 / CM1/TEU</b>: 수익 / TEU당 수익</li>
-  <li><b>WOS</b>: Weeks-Out-Of-Schedule 단계 (WOS-1/2/3 등)</li>
-  <li><b>등급</b>: 화주 등급 (A/B/C/D)</li>
-  <li><b>고수익</b>: <span class="tag" style="background:#e8f5e9;color:#1b5e20">HI</span> 또는 공란</li>
-  <li><b>상태</b>: <span style="color:#1e8e3e">실선적</span> / <span style="color:#d93025">캔슬</span> / 진행중</li>
+<li>패널 헤더에 매칭 건수와 활성 필터가 표시됨</li>
+<li>화면에는 상위 1,000건만 표시 — 전체는 CSV 내보내기로</li>
+<li>CSV는 UTF-8 BOM 포함 — Excel에서 한글 정상</li>
 </ul>
-
-<div class="tip">
-<strong>💡 다른 화주 클릭 시:</strong> 직전에 펼쳤던 BKG 상세가 자동으로 접히고 새 화주의 상세만 펼쳐집니다. (한 번에 하나만)
+<div class="warn"><strong>⚠ 주의:</strong> 필터 없이 전체를 펼치면 수만 건. 좁혀서 사용하세요.</div>
 </div>
-</div>
-
-<div class="card">
-<h2 id="bkg-panel">9. 전체 매칭 BKG_NO 보기 + CSV 내보내기</h2>
-<p>② 화면의 화주표 아래에는 "조건에 맞는 전체 BKG_NO 보기" 토글 패널이 있습니다. 화주별로 펼치지 않고 <b>현재 필터 조건에 매칭되는 모든 BKG를 한 표에</b> 보여주며, <b>CSV로 내보내기</b>가 가능합니다.</p>
-
-<div class="shot">
-  <img src="guide-img/12_all_bkg.png" alt="전체 매칭 BKG 패널">
-  <div class="cap"><b>화면 6.</b> 패널을 펼친 모습. 16개 컬럼: BKG_NO / 선적지 / 영업사원 / 월 / 화주 / 등급 / POL→POD / VSL/VOY / Booking / FST / LST / CM1 / CM1/TEU / WOS / 고수익 / 상태.</div>
-</div>
-
-<h4>특징</h4>
+<div class="card en" style="display:none">
+<div class="shot"><img src="guide-img/12_all_bkg.png" alt="all-bkg"><div class="cap"><b>Fig. 6.</b> Flat BKG list across all shippers. 16 columns.</div></div>
 <ul>
-  <li>패널 헤더에 <b>몇 건 매칭되는지</b>와 <b>현재 활성 필터 요약</b>이 표시됩니다.</li>
-  <li>화면에는 최대 1000건까지 표시되며, <b>전체는 CSV 내보내기</b>로 받을 수 있습니다.</li>
-  <li>CSV는 UTF-8 BOM 포함 → 한글이 Excel에서 정상 표시됩니다.</li>
+<li>The header shows match count + active filter summary</li>
+<li>Top 1,000 rows are rendered; CSV export contains the full set</li>
+<li>CSV is UTF-8 with BOM — opens correctly in Excel for Korean characters</li>
 </ul>
-
-<div class="warn">
-<strong>⚠ 너무 넓은 범위 주의:</strong> 필터 없이 전체를 펼치면 수만 건이 됩니다. 가능한 한 국가/포트/영업사원/월로 좁히고 사용하세요.
-</div>
+<div class="warn"><strong>⚠ Warning:</strong> Unfiltered scope can return tens of thousands of rows — narrow first.</div>
 </div>
 
-<div class="card">
-<h2 id="view3">10. ③ 조합 Pivot</h2>
-<p>행/열/측정값을 자유롭게 조합해서 BKG 단위 데이터를 집계하는 화면입니다.</p>
-
-<div class="shot">
-  <img src="guide-img/07_pivot_default.png" alt="Pivot 기본 화면">
-  <div class="cap"><b>화면 7.</b> Pivot 기본 (행=선적지, 열=없음, 값=FST TEU).</div>
+<!-- 11. PIVOT -->
+<h2 id="view3" class="ko">11. ③ 조합 Pivot</h2><h2 id="view3" class="en" style="display:none">11. ③ Pivot</h2>
+<div class="card ko">
+<div class="shot"><img src="guide-img/08_pivot_pod_grade.png" alt="pivot"><div class="cap"><b>화면 8.</b> 행=POD 국가, 열=등급, 값=WOS-3 FST TEU.</div></div>
+<p>행/열/측정값을 자유롭게 조합. <b>셀 클릭 시 BKG_NO 리스트</b>가 표 아래 패널로 펼침 + CSV 내보내기.</p>
+<div class="shot"><img src="guide-img/13_pivot_cell.png" alt="pivot-cell"><div class="cap"><b>화면 9.</b> 셀 클릭 결과 — 24건 BKG.</div></div>
+<div class="warn">필터 범위 200 chunk 초과 시 경고. 응답 빠르게 하려면 좁히세요.</div>
 </div>
-<div class="shot">
-  <img src="guide-img/08_pivot_pod_grade.png" alt="Pivot POD x 등급">
-  <div class="cap"><b>화면 8.</b> 행=POD 국가, 열=등급, 값=WOS-3 FST TEU. 셀의 0이 아닌 값은 클릭 가능.</div>
+<div class="card en" style="display:none">
+<div class="shot"><img src="guide-img/08_pivot_pod_grade.png" alt="pivot"><div class="cap"><b>Fig. 8.</b> Row=POD country, Col=Grade, Metric=WOS-3 FST TEU.</div></div>
+<p>Pick any row, column, and metric. <b>Clicking a cell</b> opens the matching BKG list below the table, with CSV export.</p>
+<div class="shot"><img src="guide-img/13_pivot_cell.png" alt="pivot-cell"><div class="cap"><b>Fig. 9.</b> Cell click → 24 BKGs.</div></div>
+<div class="warn">A warning appears when scope exceeds 200 chunks — narrow filters for speed.</div>
 </div>
 
-<h3>10.1 차원(행/열) 옵션</h3>
+<!-- 12. DEEP LINK -->
+<h2 id="deep-link" class="ko">12. 메인 대시보드와의 연동 (Deep link)</h2><h2 id="deep-link" class="en" style="display:none">12. Deep link from the main dashboard</h2>
+<div class="card ko">
 <table>
-<tr><th>옵션</th><th>의미</th></tr>
-<tr><td>선적지</td><td>POR (예: CN_SHA)</td></tr>
-<tr><td>영업사원</td><td>Salesman_POR</td></tr>
-<tr><td>화주</td><td>BKG_SHPR_CST_ENM</td></tr>
-<tr><td>등급</td><td>A/B/C/D의 첫 글자로 그룹</td></tr>
-<tr><td>POD 국가 / POD 항구</td><td>POD_CTR_CD / POD_PORT_CD</td></tr>
-<tr><td>월</td><td>YYYYMM</td></tr>
-<tr><td>고수익 여부</td><td>고수익 / 일반 (열에만)</td></tr>
-<tr><td>WOS 단계</td><td>WOS-1, WOS-2, WOS-3, ...</td></tr>
+<tr><th>파라미터</th><th>예시</th></tr>
+<tr><td>quarter</td><td>q1, q2</td></tr>
+<tr><td>view</td><td>summary, drill, pivot</td></tr>
+<tr><td>country / countries</td><td>CN 또는 CN,VN</td></tr>
+<tr><td>origin / origins</td><td>CN_SHA 또는 CN_SHA,VN_HPH</td></tr>
+<tr><td>dest_country / dest_countries</td><td>KR,JP</td></tr>
+<tr><td>dest_port / dest_ports</td><td>KR/PUS,JP/TYO (URL-인코딩 필요)</td></tr>
+<tr><td>sales</td><td>WUXIAOCHEN 또는 콤마 다중</td></tr>
+<tr><td>month / grade / profit / wos</td><td>202604 / AB / HI / W3</td></tr>
 </table>
-
-<h3>10.2 측정값 옵션</h3>
-<ul>
-  <li>FST TEU / LST TEU / WOS-3 FST / WOS-3 LST</li>
-  <li>BKG 건수 / 고유 BKG_NO 수 / 화주 수</li>
-  <li>CM1 / CM1/TEU</li>
-</ul>
-
-<h3>10.3 셀 클릭 → 매칭 BKG_NO 리스트</h3>
-<p>Pivot 셀(값이 있는 셀)을 클릭하면 <b>그 행×열 조합에 속한 BKG_NO 리스트</b>가 표 아래 패널로 표시됩니다. 패널은 <b>CSV 내보내기</b>와 <b>닫기</b> 버튼이 있습니다.</p>
-
-<div class="shot">
-  <img src="guide-img/13_pivot_cell.png" alt="Pivot 셀 클릭 결과">
-  <div class="cap"><b>화면 9.</b> Pivot 셀 클릭 결과 — 해당 조건의 BKG_NO 리스트가 펼쳐짐.</div>
 </div>
-
-<div class="tip">
-<strong>💡 합계 셀도 클릭 가능:</strong> 가장 우측의 행 합계나 가장 아래의 열 합계를 클릭하면 그 row/col 전체 BKG가 표시됩니다.
-</div>
-
-<div class="warn">
-<strong>⚠ 성능:</strong> 필터 범위가 200 chunk 초과 시 상단에 경고가 뜹니다. 응답이 느릴 수 있으니 필터로 좁히세요.
-</div>
-</div>
-
-<div class="card">
-<h2 id="deep-link">11. 메인 대시보드와의 연동 (Deep link)</h2>
-<p>메인 대시보드 → ② 부킹 트렌드 → 영업사원별 표에는 우측 끝에 <span class="tag tag-info">→</span> 링크가 있습니다. 이 링크를 클릭하면 그 영업사원의 드릴 화면으로 바로 진입합니다.</p>
-
-<div class="shot">
-  <img src="guide-img/11_deep_link.png" alt="딥 링크로 진입한 화면">
-  <div class="cap"><b>화면 10.</b> <code>?origin=CN_SHA&amp;sales=WUXIAOCHEN&amp;quarter=q1&amp;view=drill</code> URL로 진입 — 자동으로 country=CN, port=CN_SHA, sales=WUXIAOCHEN이 설정되고 ② Drill 모드로 진입.</div>
-</div>
-
-<h4>URL 파라미터</h4>
+<div class="card en" style="display:none">
 <table>
-<tr><th>파라미터</th><th>예시</th><th>의미</th></tr>
-<tr><td>quarter</td><td>q1, q2</td><td>분기</td></tr>
-<tr><td>view</td><td>summary, drill, pivot</td><td>진입 view</td></tr>
-<tr><td>country / countries</td><td>CN 또는 CN,VN</td><td>국가 다중선택 (콤마)</td></tr>
-<tr><td>origin / origins</td><td>CN_SHA 또는 CN_SHA,VN_HPH</td><td>포트 다중선택 (콤마)</td></tr>
-<tr><td>sales</td><td>WUXIAOCHEN,WENJIE</td><td>영업사원 다중선택</td></tr>
-<tr><td>month</td><td>202604</td><td>특정 월</td></tr>
-<tr><td>grade</td><td>AB, CD</td><td>화주 등급</td></tr>
-<tr><td>profit</td><td>HI, NOTHI</td><td>고수익 필터</td></tr>
-<tr><td>wos</td><td>W3, ALL</td><td>WOS 필터</td></tr>
+<tr><th>Param</th><th>Example</th></tr>
+<tr><td>quarter</td><td>q1, q2</td></tr>
+<tr><td>view</td><td>summary, drill, pivot</td></tr>
+<tr><td>country / countries</td><td>CN or CN,VN</td></tr>
+<tr><td>origin / origins</td><td>CN_SHA or CN_SHA,VN_HPH</td></tr>
+<tr><td>dest_country / dest_countries</td><td>KR,JP</td></tr>
+<tr><td>dest_port / dest_ports</td><td>KR/PUS,JP/TYO (URL-encode the slash)</td></tr>
+<tr><td>sales</td><td>WUXIAOCHEN or comma list</td></tr>
+<tr><td>month / grade / profit / wos</td><td>202604 / AB / HI / W3</td></tr>
 </table>
 </div>
 
-<div class="card">
-<h2 id="data-flow">12. 데이터 흐름 / 갱신 주기</h2>
-<p>이 화면이 사용하는 데이터는 매일 자동 갱신됩니다.</p>
-
-<h4>일일 갱신 파이프라인</h4>
+<!-- 13. DATA FLOW -->
+<h2 id="data-flow" class="ko">13. 데이터 흐름 / 갱신 주기</h2><h2 id="data-flow" class="en" style="display:none">13. Data flow</h2>
+<div class="card ko">
 <ol>
-  <li><b>Tableau 데이터 다운로드</b> (1.csv, 2.csv) → 부킹 스냅샷 생성 (booking_snapshot_result_*.csv)</li>
-  <li><b>대시보드 데이터 빌드</b> (dashboard_summary_*.json)</li>
-  <li><b>Sales Target 빌드</b> (이 화면) — Summary_All 시트 읽기 + 부킹 스냅샷 집계 → index.json + 1592개 chunk JSON 생성</li>
-  <li><b>GitHub Pages에 커밋 + 푸시</b> → 1시간 내 라이브 반영</li>
+<li><b>Tableau 다운로드</b> → 부킹 스냅샷 (booking_snapshot_result_*.csv)</li>
+<li><b>대시보드 빌드</b> (dashboard_summary_*.json) → salesman.csv로 영업사원 remap → dist/data.json</li>
+<li><b>Sales Target 빌드</b> — Summary_All + 스냅샷 집계 → index.json + manifest.json + 1700여 chunks</li>
+<li><b>GitHub Pages push</b> → ~1시간 내 라이브</li>
 </ol>
-
-<h4>출력 파일 구조</h4>
+<h4>출력 파일</h4>
 <ul>
-  <li><code>dist/sales-target/index.json</code> — 191 row의 Target/Perform/GAP 요약 (Summary_All 미러)</li>
-  <li><code>dist/sales-target/manifest.json</code> — 사용 가능한 (origin, salesman, month) chunk 카탈로그</li>
-  <li><code>dist/sales-target/data/&lt;origin&gt;__&lt;salesman&gt;__&lt;YYYYMM&gt;.json</code> — 각 chunk (lazy load)</li>
+<li><code>sales-target/index.json</code> — Summary_All 미러 (~131 KB)</li>
+<li><code>sales-target/manifest.json</code> — chunk 카탈로그 + 도착국가 / 도착포트 옵션</li>
+<li><code>sales-target/data/&lt;origin&gt;__&lt;salesman&gt;__&lt;YYYYMM&gt;.json</code> — lazy load</li>
 </ul>
-
-<div class="tip">
-<strong>💡 데이터 기준일:</strong> 헤더의 "데이터 기준일"이 오늘이 아니면 아직 일일 갱신이 안 끝났거나 실패한 상태입니다.
+<div class="tip">헤더의 "데이터 기준일"이 오늘이 아니면 일일 작업이 안 끝났거나 실패한 상태입니다.</div>
 </div>
+<div class="card en" style="display:none">
+<ol>
+<li><b>Tableau download</b> → booking_snapshot_result_*.csv</li>
+<li><b>Dashboard build</b> (dashboard_summary_*.json) → salesman.csv remap → dist/data.json</li>
+<li><b>Sales target build</b> — Summary_All + snapshot rollup → index.json + manifest.json + ~1,700 chunks</li>
+<li><b>GitHub Pages push</b> → live within ~1 hour</li>
+</ol>
+<h4>Output</h4>
+<ul>
+<li><code>sales-target/index.json</code> — mirror of Summary_All (~131 KB)</li>
+<li><code>sales-target/manifest.json</code> — chunk catalogue + dest country / port options</li>
+<li><code>sales-target/data/&lt;origin&gt;__&lt;salesman&gt;__&lt;YYYYMM&gt;.json</code> — lazy</li>
+</ul>
+<div class="tip">If "Data date" in the header isn't today, the daily job didn't run or didn't finish.</div>
 </div>
 
-<div class="card">
-<h2 id="targets">13. 목표 입력 (Eternal Workbook)</h2>
-<p>Target 수치는 다음 두 가지 워크북에서 관리됩니다.</p>
-
+<!-- 14. TARGETS -->
+<h2 id="targets" class="ko">14. 목표 입력 (Eternal Workbook)</h2><h2 id="targets" class="en" style="display:none">14. Target input (Eternal Workbook)</h2>
+<div class="card ko">
 <table>
-<tr><th width="30%">워크북</th><th>역할</th></tr>
-<tr><td><b>2026 OBT Sales Target by 선적지</b><br><code>1YxZkwvoMaQ...</code></td><td>기존의 36-탭 리포트 워크북. Summary_All에서 Target/Perform/GAP 수식을 계산 → 이 화면이 읽음. <b>이 워크북은 자동 계산용</b>.</td></tr>
-<tr><td><b>OBT Sales Target Input (Eternal)</b><br><code>13BSBBs-McCCH...</code></td><td>새로 만들어진 <b>입력 전용</b> 워크북. Year 컬럼으로 연도 관리 (영원히 한 URL).</td></tr>
+<tr><th width="32%">워크북</th><th>역할</th></tr>
+<tr><td><b>2026 OBT Sales Target by 선적지</b><br><code>1YxZkwvoMaQ...</code></td><td>기존 36-탭 리포트 워크북. Summary_All에서 Target/Perform/GAP 수식 → 이 화면이 읽음.</td></tr>
+<tr><td><b>OBT Sales Target Input (Eternal)</b><br><code>13BSBBs-McCCH...</code></td><td>신규 <b>입력 전용</b> 워크북. Year 컬럼으로 연도 관리 — 영원히 한 URL.</td></tr>
 </table>
-
-<h3>13.1 Eternal Workbook 구조</h3>
+<h3>탭 구조</h3>
 <table>
 <tr><th>탭</th><th>내용</th></tr>
-<tr><td>README</td><td>워크북 사용 안내 + 화이트리스트</td></tr>
-<tr><td>Settings</td><td>Active_Year (현재 활성 연도), Admins (편집 권한 이메일), Last_Reviewed, Notes</td></tr>
-<tr><td>Targets</td><td>Year × Tab (23개 포트) 입력 표 — Booking/Lifting/High-Profit Input %p + Memo</td></tr>
-<tr><td>Audit</td><td>변경 이력 (append-only)</td></tr>
+<tr><td>README</td><td>안내 + 화이트리스트</td></tr>
+<tr><td>Settings</td><td>Active_Year / Admins / Last_Reviewed / Notes</td></tr>
+<tr><td>Targets</td><td>Year × Tab (23 port) Input %p (Booking/Lifting/HP) + Memo</td></tr>
+<tr><td>Audit</td><td>변경 이력 (append-only, Apps Script로 자동기록 확장 가능)</td></tr>
 </table>
-
-<h3>13.2 매년 롤오버 절차</h3>
-<ol>
-  <li>Targets 탭에 다음 연도(예: 2027)의 row 23개를 append</li>
-  <li>Settings의 <b>Active_Year</b>를 새 연도로 변경</li>
-  <li>관리자 권한(Admins) 갱신</li>
-  <li>(필요시) 리포트 워크북도 새 연도 컬럼/탭으로 확장</li>
-</ol>
-
-<div class="warn">
-<strong>⚠ 권한:</strong> Targets 탭은 권한자만 편집. 그 외 사용자에게는 View only 권한을 부여하세요. Apps Script를 추가하면 변경 시 Audit 탭에 자동 기록되도록 확장할 수 있습니다 (Phase 2).
+<h3>매년 롤오버</h3>
+<ol><li>Targets 탭에 다음 연도 23 row append</li><li>Settings의 Active_Year 변경</li><li>Admins 갱신</li></ol>
 </div>
+<div class="card en" style="display:none">
+<table>
+<tr><th width="32%">Workbook</th><th>Purpose</th></tr>
+<tr><td><b>2026 OBT Sales Target by 선적지</b><br><code>1YxZkwvoMaQ...</code></td><td>The 36-tab report workbook. Summary_All formulas compute Target/Perform/GAP — read by this screen.</td></tr>
+<tr><td><b>OBT Sales Target Input (Eternal)</b><br><code>13BSBBs-McCCH...</code></td><td>New <b>input-only</b> workbook. Year column drives downstream — one URL forever.</td></tr>
+</table>
+<h3>Tabs</h3>
+<table>
+<tr><th>Tab</th><th>Content</th></tr>
+<tr><td>README</td><td>How-to + whitelist</td></tr>
+<tr><td>Settings</td><td>Active_Year / Admins / Last_Reviewed / Notes</td></tr>
+<tr><td>Targets</td><td>Year × Tab (23 ports), Input %p (Booking / Lifting / HP) + Memo</td></tr>
+<tr><td>Audit</td><td>Change log (append-only; Apps Script can auto-record edits later)</td></tr>
+</table>
+<h3>Annual rollover</h3>
+<ol><li>Append 23 rows for the next year in Targets</li><li>Update Active_Year in Settings</li><li>Refresh the Admins list</li></ol>
 </div>
 
-<div class="card">
-<h2 id="faq">14. 자주 묻는 질문</h2>
-
-<h4>Q1. 화면에 내 데이터가 안 보입니다.</h4>
-<p>다음을 확인하세요:</p>
-<ul>
-  <li>국가/포트 필터가 너무 좁게 설정되어 있지 않은가? → "필터 초기화" 클릭</li>
-  <li>등급/고수익 필터가 데이터를 모두 제거하지 않았는가?</li>
-  <li>해당 영업사원이 화이트리스트에 포함된 선적지에 속해 있는가? (TW, ID_out 등 일부 origin은 OBT 외이므로 제외됨)</li>
-</ul>
-
+<!-- 15. FAQ -->
+<h2 id="faq" class="ko">15. 자주 묻는 질문</h2><h2 id="faq" class="en" style="display:none">15. FAQ</h2>
+<div class="card ko">
+<h4>Q1. 내 데이터가 안 보입니다.</h4>
+<p>국가/포트/영업사원/도착지 필터가 너무 좁지 않은지 확인. "필터 초기화"로 리셋. 화이트리스트 외 origin은 표시되지 않습니다.</p>
 <h4>Q2. Target 컬럼이 비어 있어요.</h4>
-<p>해당 영업사원이 <b>2025_basis</b>가 없는 (1Q 2026 신규 진입) 또는 Target Workbook의 Targets 탭에 row가 없는 경우입니다. 관리자가 입력해야 합니다.</p>
-
-<h4>Q3. 같은 영업사원이 두 선적지에 보입니다.</h4>
-<p>한 영업사원이 복수 선적지의 화주를 담당하는 케이스입니다. 정확한 합산을 보려면 ① Target 요약 표에서 그 영업사원의 모든 row를 비교하세요.</p>
-
-<h4>Q4. CSV 내보내기로 받은 파일이 너무 크면?</h4>
-<p>Pivot 셀 → CSV 내보내기를 쓰면 그 셀에 속한 행만 받을 수 있어 보통 훨씬 작습니다.</p>
-
-<h4>Q5. 데이터가 어제까지밖에 안 보여요.</h4>
-<p>일일 자동 갱신이 매일 새벽에 한 번 실행됩니다. 헤더의 "데이터 기준일"을 확인하세요. 24시간 이상 된 경우 운영 담당자에게 문의하세요.</p>
-
-<h4>Q6. 영어로 전환하고 싶어요.</h4>
-<p>헤더 우측의 <b>EN</b> 버튼을 클릭하세요. 선택은 브라우저에 저장됩니다. 다시 한국어로 돌아가려면 <b>KO</b> 클릭.</p>
-
-<h4>Q7. 한 영업사원이 안 보입니다.</h4>
-<p>그 영업사원의 모든 booking이 (a) 화이트리스트 외 origin이거나 (b) 1Q에 화주가 0명이거나 (c) Target Workbook Summary_All에서 제외된 케이스일 수 있습니다. 일단 ① Target 요약에서 검색해 보세요.</p>
-
+<p>2025_basis가 없는 신규 진입이거나 Targets 탭에 row가 없는 경우. 관리자에게 입력 요청.</p>
+<h4>Q3. 도착지 필터가 ① 요약에 안 먹어요.</h4>
+<p>① 요약은 시트 기반 집계라 BKG 단위 필터(도착지·등급·고수익·WOS)의 영향을 받지 않습니다. ② / ③에서 사용하세요.</p>
+<h4>Q4. CSV가 한글 깨짐.</h4>
+<p>UTF-8 BOM 포함이므로 Excel에서 바로 열어야 합니다. 메모장에서 열면 깨지는 경우가 있습니다.</p>
+<h4>Q5. 영어로 전환?</h4>
+<p>헤더 우측의 <b>EN</b> 버튼. 선택은 브라우저에 저장.</p>
+<h4>Q6. 데이터가 오래 됐어요.</h4>
+<p>매일 평일 09:03 자동 빌드. 헤더의 "데이터 기준일" 확인 후 24시간 이상 지났으면 운영 담당자에게 문의.</p>
+</div>
+<div class="card en" style="display:none">
+<h4>Q1. I can't see my data.</h4>
+<p>Check that the origin / port / salesperson / destination filters aren't too narrow. Click "Reset filters". Non-whitelisted origins never appear.</p>
+<h4>Q2. Target columns are empty.</h4>
+<p>That salesperson has no 2025 basis (newly onboarded in Q1) or the Targets tab is missing their row. Ask the admin to enter it.</p>
+<h4>Q3. Dest filter doesn't affect ① Summary.</h4>
+<p>① Summary is sheet-aggregated, so BKG-level filters (destination, grade, hi-profit, WOS) don't apply there. Use ② / ③ instead.</p>
+<h4>Q4. CSV shows garbled Korean.</h4>
+<p>It's UTF-8 with BOM — open it in Excel directly. Notepad sometimes mis-detects the encoding.</p>
+<h4>Q5. How do I switch to English?</h4>
+<p>The <b>EN</b> button on the top right. Your choice is saved in localStorage.</p>
+<h4>Q6. Data looks stale.</h4>
+<p>Daily build runs at 09:03 weekday. Check the "Data date" in the header. Older than 24 h → contact the operator.</p>
 </div>
 
 <hr>
-<p style="font-size:12px;color:#80868b;text-align:center;padding:20px">
-© KMTC OBT — Sales Target &amp; Progress · 이 문서는 자동 검증된 스크린샷을 사용해 작성되었습니다.<br>
+<p style="font-size:12px;color:#80868b;text-align:center;padding:20px" class="ko">
+© KMTC OBT — Sales Target &amp; Progress · 마지막 업데이트 2026-05-20<br>
 질문 / 버그 신고는 운영 담당자에게.
+</p>
+<p style="font-size:12px;color:#80868b;text-align:center;padding:20px" class="en" style="display:none">
+© KMTC OBT — Sales Target &amp; Progress · Last updated 2026-05-20<br>
+For questions or bug reports, contact the operations team.
 </p>
 
 </div>

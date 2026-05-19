@@ -30,7 +30,11 @@
       </select>
     </div>
     <div class="group">
-      <label data-i18n="fCountry">국가</label>
+      <label data-i18n="fMonth">월(상세)</label>
+      <select id="fMonth"><option value="ALL" data-i18n-attr="text:monthAll">전체 (분기 합산)</option></select>
+    </div>
+    <div class="group">
+      <label data-i18n="fCountry">선적국가</label>
       <div class="ms" id="msCountry" data-msname="country"></div>
     </div>
     <div class="group">
@@ -38,12 +42,16 @@
       <div class="ms" id="msPort" data-msname="port"></div>
     </div>
     <div class="group">
-      <label data-i18n="fSales">영업사원</label>
-      <div class="ms" id="msSales" data-msname="sales"></div>
+      <label data-i18n="fDestCountry">도착국가</label>
+      <div class="ms" id="msDestCountry" data-msname="destCountry"></div>
     </div>
     <div class="group">
-      <label data-i18n="fMonth">월(상세)</label>
-      <select id="fMonth"><option value="ALL" data-i18n-attr="text:monthAll">전체 (분기 합산)</option></select>
+      <label data-i18n="fDestPort">도착포트</label>
+      <div class="ms" id="msDestPort" data-msname="destPort"></div>
+    </div>
+    <div class="group">
+      <label data-i18n="fSales">영업사원</label>
+      <div class="ms" id="msSales" data-msname="sales"></div>
     </div>
     <div class="group">
       <label data-i18n="fGrade">등급</label>
