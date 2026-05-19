@@ -46,7 +46,13 @@ const STATE = {
     profit: 'ALL',
     wos: 'W3',
   },
-  pivot: { row: 'origin', col: 'metric', metric: 'fst' },
+  pivot: {
+    row: 'origin', row2: '-', col: '-', metric: 'fst',
+    normalize: 'value',   // 'value' | 'row' | 'col' | 'grand'
+    heatmap: false,        // tint cells by intensity
+    topN: 0,               // 0 = all
+    sort: { col: null, dir: 'desc' },
+  },
   initialUrlParams: null,
   lang: 'ko',
   multiSelect: {}, // id -> { values: Set, options: [...], onChange, refresh, render }
@@ -107,7 +113,10 @@ const I18N = {
     loadingDetail: '상세 데이터 로딩 중...',
     panelAllBkg: '조건에 맞는 전체 BKG_NO 보기',
     btnCsv: 'CSV 내보내기', btnClose: '닫기',
-    pivotScope: '스코프', pivotRowLabel: '행', pivotColLabel: '열', pivotMetric: '값', pivotNone: '(없음)',
+    pivotScope: '스코프', pivotRowLabel: '행', pivotRow2Label: '하위행', pivotColLabel: '열', pivotMetric: '값', pivotNone: '(없음)',
+    pivotNorm: '표시', pivotNormVal: '실값', pivotNormRow: '행%', pivotNormCol: '열%', pivotNormGrand: '전체%',
+    pivotHeatmap: '히트맵', pivotTopN: 'Top N', pivotTopNAll: '전체',
+    pivotSortAsc: '오름차순 정렬됨', pivotSortDesc: '내림차순 정렬됨',
     pivotHeavy: (n) => `현재 필터 범위가 ${n}개 chunk 입니다. 응답이 느릴 수 있습니다. 선적지·영업사원·분기 필터로 범위를 좁히는 것을 권장합니다.`,
     pivotCellDetail: 'Pivot 셀 상세',
     columns: {
@@ -123,7 +132,7 @@ const I18N = {
       totalLabel: '합계',
     },
     dimNames: { origin: '선적지', salesman: '영업사원', shipper: '화주', grade: '등급', pod_country: 'POD 국가', pod: 'POD 항구', yyyymm: '월', hi: '고수익', wos: 'WOS 단계' },
-    metricNames: { fst: 'FST TEU', lst: 'LST TEU', w3_fst: 'WOS-3 FST TEU', w3_lst: 'WOS-3 LST TEU', bkg_count: 'BKG 건수', bkg_unique: '고유 BKG_NO', shipper_unique: '화주 수', cm1: 'CM1', cm1_per_teu: 'CM1/TEU' },
+    metricNames: { fst: 'FST TEU', lst: 'LST TEU', w3_fst: 'WOS-3 FST TEU', w3_lst: 'WOS-3 LST TEU', bkg_count: 'BKG 건수', bkg_unique: '고유 BKG_NO', shipper_unique: '화주 수', cm1: 'CM1', cm1_per_teu: 'CM1/TEU', lst_rate_w3: '실선적률 W3 %', hi_share_w3: '고수익 비중 W3 %', cancel_rate: '캔슬률 %' },
   },
   en: {
     title: 'Sales Target & Progress',
@@ -164,7 +173,10 @@ const I18N = {
     loadingDetail: 'Loading detail...',
     panelAllBkg: 'All matching BKG_NO',
     btnCsv: 'Export CSV', btnClose: 'Close',
-    pivotScope: 'Scope', pivotRowLabel: 'Row', pivotColLabel: 'Col', pivotMetric: 'Value', pivotNone: '(none)',
+    pivotScope: 'Scope', pivotRowLabel: 'Row', pivotRow2Label: 'Sub-row', pivotColLabel: 'Col', pivotMetric: 'Value', pivotNone: '(none)',
+    pivotNorm: 'Show', pivotNormVal: 'Raw', pivotNormRow: 'Row%', pivotNormCol: 'Col%', pivotNormGrand: 'Total%',
+    pivotHeatmap: 'Heatmap', pivotTopN: 'Top N', pivotTopNAll: 'All',
+    pivotSortAsc: 'sorted asc', pivotSortDesc: 'sorted desc',
     pivotHeavy: (n) => `Current scope is ${n} chunks; response may be slow. Narrow by Origin / Salesperson / Quarter.`,
     pivotCellDetail: 'Pivot cell detail',
     columns: {
@@ -180,7 +192,7 @@ const I18N = {
       totalLabel: 'Total',
     },
     dimNames: { origin: 'Origin', salesman: 'Salesperson', shipper: 'Shipper', grade: 'Grade', pod_country: 'POD Country', pod: 'POD Port', yyyymm: 'Month', hi: 'Hi-profit', wos: 'WOS' },
-    metricNames: { fst: 'FST TEU', lst: 'LST TEU', w3_fst: 'WOS-3 FST', w3_lst: 'WOS-3 LST', bkg_count: 'BKG count', bkg_unique: 'Unique BKG_NO', shipper_unique: 'Shipper count', cm1: 'CM1', cm1_per_teu: 'CM1/TEU' },
+    metricNames: { fst: 'FST TEU', lst: 'LST TEU', w3_fst: 'WOS-3 FST', w3_lst: 'WOS-3 LST', bkg_count: 'BKG count', bkg_unique: 'Unique BKG_NO', shipper_unique: 'Shipper count', cm1: 'CM1', cm1_per_teu: 'CM1/TEU', lst_rate_w3: 'LFT% W3', hi_share_w3: 'Hi-profit% W3', cancel_rate: 'Cancel%' },
   },
 };
 function tr(key) {
@@ -1266,40 +1278,47 @@ function renderPivotView() {
   const containerId = 'pivot-body';
   const dim = I18N[STATE.lang].dimNames;
   const met = I18N[STATE.lang].metricNames;
+  const dimOptions = [
+    ['origin', dim.origin], ['salesman', dim.salesman], ['shipper', dim.shipper],
+    ['grade', dim.grade], ['pod_country', dim.pod_country], ['pod', dim.pod],
+    ['yyyymm', dim.yyyymm], ['hi', dim.hi], ['wos', dim.wos],
+  ];
+  const colDimOptions = [['-', tr('pivotNone')], ...dimOptions];
+  const metricOptions = [
+    ['fst', met.fst], ['lst', met.lst], ['w3_fst', met.w3_fst], ['w3_lst', met.w3_lst],
+    ['bkg_count', met.bkg_count], ['bkg_unique', met.bkg_unique], ['shipper_unique', met.shipper_unique],
+    ['cm1', met.cm1], ['cm1_per_teu', met.cm1_per_teu],
+    ['lst_rate_w3', met.lst_rate_w3], ['hi_share_w3', met.hi_share_w3], ['cancel_rate', met.cancel_rate],
+  ];
+  const renderOpts = (arr) => arr.map(([v, l]) => `<option value="${escapeHtml(v)}">${escapeHtml(l)}</option>`).join('');
+
   let h = `<div class="pivot-config">
     <span>${tr('pivotRowLabel')}:</span>
-    <select id="pivotRow">
-      <option value="origin">${dim.origin}</option>
-      <option value="salesman">${dim.salesman}</option>
-      <option value="shipper">${dim.shipper}</option>
-      <option value="grade">${dim.grade}</option>
-      <option value="pod_country">${dim.pod_country}</option>
-      <option value="pod">${dim.pod}</option>
-      <option value="yyyymm">${dim.yyyymm}</option>
-    </select>
+    <select id="pivotRow">${renderOpts(dimOptions)}</select>
+    <span style="margin-left:4px">${tr('pivotRow2Label')}:</span>
+    <select id="pivotRow2"><option value="-">${escapeHtml(tr('pivotNone'))}</option>${renderOpts(dimOptions)}</select>
     <span style="margin-left:8px">${tr('pivotColLabel')}:</span>
-    <select id="pivotCol">
-      <option value="-">${tr('pivotNone')}</option>
-      <option value="yyyymm">${dim.yyyymm}</option>
-      <option value="origin">${dim.origin}</option>
-      <option value="salesman">${dim.salesman}</option>
-      <option value="grade">${dim.grade}</option>
-      <option value="pod_country">${dim.pod_country}</option>
-      <option value="hi">${dim.hi}</option>
-      <option value="wos">${dim.wos}</option>
-    </select>
+    <select id="pivotCol">${renderOpts(colDimOptions)}</select>
     <span style="margin-left:8px">${tr('pivotMetric')}:</span>
-    <select id="pivotMetric">
-      <option value="fst">${met.fst}</option>
-      <option value="lst">${met.lst}</option>
-      <option value="w3_fst">${met.w3_fst}</option>
-      <option value="w3_lst">${met.w3_lst}</option>
-      <option value="bkg_count">${met.bkg_count}</option>
-      <option value="bkg_unique">${met.bkg_unique}</option>
-      <option value="shipper_unique">${met.shipper_unique}</option>
-      <option value="cm1">${met.cm1}</option>
-      <option value="cm1_per_teu">${met.cm1_per_teu}</option>
+    <select id="pivotMetric">${renderOpts(metricOptions)}</select>
+    <span style="margin-left:8px">${tr('pivotNorm')}:</span>
+    <select id="pivotNorm">
+      <option value="value">${escapeHtml(tr('pivotNormVal'))}</option>
+      <option value="row">${escapeHtml(tr('pivotNormRow'))}</option>
+      <option value="col">${escapeHtml(tr('pivotNormCol'))}</option>
+      <option value="grand">${escapeHtml(tr('pivotNormGrand'))}</option>
     </select>
+    <span style="margin-left:8px">${tr('pivotTopN')}:</span>
+    <select id="pivotTopN">
+      <option value="0">${escapeHtml(tr('pivotTopNAll'))}</option>
+      <option value="10">10</option>
+      <option value="20">20</option>
+      <option value="50">50</option>
+      <option value="100">100</option>
+    </select>
+    <label style="margin-left:8px;cursor:pointer;display:inline-flex;align-items:center;gap:4px">
+      <input type="checkbox" id="pivotHeatmap"> ${escapeHtml(tr('pivotHeatmap'))}
+    </label>
     <span style="margin-left:auto;color:#80868b">${tr('pivotScope')}: ${chunkEstimate} chunks</span>
   </div>`;
   if (chunkEstimate > 200) {
@@ -1308,15 +1327,27 @@ function renderPivotView() {
   h += `<div id="${containerId}"><div class="loading">${tr('loadingDetail')}</div></div>`;
   queueMicrotask(() => {
     document.getElementById('pivotRow').value = STATE.pivot.row;
+    document.getElementById('pivotRow2').value = STATE.pivot.row2;
     document.getElementById('pivotCol').value = STATE.pivot.col;
     document.getElementById('pivotMetric').value = STATE.pivot.metric;
-    ['pivotRow', 'pivotCol', 'pivotMetric'].forEach(id => {
+    document.getElementById('pivotNorm').value = STATE.pivot.normalize;
+    document.getElementById('pivotTopN').value = String(STATE.pivot.topN);
+    document.getElementById('pivotHeatmap').checked = !!STATE.pivot.heatmap;
+    const wireChange = (id, key, isCheckbox, parser) => {
       document.getElementById(id).addEventListener('change', e => {
-        const key = { pivotRow: 'row', pivotCol: 'col', pivotMetric: 'metric' }[id];
-        STATE.pivot[key] = e.target.value;
+        const raw = isCheckbox ? e.target.checked : e.target.value;
+        STATE.pivot[key] = parser ? parser(raw) : raw;
+        STATE.pivot.sort = { col: null, dir: 'desc' };  // reset sort on config change
         rebuildPivot(containerId);
       });
-    });
+    };
+    wireChange('pivotRow', 'row');
+    wireChange('pivotRow2', 'row2');
+    wireChange('pivotCol', 'col');
+    wireChange('pivotMetric', 'metric');
+    wireChange('pivotNorm', 'normalize');
+    wireChange('pivotTopN', 'topN', false, v => Number(v) || 0);
+    wireChange('pivotHeatmap', 'heatmap', true);
     rebuildPivot(containerId);
   });
   return h;
@@ -1362,11 +1393,16 @@ function pivotKeyOf(b, dim) {
 }
 
 function pivotAggregate(rows, metric) {
-  const init = { fst: 0, lst: 0, w3_fst: 0, w3_lst: 0, bkg_count: 0, bkg_no_set: new Set(), shipper_set: new Set(), cm1: 0 };
+  const init = { fst: 0, lst: 0, w3_fst: 0, w3_lst: 0, w3_hi_fst: 0, cancel: 0, bkg_count: 0, bkg_no_set: new Set(), shipper_set: new Set(), cm1: 0 };
   rows.forEach(b => {
     init.fst += b.fst_teu || 0;
     init.lst += b.lst_teu || 0;
-    if (b.is_w3) { init.w3_fst += b.fst_teu || 0; init.w3_lst += b.lst_teu || 0; }
+    if (b.is_w3) {
+      init.w3_fst += b.fst_teu || 0;
+      init.w3_lst += b.lst_teu || 0;
+      if (b.is_hi) init.w3_hi_fst += b.fst_teu || 0;
+    }
+    if (b.is_cancel) init.cancel += b.fst_teu || 0;
     init.bkg_count++;
     if (b.bkg_no) init.bkg_no_set.add(b.bkg_no);
     if (b.shipper_no || b.shipper_name) init.shipper_set.add(b.shipper_no || b.shipper_name);
@@ -1382,76 +1418,175 @@ function pivotAggregate(rows, metric) {
     case 'shipper_unique': return init.shipper_set.size;
     case 'cm1': return init.cm1;
     case 'cm1_per_teu': return init.lst ? init.cm1 / init.lst : 0;
+    case 'lst_rate_w3': return init.w3_fst ? init.w3_lst / init.w3_fst : 0;
+    case 'hi_share_w3': return init.w3_fst ? init.w3_hi_fst / init.w3_fst : 0;
+    case 'cancel_rate': return init.fst ? init.cancel / init.fst : 0;
     default: return 0;
   }
 }
 
+// Metrics returned as fractions (0..1) get displayed as % values.
+const RATIO_METRICS = new Set(['lst_rate_w3', 'hi_share_w3', 'cancel_rate']);
+
+function pivotFormat(value, metric) {
+  if (RATIO_METRICS.has(metric)) return fmtPct(value, 1);
+  return fmtNum(value, 0);
+}
+
 function renderPivotTable(bookings) {
-  const { row, col, metric } = STATE.pivot;
-  if (!bookings.length) return `<div class="empty">데이터 없음 (필터 확인)</div>`;
-  // Build row x col cube
-  const cube = new Map(); // rowKey -> Map(colKey -> bookings[])
-  const rowKeys = new Set();
-  const colKeys = new Set();
+  const { row, row2, col, metric, normalize, heatmap, topN, sort } = STATE.pivot;
+  if (!bookings.length) return `<div class="empty">${tr('noMatches')}</div>`;
+
+  const useRow2 = row2 && row2 !== '-' && row2 !== row;
+  const colDim = col;
+  const colKeyOf = (b) => colDim === '-' ? '__total__' : pivotKeyOf(b, colDim);
+
+  const groups = new Map();
+  const colKeysSet = new Set();
   bookings.forEach(b => {
     const rk = pivotKeyOf(b, row);
-    const ck = col === '-' ? '__total__' : pivotKeyOf(b, col);
-    rowKeys.add(rk);
-    colKeys.add(ck);
-    if (!cube.has(rk)) cube.set(rk, new Map());
-    const inner = cube.get(rk);
-    if (!inner.has(ck)) inner.set(ck, []);
-    inner.get(ck).push(b);
+    const ck = colKeyOf(b);
+    colKeysSet.add(ck);
+    if (!groups.has(rk)) groups.set(rk, { rk, sub: new Map(), flat: new Map(), allBks: [] });
+    const g = groups.get(rk);
+    g.allBks.push(b);
+    if (!g.flat.has(ck)) g.flat.set(ck, []);
+    g.flat.get(ck).push(b);
+    if (useRow2) {
+      const r2 = pivotKeyOf(b, row2);
+      if (!g.sub.has(r2)) g.sub.set(r2, new Map());
+      const inner = g.sub.get(r2);
+      if (!inner.has(ck)) inner.set(ck, []);
+      inner.get(ck).push(b);
+    }
   });
-  const rowOrder = Array.from(rowKeys).sort();
-  const colOrder = col === '-' ? ['__total__'] : Array.from(colKeys).sort();
-  const fmt = metric === 'cm1_per_teu' ? v => fmtNum(v, 0)
-            : (metric === 'bkg_count' || metric === 'bkg_unique' || metric === 'shipper_unique') ? v => fmtNum(v, 0)
-            : v => fmtNum(v, 0);
+  const colOrder = colDim === '-' ? ['__total__'] : [...colKeysSet].sort();
 
-  // Persist cube on STATE so pivot cell click handlers can resolve the BKG subset.
-  STATE.pivotCube = cube;
+  const rowEntries = [...groups.entries()];
+  const rowAggBy = (entry, ck) => {
+    if (ck === '__row_total__' || !ck) return pivotAggregate(entry[1].allBks, metric);
+    return pivotAggregate(entry[1].flat.get(ck) || [], metric);
+  };
+  if (sort && sort.col != null) {
+    const dir = sort.dir === 'asc' ? 1 : -1;
+    rowEntries.sort((a, b) => dir * (rowAggBy(a, sort.col) - rowAggBy(b, sort.col)));
+  } else {
+    rowEntries.sort((a, b) => rowAggBy(b, '__row_total__') - rowAggBy(a, '__row_total__'));
+  }
+  const limited = topN && topN > 0 ? rowEntries.slice(0, topN) : rowEntries;
+
+  STATE.pivotCube = new Map(rowEntries.map(([rk, g]) => [rk, g.flat]));
+  STATE.pivotSubCube = useRow2 ? new Map(rowEntries.map(([rk, g]) => [rk, g.sub])) : null;
   STATE.pivotColOrder = colOrder;
-  STATE.pivotRowOrder = rowOrder;
+
+  const colTotalsBks = {};
+  colOrder.forEach(ck => { colTotalsBks[ck] = []; });
+  rowEntries.forEach(([, g]) => {
+    colOrder.forEach(ck => { colTotalsBks[ck] = colTotalsBks[ck].concat(g.flat.get(ck) || []); });
+  });
+  const grandBks = [].concat(...Object.values(colTotalsBks));
+  const grandValue = pivotAggregate(grandBks, metric);
+
+  let heatMax = 0;
+  if (heatmap && !RATIO_METRICS.has(metric)) {
+    limited.forEach(([, g]) => {
+      colOrder.forEach(ck => {
+        const v = pivotAggregate(g.flat.get(ck) || [], metric);
+        if (v > heatMax) heatMax = v;
+      });
+    });
+  }
+  const heatStyle = (val) => {
+    if (!heatmap || heatMax <= 0 || RATIO_METRICS.has(metric)) return '';
+    const intensity = Math.max(0, Math.min(1, val / heatMax));
+    if (intensity < 0.02) return '';
+    const alpha = 0.08 + intensity * 0.55;
+    return `background:rgba(26,115,232,${alpha.toFixed(3)});`;
+  };
+  const formatCell = (val, rowBks, colBks) => {
+    if (!val) return '';
+    if (normalize === 'value' || RATIO_METRICS.has(metric)) return pivotFormat(val, metric);
+    let denom = 0;
+    if (normalize === 'row') denom = pivotAggregate(rowBks || [], metric);
+    else if (normalize === 'col') denom = pivotAggregate(colBks || [], metric);
+    else if (normalize === 'grand') denom = grandValue;
+    if (!denom) return pivotFormat(val, metric);
+    return ((val / denom) * 100).toFixed(1) + '%';
+  };
 
   const totalLabel = I18N[STATE.lang].columns.totalLabel;
-  let h = `<div style="font-size:11px;color:#80868b;margin-bottom:6px">${tr('cluePivot')}</div>`;
-  h += `<table class="dt"><thead><tr><th>${escapeHtml(rowLabel(row))}</th>`;
-  colOrder.forEach(ck => h += `<th>${ck === '__total__' ? totalLabel : escapeHtml(ck)}</th>`);
-  if (col !== '-') h += `<th>${totalLabel}</th>`;
+  const sortArrow = (ck) => {
+    if (!sort || sort.col !== ck) return '';
+    return sort.dir === 'asc' ? ' ▲' : ' ▼';
+  };
+  const normNote = normalize !== 'value' && !RATIO_METRICS.has(metric)
+    ? ` · ${tr('pivotNorm')} ${tr('pivotNorm' + normalize[0].toUpperCase() + normalize.slice(1))}` : '';
+
+  let h = `<div style="font-size:11px;color:#80868b;margin-bottom:6px">${tr('cluePivot')} · ${tr('pivotMetric')}: <b>${escapeHtml(I18N[STATE.lang].metricNames[metric] || metric)}</b>${normNote}${heatmap ? ' · 🔥' : ''}${sort && sort.col ? ` · ${sort.dir === 'asc' ? tr('pivotSortAsc') : tr('pivotSortDesc')}` : ''}</div>`;
+  h += `<table class="dt"><thead><tr>`;
+  h += `<th>${escapeHtml(rowLabel(row))}${useRow2 ? ' › ' + escapeHtml(rowLabel(row2)) : ''}</th>`;
+  colOrder.forEach(ck => {
+    h += `<th style="cursor:pointer" data-action="pivot-sort" data-ck="${escapeHtml(ck)}">${ck === '__total__' ? totalLabel : escapeHtml(ck)}${sortArrow(ck)}</th>`;
+  });
+  if (colDim !== '-') h += `<th style="cursor:pointer" data-action="pivot-sort" data-ck="__row_total__">${totalLabel}${sortArrow('__row_total__')}</th>`;
   h += '</tr></thead><tbody>';
-  // Compute column totals
-  const colTotals = {};
-  rowOrder.forEach(rk => {
+
+  limited.forEach(([rk, g]) => {
     h += `<tr><td class="txt">${escapeHtml(rk)}</td>`;
-    let rowTotalBookings = [];
+    const rowAllBks = g.allBks;
     colOrder.forEach(ck => {
-      const bks = cube.get(rk)?.get(ck) || [];
-      rowTotalBookings = rowTotalBookings.concat(bks);
+      const bks = g.flat.get(ck) || [];
       const val = pivotAggregate(bks, metric);
-      colTotals[ck] = (colTotals[ck] || []).concat(bks);
-      const clickable = bks.length ? ` class="pivot-cell row-clickable" data-rk="${escapeHtml(rk)}" data-ck="${escapeHtml(ck)}"` : '';
-      h += `<td${clickable}>${fmt(val)}</td>`;
+      const clickable = bks.length ? ` class="pivot-cell row-clickable"` : '';
+      const dataAttrs = bks.length ? ` data-rk="${escapeHtml(rk)}" data-ck="${escapeHtml(ck)}"` : '';
+      const style = heatStyle(val);
+      h += `<td${clickable}${dataAttrs}${style ? ` style="${style}"` : ''}>${formatCell(val, rowAllBks, colTotalsBks[ck])}</td>`;
     });
-    if (col !== '-') {
-      h += `<td class="pct pivot-cell row-clickable" data-rk="${escapeHtml(rk)}" data-ck="__row_total__">${fmt(pivotAggregate(rowTotalBookings, metric))}</td>`;
+    if (colDim !== '-') {
+      const val = pivotAggregate(rowAllBks, metric);
+      h += `<td class="pct pivot-cell row-clickable" data-rk="${escapeHtml(rk)}" data-ck="__row_total__"${heatStyle(val) ? ` style="${heatStyle(val)}"` : ''}>${formatCell(val, rowAllBks, grandBks)}</td>`;
     }
     h += '</tr>';
+    if (useRow2 && g.sub.size) {
+      const subEntries = [...g.sub.entries()].sort((a, b) =>
+        pivotAggregate([].concat(...b[1].values()), metric) - pivotAggregate([].concat(...a[1].values()), metric)
+      );
+      subEntries.forEach(([r2k, inner]) => {
+        const subAllBks = [].concat(...inner.values());
+        h += `<tr><td class="txt" style="padding-left:24px;font-weight:400;color:#5f6368">↳ ${escapeHtml(r2k)}</td>`;
+        colOrder.forEach(ck => {
+          const bks = inner.get(ck) || [];
+          const val = pivotAggregate(bks, metric);
+          const clickable = bks.length ? ` class="pivot-cell row-clickable"` : '';
+          const dataAttrs = bks.length ? ` data-rk="${escapeHtml(rk)}" data-ck="${escapeHtml(ck)}" data-r2="${escapeHtml(r2k)}"` : '';
+          const style = heatStyle(val);
+          h += `<td${clickable}${dataAttrs} style="${style}color:#5f6368;font-size:11px">${formatCell(val, subAllBks, colTotalsBks[ck])}</td>`;
+        });
+        if (colDim !== '-') {
+          const val = pivotAggregate(subAllBks, metric);
+          h += `<td class="pct pivot-cell row-clickable" data-rk="${escapeHtml(rk)}" data-ck="__row_total__" data-r2="${escapeHtml(r2k)}" style="${heatStyle(val)}color:#5f6368;font-size:11px">${formatCell(val, subAllBks, grandBks)}</td>`;
+        }
+        h += '</tr>';
+      });
+    }
   });
+
   h += `<tr class="row-total"><td class="txt">${totalLabel}</td>`;
-  let grandList = [];
   colOrder.forEach(ck => {
-    const list = colTotals[ck] || [];
-    grandList = grandList.concat(list);
-    h += `<td class="pivot-cell row-clickable" data-rk="__col_total__" data-ck="${escapeHtml(ck)}">${fmt(pivotAggregate(list, metric))}</td>`;
+    const list = colTotalsBks[ck] || [];
+    const val = pivotAggregate(list, metric);
+    h += `<td class="pivot-cell row-clickable" data-rk="__col_total__" data-ck="${escapeHtml(ck)}">${formatCell(val, grandBks, list)}</td>`;
   });
-  if (col !== '-') h += `<td class="pivot-cell row-clickable" data-rk="__grand__" data-ck="__grand__">${fmt(pivotAggregate(grandList, metric))}</td>`;
-  h += '</tr>';
-  h += '</tbody></table>';
-  // Reserved area for click-expansion BKG list
+  if (colDim !== '-') {
+    h += `<td class="pivot-cell row-clickable" data-rk="__grand__" data-ck="__grand__">${formatCell(grandValue, grandBks, grandBks)}</td>`;
+  }
+  h += '</tr></tbody></table>';
+
+  if (topN && rowEntries.length > topN) {
+    h += `<p style="margin-top:6px;font-size:11px;color:#80868b">Top ${topN} / ${rowEntries.length} rows.</p>`;
+  }
   h += `<div id="pivotBkgPanel" style="margin-top:14px"></div>`;
-  // attach cell handlers next frame
-  queueMicrotask(() => attachPivotCellHandlers(bookings, colTotals));
+  queueMicrotask(() => attachPivotCellHandlers(bookings, colTotalsBks));
   return h;
 }
 
@@ -1461,11 +1596,18 @@ function attachPivotCellHandlers(bookings, colTotals) {
     cell.addEventListener('click', () => {
       const rk = cell.dataset.rk;
       const ck = cell.dataset.ck;
+      const r2 = cell.dataset.r2;
       let subset = [];
       if (rk === '__grand__' && ck === '__grand__') {
         subset = bookings;
       } else if (rk === '__col_total__') {
         subset = colTotals[ck] || [];
+      } else if (r2 && STATE.pivotSubCube) {
+        const inner = STATE.pivotSubCube.get(rk)?.get(r2);
+        if (inner) {
+          if (ck === '__row_total__') for (const list of inner.values()) subset = subset.concat(list);
+          else subset = inner.get(ck) || [];
+        }
       } else if (ck === '__row_total__') {
         const innerMap = STATE.pivotCube.get(rk);
         if (innerMap) for (const list of innerMap.values()) subset = subset.concat(list);
@@ -1474,13 +1616,28 @@ function attachPivotCellHandlers(bookings, colTotals) {
       }
       const panel = document.getElementById('pivotBkgPanel');
       const totalLbl = I18N[STATE.lang].columns.totalLabel;
-      const label = `${tr('pivotRowLabel')} ${rk === '__col_total__' ? totalLbl : rk} · ${tr('pivotColLabel')} ${ck === '__row_total__' || ck === '__total__' ? totalLbl : ck}`;
+      const label = `${tr('pivotRowLabel')} ${rk === '__col_total__' ? totalLbl : rk}${r2 ? ' › ' + r2 : ''} · ${tr('pivotColLabel')} ${ck === '__row_total__' || ck === '__total__' ? totalLbl : ck}`;
       panel.innerHTML = renderPivotCellDetail(subset, label);
       panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
       const exp = panel.querySelector('[data-action="export-pivot-cell"]');
-      if (exp) exp.addEventListener('click', () => exportBkgListAsCsv(subset, `pivot_${safeToken(rk)}_${safeToken(ck)}_${new Date().toISOString().slice(0,10)}.csv`));
+      if (exp) exp.addEventListener('click', () => exportBkgListAsCsv(subset, `pivot_${safeToken(rk)}_${safeToken(r2 || ck)}_${new Date().toISOString().slice(0,10)}.csv`));
       const close = panel.querySelector('[data-action="close-pivot-cell"]');
       if (close) close.addEventListener('click', () => { panel.innerHTML = ''; });
+    });
+  });
+
+  // Column header sort
+  document.querySelectorAll('th[data-action="pivot-sort"]').forEach(th => {
+    th.addEventListener('click', () => {
+      const ck = th.dataset.ck;
+      const s = STATE.pivot.sort || { col: null, dir: 'desc' };
+      if (s.col === ck) {
+        if (s.dir === 'desc') STATE.pivot.sort = { col: ck, dir: 'asc' };
+        else STATE.pivot.sort = { col: null, dir: 'desc' };  // back to default
+      } else {
+        STATE.pivot.sort = { col: ck, dir: 'desc' };
+      }
+      rebuildPivot('pivot-body');
     });
   });
 }

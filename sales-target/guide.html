@@ -12,7 +12,7 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:#f8f9fa;color:
 .header a{color:rgba(255,255,255,.85);text-decoration:none;font-size:13px;margin-left:14px}
 .header a:hover{color:#fff}
 .header .langBtn{background:rgba(255,255,255,.25);color:#fff;border:1px solid rgba(255,255,255,.5);padding:4px 12px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600;margin-right:10px}
-.container{max-width:980px;margin:0 auto;padding:24px}
+.container{max-width:880px;margin:0 auto;padding:24px}
 h2{color:#1a73e8;font-size:22px;margin:36px 0 12px;padding-bottom:8px;border-bottom:2px solid #e8f0fe}
 h3{color:#202124;font-size:17px;margin:22px 0 8px}
 h4{color:#1a73e8;font-size:14px;margin:14px 0 6px;text-transform:uppercase;letter-spacing:.3px}
@@ -48,8 +48,9 @@ hr{border:none;border-top:1px solid #e0e2e5;margin:30px 0}
 .side-toc a{display:block;padding:4px 0 4px 10px;color:#5f6368;text-decoration:none;border-left:2px solid transparent;transition:all .15s}
 .side-toc a:hover{color:#1a73e8}
 .side-toc a.active{color:#1a73e8;border-left-color:#1a73e8;font-weight:600}
-@media(max-width:1199px){.side-toc{display:none}}
-@media(min-width:1200px){.container{max-width:880px;margin-right:280px}}
+/* Below 1400px, hide the side TOC because a centered 880px container would
+   overlap with it. Above 1400px, both can coexist with the container centered. */
+@media(max-width:1399px){.side-toc{display:none}}
 
 .kbd-list{list-style:none;margin:8px 0}
 </style>
@@ -62,7 +63,7 @@ hr{border:none;border-top:1px solid #e0e2e5;margin:30px 0}
   </div>
   <div>
     <button class="langBtn" id="langBtn" onclick="toggleLang()" type="button">EN</button>
-    <a href="./" class="ko">← 화면으로</a><a href="./" class="en" style="display:none">← Back to screen</a>
+    <a href="./" class="ko" style="font-weight:600;background:rgba(255,255,255,.18);padding:4px 10px;border-radius:4px">← Sales Target 화면</a><a href="./" class="en" style="display:none;font-weight:600;background:rgba(255,255,255,.18);padding:4px 10px;border-radius:4px">← Sales Target screen</a>
     <a href="../guide.html" class="ko">전체 대시보드 가이드</a><a href="../guide.html" class="en" style="display:none">Full dashboard guide</a>
     <a href="../index.html" class="ko">메인 대시보드</a><a href="../index.html" class="en" style="display:none">Main dashboard</a>
   </div>
