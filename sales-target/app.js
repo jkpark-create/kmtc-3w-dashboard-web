@@ -5,6 +5,28 @@
 //   - data/*.json  : per-chunk shipper aggregates + BKG_NO list (lazy load)
 // ═════════════════════════════════════════════════════════════════
 
+// Whitelist of countries / ports allowed in filters. Anything outside this list
+// is excluded from the Country/Port dropdowns (and from the resulting query scope).
+const WHITELIST_ORIGINS = [
+  { country: 'CN', label: { ko: '중국 / China', en: 'China' }, ports: ['CN_SHA','CN_NBO','CN_TAO','CN_XGG','CN_DLC','CN_LYG','CN_SHK_DCB','CN_XMN','CN_NNS'] },
+  { country: 'HK', label: { ko: '홍콩 / Hong Kong', en: 'Hong Kong' }, ports: ['HK'] },
+  { country: 'TW', label: { ko: '대만 / Taiwan', en: 'Taiwan' }, ports: ['TW'] },
+  { country: 'TH', label: { ko: '태국 / Thailand', en: 'Thailand' }, ports: ['TH'] },
+  { country: 'VN', label: { ko: '베트남 / Vietnam', en: 'Vietnam' }, ports: ['VN_SGN_CMP','VN_HPH'] },
+  { country: 'PH', label: { ko: '필리핀 / Philippines', en: 'Philippines' }, ports: ['PH'] },
+  { country: 'MY', label: { ko: '말레이시아 / Malaysia', en: 'Malaysia' }, ports: ['PKG+PKW','PEN','PGU'] },
+  { country: 'SG', label: { ko: '싱가포르 / Singapore', en: 'Singapore' }, ports: ['SG'] },
+  { country: 'ID', label: { ko: '인도네시아 / Indonesia', en: 'Indonesia' }, ports: ['JKT','SUB'] },
+  { country: 'IN', label: { ko: '인도 / India', en: 'India' }, ports: ['IN'] },
+  { country: 'AE', label: { ko: 'UAE', en: 'UAE' }, ports: ['AE'] },
+];
+const COUNTRY_OF_PORT = (() => {
+  const m = new Map();
+  WHITELIST_ORIGINS.forEach(c => c.ports.forEach(p => m.set(p, c.country)));
+  return m;
+})();
+const ALL_WHITELIST_PORTS = WHITELIST_ORIGINS.flatMap(c => c.ports);
+
 const STATE = {
   index: null,
   manifest: null,
@@ -14,8 +36,9 @@ const STATE = {
   expandedShipperKey: null,
   filters: {
     quarter: 'q1',
-    origin: 'ALL',
-    sales: 'ALL',
+    countries: [],   // [] = no country filter (all whitelist countries)
+    origins: [],     // [] = no port filter (all whitelist ports, narrowed by countries)
+    sales: [],       // [] = all salespeople in current origin scope
     month: 'ALL',
     grade: 'ALL',
     profit: 'ALL',
@@ -23,7 +46,176 @@ const STATE = {
   },
   pivot: { row: 'origin', col: 'metric', metric: 'fst' },
   initialUrlParams: null,
+  lang: 'ko',
+  multiSelect: {}, // id -> { values: Set, options: [...], onChange, refresh, render }
 };
+
+// Effective origin scope: ports the user wants to see, intersected with whitelist.
+function effectiveOrigins() {
+  const { countries, origins } = STATE.filters;
+  let allowed = ALL_WHITELIST_PORTS;
+  if (countries.length) {
+    const c = new Set(countries);
+    allowed = allowed.filter(p => c.has(COUNTRY_OF_PORT.get(p)));
+  }
+  if (origins.length) {
+    const o = new Set(origins);
+    allowed = allowed.filter(p => o.has(p));
+  }
+  return new Set(allowed);
+}
+
+const I18N = {
+  ko: {
+    title: 'Sales Target & Progress',
+    backDash: '← -3W Booking Dashboard',
+    workbook: 'Target Workbook ↗',
+    guide: '📖 가이드',
+    fQuarter: '분기', fCountry: '국가', fOrigin: '선적포트', fSales: '영업사원', fMonth: '월(상세)',
+    fGrade: '등급', fProfit: '고수익', fWos: 'WOS',
+    btnReset: '필터 초기화',
+    all: '전체', msAll: '전체', msNone: '해제', msSearch: '검색...',
+    msPlaceholder: '전체', msSelected: (n) => `${n}개 선택`,
+    msNoOptions: '선택 가능한 항목이 없습니다',
+    msPickedAll: (n) => `전체 ${n}개`,
+    salesHint: '전체 (선적지 선택 시 좁힘)',
+    salesHintNarrowed: (n) => `${n}명 (선적지 기준)`,
+    monthAll: '전체 (분기 합산)',
+    profitHi: '고수익만', profitNotHi: '고수익 제외',
+    q2Label: '2Q 2026 (Progress)',
+    cardScope: '대상 영업사원', originCount: '선적지', salesCount: '영업사원', custCount: '화주 (A/C)',
+    bkLabel: '3W Before Booking Rate (vs BSA)',
+    lfLabel: '3W Before Actual Lifting Rate',
+    hpLabel: '3W Before High-Profit Rate',
+    kT: 'Target', kP: 'Perform',
+    vSummary: '① Target 요약 (선적지 × 영업사원)',
+    vDrill: '② 영업사원 → 화주 → BKG 상세',
+    vPivot: '③ 조합 Pivot',
+    legendOk: '달성', legendWarn: '-2%p 이내', legendNeg: '미달',
+    panelTitleSummary: '선적지 × 영업사원 — Target vs Performance',
+    cluePivot: '셀 클릭 → 해당 조건에 맞는 BKG_NO 리스트 보기',
+    clueDrill: '행 클릭 → 해당 영업사원의 화주·BKG 상세 (② 탭으로 이동)',
+    clueShipper: '화주 행 클릭 → 해당 화주의 BKG_NO 리스트 펼침',
+    pickOriginSales: '상단 필터에서 <b>선적지</b>와 <b>영업사원</b>을 각각 하나씩 선택하거나, ① 탭의 행을 클릭하세요.',
+    noChunks: '선택한 분기에 해당하는 월 데이터가 없습니다.',
+    noMatches: '필터 조건에 맞는 데이터가 없습니다.',
+    noShipper: '필터 조건에 맞는 화주가 없습니다. (등급/고수익/WOS 필터를 확인하세요)',
+    loadingDetail: '상세 데이터 로딩 중...',
+    panelAllBkg: '조건에 맞는 전체 BKG_NO 보기',
+    btnCsv: 'CSV 내보내기', btnClose: '닫기',
+    pivotScope: '스코프', pivotRowLabel: '행', pivotColLabel: '열', pivotMetric: '값', pivotNone: '(없음)',
+    pivotHeavy: (n) => `현재 필터 범위가 ${n}개 chunk 입니다. 응답이 느릴 수 있습니다. 선적지·영업사원·분기 필터로 범위를 좁히는 것을 권장합니다.`,
+    pivotCellDetail: 'Pivot 셀 상세',
+    columns: {
+      origin: '선적지', sales: '영업사원', share25: "'25 비중",
+      bk3w: '3W Booking (vs BSA)', lf3w: 'Actual Lifting Rate', hp3w: 'High-Profit Rate',
+      ac: 'No. of A/C (Q1)', acTotal: 'Total', ac3w: '3W', acPct: '%',
+      target: 'Target', perform: 'Perform', progress: 'Progress', gap: '+/-',
+      shipper: '화주', grade: '등급', bkgUnique: '고유 BKG_NO', bkgCnt: 'BKG 건',
+      fstTeu: 'FST TEU', lstTeu: 'LST TEU', w3fst: 'WOS-3 FST', w3lst: 'WOS-3 LST',
+      lstRate: '실선적률(W3)', hiShare: '고수익 비중(W3)', cm1: 'CM1',
+      bkgNo: 'BKG_NO', month: '월', polPod: 'POL→POD', vslVoy: 'VSL/VOY',
+      booking: 'Booking', wos: 'WOS', hi: '고수익', status: '상태', cm1PerTeu: 'CM1/TEU',
+      totalLabel: '합계',
+    },
+    dimNames: { origin: '선적지', salesman: '영업사원', shipper: '화주', grade: '등급', pod_country: 'POD 국가', pod: 'POD 항구', yyyymm: '월', hi: '고수익', wos: 'WOS 단계' },
+    metricNames: { fst: 'FST TEU', lst: 'LST TEU', w3_fst: 'WOS-3 FST TEU', w3_lst: 'WOS-3 LST TEU', bkg_count: 'BKG 건수', bkg_unique: '고유 BKG_NO', shipper_unique: '화주 수', cm1: 'CM1', cm1_per_teu: 'CM1/TEU' },
+  },
+  en: {
+    title: 'Sales Target & Progress',
+    backDash: '← -3W Booking Dashboard',
+    workbook: 'Target Workbook ↗',
+    guide: '📖 Guide',
+    fQuarter: 'Quarter', fCountry: 'Country', fOrigin: 'Origin port', fSales: 'Salesperson', fMonth: 'Month',
+    fGrade: 'Grade', fProfit: 'Hi-Profit', fWos: 'WOS',
+    btnReset: 'Reset filters',
+    all: 'All', msAll: 'Select all', msNone: 'Clear', msSearch: 'Search...',
+    msPlaceholder: 'All', msSelected: (n) => `${n} selected`,
+    msNoOptions: 'No options',
+    msPickedAll: (n) => `All ${n}`,
+    salesHint: 'All (narrowed when origin selected)',
+    salesHintNarrowed: (n) => `${n} (within origin)`,
+    monthAll: 'All (quarter sum)',
+    profitHi: 'High-profit only', profitNotHi: 'Exclude high-profit',
+    q2Label: '2Q 2026 (Progress)',
+    cardScope: 'Scope', originCount: 'Origins', salesCount: 'Salespeople', custCount: 'Shippers (A/C)',
+    bkLabel: '3W Before Booking Rate (vs BSA)',
+    lfLabel: '3W Before Actual Lifting Rate',
+    hpLabel: '3W Before High-Profit Rate',
+    kT: 'Target', kP: 'Perform',
+    vSummary: '① Target Summary (Origin × Salesperson)',
+    vDrill: '② Salesperson → Shipper → BKG detail',
+    vPivot: '③ Composable Pivot',
+    legendOk: 'On target', legendWarn: 'within -2%p', legendNeg: 'Behind',
+    panelTitleSummary: 'Origin × Salesperson — Target vs Performance',
+    cluePivot: 'Click a cell → BKG_NO list matching that combination',
+    clueDrill: 'Row click → drill to that salesperson (jumps to view ②)',
+    clueShipper: 'Click a shipper row → expand BKG_NO list',
+    pickOriginSales: 'Select an <b>Origin</b> and a <b>Salesperson</b> above, or click a row in view ①.',
+    noChunks: 'No monthly data for the selected quarter.',
+    noMatches: 'No data matches the filters.',
+    noShipper: 'No shippers match the filters. (Check Grade / High-profit / WOS.)',
+    loadingDetail: 'Loading detail...',
+    panelAllBkg: 'All matching BKG_NO',
+    btnCsv: 'Export CSV', btnClose: 'Close',
+    pivotScope: 'Scope', pivotRowLabel: 'Row', pivotColLabel: 'Col', pivotMetric: 'Value', pivotNone: '(none)',
+    pivotHeavy: (n) => `Current scope is ${n} chunks; response may be slow. Narrow by Origin / Salesperson / Quarter.`,
+    pivotCellDetail: 'Pivot cell detail',
+    columns: {
+      origin: 'Origin', sales: 'Salesperson', share25: "'25 share",
+      bk3w: '3W Booking (vs BSA)', lf3w: 'Actual Lifting Rate', hp3w: 'High-Profit Rate',
+      ac: 'No. of A/C (Q1)', acTotal: 'Total', ac3w: '3W', acPct: '%',
+      target: 'Target', perform: 'Perform', progress: 'Progress', gap: '+/-',
+      shipper: 'Shipper', grade: 'Grade', bkgUnique: 'Unique BKG_NO', bkgCnt: 'BKG count',
+      fstTeu: 'FST TEU', lstTeu: 'LST TEU', w3fst: 'WOS-3 FST', w3lst: 'WOS-3 LST',
+      lstRate: 'LFT% (W3)', hiShare: 'Hi-Profit% (W3)', cm1: 'CM1',
+      bkgNo: 'BKG_NO', month: 'Month', polPod: 'POL→POD', vslVoy: 'VSL/VOY',
+      booking: 'Booking', wos: 'WOS', hi: 'Hi', status: 'Status', cm1PerTeu: 'CM1/TEU',
+      totalLabel: 'Total',
+    },
+    dimNames: { origin: 'Origin', salesman: 'Salesperson', shipper: 'Shipper', grade: 'Grade', pod_country: 'POD Country', pod: 'POD Port', yyyymm: 'Month', hi: 'Hi-profit', wos: 'WOS' },
+    metricNames: { fst: 'FST TEU', lst: 'LST TEU', w3_fst: 'WOS-3 FST', w3_lst: 'WOS-3 LST', bkg_count: 'BKG count', bkg_unique: 'Unique BKG_NO', shipper_unique: 'Shipper count', cm1: 'CM1', cm1_per_teu: 'CM1/TEU' },
+  },
+};
+function tr(key) {
+  const dict = I18N[STATE.lang] || I18N.ko;
+  return (dict && dict[key] !== undefined) ? dict[key] : key;
+}
+function trCol(key) {
+  return I18N[STATE.lang].columns[key] || I18N.ko.columns[key] || key;
+}
+function toggleLang() {
+  STATE.lang = STATE.lang === 'ko' ? 'en' : 'ko';
+  try { localStorage.setItem('sales_target_lang', STATE.lang); } catch {}
+  applyLang();
+  render();
+}
+function applyLang() {
+  const dict = I18N[STATE.lang];
+  const langBtn = document.getElementById('langBtn');
+  if (langBtn) langBtn.textContent = STATE.lang === 'ko' ? 'EN' : 'KO';
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.dataset.i18n;
+    const val = dict[key];
+    if (typeof val === 'string') el.textContent = val;
+  });
+  document.querySelectorAll('[data-i18n-attr]').forEach(el => {
+    const spec = el.dataset.i18nAttr;  // e.g. "text:all"
+    const [attr, key] = spec.split(':');
+    if (attr === 'text' && dict[key]) el.textContent = dict[key];
+  });
+  // Refresh multi-selects (re-render to use new locale-aware labels)
+  Object.values(STATE.multiSelect).forEach(ms => { try { ms.render(); } catch {} });
+  // Refresh dynamic salesperson + month options once manifest is loaded
+  if (STATE.manifest) {
+    refreshSalesOptions();
+    refreshMonthOptions();
+  }
+  const monthSel = document.getElementById('fMonth');
+  if (monthSel && monthSel.options[0]) monthSel.options[0].textContent = dict.monthAll;
+  const qSel = document.getElementById('fQuarter');
+  if (qSel && qSel.options[1]) qSel.options[1].textContent = dict.q2Label;
+}
 
 const QUARTER_MONTHS = {
   q1: ['202601', '202602', '202603'],
@@ -84,6 +276,8 @@ async function loadJson(url) {
 
 async function init() {
   try {
+    try { STATE.lang = localStorage.getItem('sales_target_lang') || 'ko'; } catch {}
+    applyLang();
     const [index, manifest] = await Promise.all([
       loadJson('index.json'),
       loadJson('manifest.json'),
@@ -94,6 +288,7 @@ async function init() {
     setupFilters();
     setupListeners();
     applyInitialParams();
+    applyLang();
     render();
     setText('dataInfo', `데이터 기준일: ${formatDataDate(index.data_date)} · ${manifest.chunk_count.toLocaleString()}개 chunk / ${manifest.bkg_rows.toLocaleString()}개 BKG`);
     const link = document.getElementById('workbookLink');
@@ -129,32 +324,174 @@ function applyInitialParams() {
   const params = STATE.initialUrlParams || {};
   if (params.quarter) STATE.filters.quarter = params.quarter;
   if (params.month) STATE.filters.month = params.month;
-  if (params.grade) STATE.filters.grade = params.grade;
+  if (params.grade) {
+    // Old links may pass A/B/C/D individually; collapse to AB/CD.
+    const g = params.grade.toUpperCase();
+    if (g === 'A' || g === 'B') STATE.filters.grade = 'AB';
+    else if (g === 'C' || g === 'D') STATE.filters.grade = 'CD';
+    else if (['ALL','AB','CD'].includes(g)) STATE.filters.grade = g;
+  }
   if (params.profit) STATE.filters.profit = params.profit;
   if (params.wos) STATE.filters.wos = params.wos;
-  if (params.origin) STATE.filters.origin = params.origin;
-  if (params.sales) STATE.filters.sales = params.sales;
+  // Support both new (?origins=A,B&country=CN) and legacy (?origin=CN_SHA) param shapes.
+  const originList = (params.origins || params.origin || '').split(',').map(s => s.trim()).filter(Boolean);
+  if (originList.length) {
+    STATE.filters.origins = originList.filter(p => ALL_WHITELIST_PORTS.includes(p));
+  }
+  const countryList = (params.country || params.countries || '').split(',').map(s => s.trim()).filter(Boolean);
+  if (countryList.length) {
+    STATE.filters.countries = countryList;
+  } else if (STATE.filters.origins.length) {
+    // Auto-derive countries from the selected ports so the country dropdown reflects context.
+    STATE.filters.countries = [...new Set(STATE.filters.origins.map(p => COUNTRY_OF_PORT.get(p)).filter(Boolean))];
+  }
+  const salesList = (params.sales || '').split(',').map(s => s.trim()).filter(Boolean);
+  if (salesList.length) STATE.filters.sales = salesList;
   if (params.view && ['summary', 'drill', 'pivot'].includes(params.view)) STATE.view = params.view;
   document.getElementById('fQuarter').value = STATE.filters.quarter;
-  document.getElementById('fOrigin').value = STATE.filters.origin;
-  document.getElementById('fSales').value = STATE.filters.sales;
   document.getElementById('fMonth').value = STATE.filters.month;
   document.getElementById('fGrade').value = STATE.filters.grade;
   document.getElementById('fProfit').value = STATE.filters.profit;
   document.getElementById('fWos').value = STATE.filters.wos;
+  // Sync multi-selects (they were already built but selections may have updated).
+  if (STATE.multiSelect.msCountry) STATE.multiSelect.msCountry.setSelected(STATE.filters.countries);
+  refreshPortOptions();
+  if (STATE.multiSelect.msPort) STATE.multiSelect.msPort.setSelected(STATE.filters.origins);
+  refreshSalesOptions();
+  if (STATE.multiSelect.msSales) STATE.multiSelect.msSales.setSelected(STATE.filters.sales);
   $$('.view-tabs .vtab').forEach(el => el.classList.toggle('active', el.dataset.view === STATE.view));
 }
 
-// ─── Filter setup ────────────────────────────────────────────────
-function setupFilters() {
-  const origins = STATE.manifest.origins || [];
-  fillSelect('fOrigin', origins, 'ALL', '전체');
-  refreshSalesOptions();
-  refreshMonthOptions();
+// ─── Multi-select widget ─────────────────────────────────────────
+function buildMultiSelect(id, opts) {
+  // opts: { options:[{value,label,group?,groupLabel?}], selected:[], onChange:(values)=>void }
+  const root = document.getElementById(id);
+  if (!root) return null;
+  const state = {
+    selected: new Set(opts.selected || []),
+    options: opts.options || [],
+    onChange: opts.onChange || (() => {}),
+    name: root.dataset.msname || id,
+  };
+  STATE.multiSelect[id] = state;
+
+  const render = () => {
+    const dict = I18N[STATE.lang];
+    const total = state.options.length;
+    const selCount = state.selected.size;
+    let label;
+    if (selCount === 0) label = dict.msPickedAll(total);
+    else if (selCount === total && total > 0) label = dict.msPickedAll(total);
+    else if (selCount === 1) {
+      const v = [...state.selected][0];
+      const opt = state.options.find(o => o.value === v);
+      label = opt ? opt.label : v;
+    } else label = dict.msSelected(selCount);
+    root.classList.toggle('dirty', selCount > 0 && selCount < total);
+    root.innerHTML = '';
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'ms-toggle';
+    btn.title = label;
+    btn.innerHTML = `<span style="overflow:hidden;text-overflow:ellipsis">${escapeHtml(label)}</span><span class="ms-caret">▾</span>`;
+    btn.addEventListener('click', e => { e.stopPropagation(); toggleOpen(); });
+    root.appendChild(btn);
+
+    const panel = document.createElement('div');
+    panel.className = 'ms-panel';
+    panel.addEventListener('click', e => e.stopPropagation());
+    panel.innerHTML = `
+      <div class="ms-actions">
+        <button type="button" data-action="all">${escapeHtml(dict.msAll)}</button>
+        <button type="button" data-action="none">${escapeHtml(dict.msNone)}</button>
+      </div>
+      <div class="ms-search-wrap"><input class="ms-search" placeholder="${escapeHtml(dict.msSearch)}"></div>
+      <div class="ms-options"></div>
+    `;
+    const optsEl = panel.querySelector('.ms-options');
+    const renderOpts = (filter) => {
+      const q = (filter || '').trim().toLowerCase();
+      optsEl.innerHTML = '';
+      let lastGroup = null;
+      const visible = state.options.filter(o => !q || o.label.toLowerCase().includes(q) || o.value.toLowerCase().includes(q));
+      if (!visible.length) {
+        optsEl.innerHTML = `<div class="ms-empty">${escapeHtml(dict.msNoOptions)}</div>`;
+        return;
+      }
+      visible.forEach(o => {
+        if (o.group && o.group !== lastGroup) {
+          lastGroup = o.group;
+          const g = document.createElement('div');
+          g.className = 'ms-group-head';
+          g.textContent = o.groupLabel || o.group;
+          optsEl.appendChild(g);
+        }
+        const row = document.createElement('label');
+        row.className = 'ms-opt' + (o.group ? ' ms-opt-sub' : '');
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.value = o.value;
+        cb.checked = state.selected.has(o.value);
+        cb.addEventListener('change', () => {
+          if (cb.checked) state.selected.add(o.value); else state.selected.delete(o.value);
+          state.onChange([...state.selected]);
+          render();
+          // Keep panel open after pick — user can multi-select
+          state._keepOpen = true;
+          requestAnimationFrame(() => { state._keepOpen = false; });
+        });
+        row.appendChild(cb);
+        row.appendChild(document.createTextNode(' ' + o.label));
+        optsEl.appendChild(row);
+      });
+    };
+    renderOpts('');
+    panel.querySelector('[data-action="all"]').addEventListener('click', () => {
+      state.options.forEach(o => state.selected.add(o.value));
+      state.onChange([...state.selected]); render();
+    });
+    panel.querySelector('[data-action="none"]').addEventListener('click', () => {
+      state.selected.clear();
+      state.onChange([...state.selected]); render();
+    });
+    const search = panel.querySelector('.ms-search');
+    search.addEventListener('input', () => renderOpts(search.value));
+    root.appendChild(panel);
+  };
+
+  const toggleOpen = () => {
+    const willOpen = !root.classList.contains('open');
+    document.querySelectorAll('.ms.open').forEach(el => el.classList.remove('open'));
+    if (willOpen) root.classList.add('open');
+  };
+  state.render = render;
+  state.setOptions = (newOptions) => {
+    state.options = newOptions;
+    // Prune selected values that no longer exist
+    const valid = new Set(newOptions.map(o => o.value));
+    state.selected = new Set([...state.selected].filter(v => valid.has(v)));
+    render();
+  };
+  state.setSelected = (vals) => {
+    state.selected = new Set(vals || []);
+    render();
+  };
+  state.getSelected = () => [...state.selected];
+  render();
+  return state;
 }
+
+document.addEventListener('click', () => {
+  document.querySelectorAll('.ms.open').forEach(el => {
+    const st = STATE.multiSelect[el.id];
+    if (st && st._keepOpen) return;
+    el.classList.remove('open');
+  });
+});
 
 function fillSelect(id, list, currentValue, allLabel) {
   const sel = document.getElementById(id);
+  if (!sel) return;
   sel.innerHTML = '';
   sel.appendChild(makeOption('ALL', allLabel || '전체'));
   list.forEach(v => sel.appendChild(makeOption(v, v)));
@@ -168,24 +505,95 @@ function makeOption(value, label) {
   return o;
 }
 
-function refreshSalesOptions() {
-  const origin = STATE.filters.origin;
-  let names;
-  if (origin === 'ALL') {
-    const set = new Set();
-    Object.values(STATE.manifest.salespeople_by_origin || {}).forEach(arr => arr.forEach(n => set.add(n)));
-    names = Array.from(set).sort();
+// ─── Filter setup ────────────────────────────────────────────────
+function setupFilters() {
+  // Country options: only whitelist countries that have any data in manifest.
+  const manifestOrigins = new Set(STATE.manifest.origins || []);
+  const countryOpts = WHITELIST_ORIGINS
+    .filter(c => c.ports.some(p => manifestOrigins.has(p)))
+    .map(c => ({ value: c.country, label: `${c.country} — ${c.label[STATE.lang] || c.label.ko}` }));
+  buildMultiSelect('msCountry', {
+    options: countryOpts,
+    selected: STATE.filters.countries,
+    onChange: vals => {
+      STATE.filters.countries = vals;
+      refreshPortOptions();
+      refreshSalesOptions();
+      render();
+    },
+  });
+  refreshPortOptions();
+  refreshSalesOptions();
+  refreshMonthOptions();
+}
+
+function refreshPortOptions() {
+  const manifestOrigins = new Set(STATE.manifest.origins || []);
+  const countries = STATE.filters.countries.length
+    ? new Set(STATE.filters.countries)
+    : new Set(WHITELIST_ORIGINS.map(c => c.country));
+  const portOpts = [];
+  WHITELIST_ORIGINS.forEach(c => {
+    if (!countries.has(c.country)) return;
+    c.ports.forEach(p => {
+      if (!manifestOrigins.has(p)) return;
+      portOpts.push({ value: p, label: p, group: c.country, groupLabel: c.label[STATE.lang] || c.label.ko });
+    });
+  });
+  const existing = STATE.multiSelect.msPort;
+  if (existing) {
+    const desired = STATE.filters.origins || [];
+    const validSet = new Set(portOpts.map(o => o.value));
+    const preserved = desired.filter(v => validSet.has(v));
+    existing.setOptions(portOpts);
+    existing.setSelected(preserved);
+    STATE.filters.origins = preserved;
   } else {
-    names = (STATE.manifest.salespeople_by_origin || {})[origin] || [];
+    buildMultiSelect('msPort', {
+      options: portOpts,
+      selected: STATE.filters.origins,
+      onChange: vals => {
+        STATE.filters.origins = vals;
+        refreshSalesOptions();
+        render();
+      },
+    });
   }
-  fillSelect('fSales', names, STATE.filters.sales, '전체');
+}
+
+function refreshSalesOptions() {
+  // Collect salespeople for the current origin scope.
+  const scope = effectiveOrigins();
+  const map = STATE.manifest.salespeople_by_origin || {};
+  const set = new Set();
+  Object.entries(map).forEach(([origin, names]) => {
+    if (!scope.has(origin)) return;
+    names.forEach(n => set.add(n));
+  });
+  const opts = [...set].sort().map(n => ({ value: n, label: n }));
+  const existing = STATE.multiSelect.msSales;
+  if (existing) {
+    // Preserve currently desired selection (STATE.filters.sales) across an options refresh.
+    const desired = STATE.filters.sales || [];
+    const validSet = new Set(opts.map(o => o.value));
+    const preserved = desired.filter(v => validSet.has(v));
+    existing.setOptions(opts);
+    existing.setSelected(preserved);
+    STATE.filters.sales = preserved;
+  } else {
+    buildMultiSelect('msSales', {
+      options: opts,
+      selected: STATE.filters.sales,
+      onChange: vals => { STATE.filters.sales = vals; render(); },
+    });
+  }
 }
 
 function refreshMonthOptions() {
   const months = STATE.manifest.months || [];
   const q = STATE.filters.quarter;
   const inQuarter = months.filter(m => (QUARTER_MONTHS[q] || []).includes(m));
-  fillSelect('fMonth', inQuarter, STATE.filters.month, '전체 (분기 합산)');
+  fillSelect('fMonth', inQuarter, STATE.filters.month, I18N[STATE.lang].monthAll);
 }
 
 function setupListeners() {
@@ -193,16 +601,6 @@ function setupListeners() {
     STATE.filters.quarter = e.target.value;
     STATE.filters.month = 'ALL';
     refreshMonthOptions();
-    render();
-  });
-  document.getElementById('fOrigin').addEventListener('change', e => {
-    STATE.filters.origin = e.target.value;
-    STATE.filters.sales = 'ALL';
-    refreshSalesOptions();
-    render();
-  });
-  document.getElementById('fSales').addEventListener('change', e => {
-    STATE.filters.sales = e.target.value;
     render();
   });
   ['fMonth', 'fGrade', 'fProfit', 'fWos'].forEach(id => {
@@ -213,18 +611,20 @@ function setupListeners() {
     });
   });
   document.getElementById('btnReset').addEventListener('click', () => {
-    STATE.filters = { quarter: 'q1', origin: 'ALL', sales: 'ALL', month: 'ALL', grade: 'ALL', profit: 'ALL', wos: 'W3' };
+    STATE.filters = { quarter: 'q1', countries: [], origins: [], sales: [], month: 'ALL', grade: 'ALL', profit: 'ALL', wos: 'W3' };
     STATE.expandedKey = null;
     STATE.expandedShipperKey = null;
     document.getElementById('fQuarter').value = 'q1';
-    refreshSalesOptions();
-    refreshMonthOptions();
-    document.getElementById('fOrigin').value = 'ALL';
-    document.getElementById('fSales').value = 'ALL';
     document.getElementById('fMonth').value = 'ALL';
     document.getElementById('fGrade').value = 'ALL';
     document.getElementById('fProfit').value = 'ALL';
     document.getElementById('fWos').value = 'W3';
+    if (STATE.multiSelect.msCountry) STATE.multiSelect.msCountry.setSelected([]);
+    refreshPortOptions();
+    if (STATE.multiSelect.msPort) STATE.multiSelect.msPort.setSelected([]);
+    refreshSalesOptions();
+    if (STATE.multiSelect.msSales) STATE.multiSelect.msSales.setSelected([]);
+    refreshMonthOptions();
     render();
   });
   $$('.view-tabs .vtab').forEach(el => el.addEventListener('click', () => {
@@ -236,12 +636,14 @@ function setupListeners() {
 
 // ─── Filtered summary rows from index.json ───────────────────────
 function filteredSummaryRows() {
-  const { origin, sales } = STATE.filters;
+  const scope = effectiveOrigins();
+  const salesSel = STATE.filters.sales;
+  const salesSet = salesSel.length ? new Set(salesSel) : null;
   const rows = STATE.index?.rows || [];
   return rows.filter(r => {
-    if (origin !== 'ALL' && r.tab !== origin) return false;
-    if (r.row_type === 'TOTAL') return sales === 'ALL';
-    if (sales !== 'ALL' && r.name !== sales) return false;
+    if (!scope.has(r.tab)) return false;
+    if (r.row_type === 'TOTAL') return !salesSet;
+    if (salesSet && !salesSet.has(r.name)) return false;
     return true;
   });
 }
@@ -312,32 +714,33 @@ function render() {
 // View 1: Target Summary — origin × salesperson, Target/Perform/Gap across 3 KPIs
 function renderSummaryView() {
   const q = STATE.filters.quarter;
-  const performLabel = q === 'q1' ? 'Perform' : 'Progress';
+  const cols = I18N[STATE.lang].columns;
+  const performLabel = q === 'q1' ? cols.perform : cols.progress;
   const rows = filteredSummaryRows();
   if (!rows.length) {
-    return `<div class="empty">필터 조건에 맞는 데이터가 없습니다.</div>`;
+    return `<div class="empty">${tr('noMatches')}</div>`;
   }
   let h = `<div class="panel-header">
-    <div class="panel-title">선적지 × 영업사원 — Target vs Performance (${q.toUpperCase()})</div>
+    <div class="panel-title">${tr('panelTitleSummary')} (${q.toUpperCase()})</div>
     <div class="panel-actions"><span class="legend">
-      <span><span class="swatch" style="background:#e6f4ea"></span>달성</span>
-      <span><span class="swatch" style="background:#fef7e0"></span>-2%p 이내</span>
-      <span><span class="swatch" style="background:#fce8e6"></span>미달</span>
+      <span><span class="swatch" style="background:#e6f4ea"></span>${tr('legendOk')}</span>
+      <span><span class="swatch" style="background:#fef7e0"></span>${tr('legendWarn')}</span>
+      <span><span class="swatch" style="background:#fce8e6"></span>${tr('legendNeg')}</span>
     </span></div>
   </div>`;
   h += `<table class="dt"><thead><tr>
-    <th rowspan="2">선적지</th>
-    <th rowspan="2">영업사원</th>
-    <th rowspan="2">'25 비중</th>
-    <th colspan="3">3W Booking (vs BSA)</th>
-    <th colspan="3">Actual Lifting Rate</th>
-    <th colspan="3">High-Profit Rate</th>
-    <th colspan="3">No. of A/C (Q1)</th>
+    <th rowspan="2">${cols.origin}</th>
+    <th rowspan="2">${cols.sales}</th>
+    <th rowspan="2">${cols.share25}</th>
+    <th colspan="3">${cols.bk3w}</th>
+    <th colspan="3">${cols.lf3w}</th>
+    <th colspan="3">${cols.hp3w}</th>
+    <th colspan="3">${cols.ac}</th>
   </tr><tr>
-    <th>Target</th><th>${performLabel}</th><th>+/-</th>
-    <th>Target</th><th>${performLabel}</th><th>+/-</th>
-    <th>Target</th><th>${performLabel}</th><th>+/-</th>
-    <th>Total</th><th>3W</th><th>%</th>
+    <th>${cols.target}</th><th>${performLabel}</th><th>${cols.gap}</th>
+    <th>${cols.target}</th><th>${performLabel}</th><th>${cols.gap}</th>
+    <th>${cols.target}</th><th>${performLabel}</th><th>${cols.gap}</th>
+    <th>${cols.acTotal}</th><th>${cols.ac3w}</th><th>${cols.acPct}</th>
   </tr></thead><tbody>`;
 
   rows.forEach(r => {
@@ -362,30 +765,43 @@ function renderSummaryView() {
     </tr>`;
   });
   h += '</tbody></table>';
-  h += `<p style="margin-top:10px;font-size:11px;color:#80868b">행 클릭 → 해당 영업사원의 화주·BKG 상세 (② 탭으로 이동)</p>`;
+  h += `<p style="margin-top:10px;font-size:11px;color:#80868b">${tr('clueDrill')}</p>`;
   return h;
 }
 
-// View 2: Drill — pick (origin, salesperson), then load chunks for the quarter/month, show shipper table; click shipper -> BKG_NO list
+// View 2: Drill — uses ALL selected origin/salesman pairs; loads chunks for the quarter/month, shows shipper table; click shipper -> BKG_NO list
 function renderDrillView() {
-  const { origin, sales } = STATE.filters;
-  if (origin === 'ALL' || sales === 'ALL') {
-    return `<div class="empty">상단 필터에서 <b>선적지</b>와 <b>영업사원</b>을 각각 하나씩 선택하거나, ① 탭의 행을 클릭하세요.</div>`;
+  const scope = effectiveOrigins();
+  const salesSel = STATE.filters.sales;
+  if (!salesSel.length) {
+    return `<div class="empty">${tr('pickOriginSales')}</div>`;
   }
   const months = monthsForFilter();
-  if (!months.length) return `<div class="empty">선택한 분기에 해당하는 월 데이터가 없습니다.</div>`;
+  if (!months.length) return `<div class="empty">${tr('noChunks')}</div>`;
 
-  const containerId = `drill-${safeToken(origin)}-${safeToken(sales)}-${safeToken(STATE.filters.quarter)}`;
-  // Trigger async load
-  queueMicrotask(() => loadDrillData(origin, sales, months, containerId));
+  // Build the (origin, sales, month) targets from the selection x scope
+  const pairs = [];
+  Object.entries(STATE.manifest.salespeople_by_origin || {}).forEach(([origin, names]) => {
+    if (!scope.has(origin)) return;
+    names.forEach(name => {
+      if (salesSel.includes(name)) pairs.push([origin, name]);
+    });
+  });
+  if (!pairs.length) {
+    return `<div class="empty">${tr('noMatches')}</div>`;
+  }
+  const containerId = `drill-${safeToken(pairs.map(p => p.join('|')).join(','))}-${safeToken(STATE.filters.quarter)}`;
+  queueMicrotask(() => loadDrillDataMulti(pairs, months, containerId));
+  const originLabels = [...new Set(pairs.map(p => p[0]))].join(', ');
+  const salesLabels = [...new Set(pairs.map(p => p[1]))].join(', ');
   return `<div class="crumbs">
-      <span class="crumb active">${escapeHtml(origin)}</span>
+      <span class="crumb active">${escapeHtml(originLabels)}</span>
       <span class="sep">›</span>
-      <span class="crumb active">${escapeHtml(sales)}</span>
+      <span class="crumb active">${escapeHtml(salesLabels)}</span>
       <span class="sep">›</span>
       <span class="crumb">${escapeHtml(monthLabel(months))}</span>
     </div>
-    <div id="${containerId}"><div class="loading">상세 데이터 로딩 중...</div></div>`;
+    <div id="${containerId}"><div class="loading">${tr('loadingDetail')}</div></div>`;
 }
 
 function monthsForFilter() {
@@ -419,15 +835,19 @@ async function loadChunk(origin, sales, yyyymm) {
   }
 }
 
-async function loadDrillData(origin, sales, months, containerId) {
-  const chunks = await Promise.all(months.map(m => loadChunk(origin, sales, m)));
+async function loadDrillDataMulti(pairs, months, containerId) {
+  const tasks = [];
+  pairs.forEach(([origin, sales]) => {
+    months.forEach(m => tasks.push(loadChunk(origin, sales, m)));
+  });
+  const chunks = await Promise.all(tasks);
   const valid = chunks.filter(Boolean);
+  const elContainer = document.getElementById(containerId);
+  if (!elContainer) return;
   if (!valid.length) {
-    document.getElementById(containerId).innerHTML = `<div class="empty">선택된 범위에서 ${escapeHtml(sales)}의 BKG 데이터를 찾지 못했습니다.</div>`;
+    elContainer.innerHTML = `<div class="empty">${tr('noMatches')}</div>`;
     return;
   }
-  const merged = mergeChunks(valid);
-  // Tag with origin/salesman/yyyymm so the flat BKG list can show context columns.
   valid.forEach(chunk => {
     (chunk.bookings || []).forEach(b => {
       b.__origin = chunk.origin;
@@ -435,14 +855,17 @@ async function loadDrillData(origin, sales, months, containerId) {
       b.__yyyymm = chunk.yyyymm;
     });
   });
+  const merged = mergeChunks(valid);
   const filtered = applyBookingFilters(merged.bookings);
   const shippers = aggregateShippers(filtered);
   STATE.drillBookings = filtered;
-  document.getElementById(containerId).innerHTML =
-    renderShipperTable(origin, sales, shippers, filtered) +
-    renderAllMatchingBkgPanel(filtered, `${origin}__${sales}`);
-  attachShipperHandlers(origin, sales, filtered);
-  attachAllBkgPanelHandlers(filtered, `${origin}__${sales}`);
+  const scopeLabel = pairs.map(p => `${p[0]}/${p[1]}`).join(',');
+  const scopeKey = safeToken(scopeLabel);
+  elContainer.innerHTML =
+    renderShipperTable(scopeLabel, '', shippers, filtered) +
+    renderAllMatchingBkgPanel(filtered, scopeKey);
+  attachShipperHandlers(scopeLabel, '', filtered);
+  attachAllBkgPanelHandlers(filtered, scopeKey);
 }
 
 function mergeChunks(chunks) {
@@ -513,8 +936,9 @@ function aggregateShippers(bookings) {
 }
 
 function renderShipperTable(origin, sales, shippers, bookings) {
+  const cols = I18N[STATE.lang].columns;
   if (!shippers.length) {
-    return `<div class="empty">필터 조건에 맞는 화주가 없습니다. (등급/고수익/WOS 필터를 확인하세요)</div>`;
+    return `<div class="empty">${tr('noShipper')}</div>`;
   }
   const totals = {
     bkg: shippers.reduce((s, r) => s + r.bkg_count, 0),
@@ -528,13 +952,14 @@ function renderShipperTable(origin, sales, shippers, bookings) {
   };
   const lstRate = safeRatio(totals.w3lst, totals.w3fst);
   const hiShare = safeRatio(totals.w3hi, totals.w3fst);
+  const scopeText = sales ? `${escapeHtml(origin)} · ${escapeHtml(sales)}` : escapeHtml(origin);
 
   let h = `<div class="panel-header">
-    <div class="panel-title">화주별 실적 — ${escapeHtml(origin)} · ${escapeHtml(sales)} (${escapeHtml(monthLabel(monthsForFilter()))})</div>
-    <div class="panel-actions">화주 ${shippers.length}개 · BKG ${fmtNum(totals.bkg)}건 · 고유 BKG_NO ${fmtNum(totals.bkgU)}건</div>
+    <div class="panel-title">${cols.shipper} — ${scopeText} (${escapeHtml(monthLabel(monthsForFilter()))})</div>
+    <div class="panel-actions">${cols.shipper} ${shippers.length} · BKG ${fmtNum(totals.bkg)} · ${cols.bkgUnique} ${fmtNum(totals.bkgU)}</div>
   </div>
   <table class="dt"><thead><tr>
-    <th>화주</th><th>등급</th><th>고유 BKG_NO</th><th>BKG 건</th><th>FST TEU</th><th>LST TEU</th><th>WOS-3 FST</th><th>WOS-3 LST</th><th>실선적률(W3)</th><th>고수익 비중(W3)</th><th>CM1</th>
+    <th>${cols.shipper}</th><th>${cols.grade}</th><th>${cols.bkgUnique}</th><th>${cols.bkgCnt}</th><th>${cols.fstTeu}</th><th>${cols.lstTeu}</th><th>${cols.w3fst}</th><th>${cols.w3lst}</th><th>${cols.lstRate}</th><th>${cols.hiShare}</th><th>${cols.cm1}</th>
   </tr></thead><tbody>`;
   shippers.forEach((s, i) => {
     h += `<tr class="row-clickable" data-action="shipper-toggle" data-shipper-key="${escapeHtml(s.shipper_no || s.shipper_name)}" data-idx="${i}">
@@ -552,7 +977,7 @@ function renderShipperTable(origin, sales, shippers, bookings) {
     </tr>`;
   });
   h += `<tr class="row-total">
-      <td class="txt">합계</td><td></td>
+      <td class="txt">${I18N[STATE.lang].columns.totalLabel}</td><td></td>
       <td>${fmtNum(totals.bkgU)}</td>
       <td>${fmtNum(totals.bkg)}</td>
       <td>${fmtNum(totals.fst)}</td>
@@ -563,7 +988,7 @@ function renderShipperTable(origin, sales, shippers, bookings) {
       <td class="pct">${fmtPct(hiShare)}</td>
       <td>${fmtNum(totals.cm1)}</td>
     </tr></tbody></table>
-    <p style="margin-top:10px;font-size:11px;color:#80868b">화주 행 클릭 → 해당 화주의 BKG_NO 리스트 펼침</p>`;
+    <p style="margin-top:10px;font-size:11px;color:#80868b">${tr('clueShipper')}</p>`;
   return h;
 }
 
@@ -595,11 +1020,11 @@ function renderAllMatchingBkgPanel(bookings, scopeKey) {
   return `<div class="all-bkg-panel" data-scope="${escapeHtml(scopeKey)}" style="margin-top:14px;border:1px solid #dadce0;border-radius:8px;background:#fff">
     <div class="all-bkg-head" style="padding:10px 14px;display:flex;justify-content:space-between;align-items:center;background:#f8fafd;border-radius:8px 8px 0 0;cursor:pointer" data-action="toggle-all-bkg">
       <div>
-        <span style="font-weight:600;color:#202124">조건에 맞는 전체 BKG_NO 보기</span>
-        <span style="margin-left:10px;font-size:12px;color:#5f6368">${fmtNum(total)}건 · ${filterDesc}</span>
+        <span style="font-weight:600;color:#202124">${tr('panelAllBkg')}</span>
+        <span style="margin-left:10px;font-size:12px;color:#5f6368">${fmtNum(total)} · ${escapeHtml(filterDesc)}</span>
       </div>
       <div style="display:flex;align-items:center;gap:8px">
-        <button class="reset" data-action="export-all-bkg" type="button" style="padding:4px 10px">CSV 내보내기</button>
+        <button class="reset" data-action="export-all-bkg" type="button" style="padding:4px 10px">${tr('btnCsv')}</button>
         <span class="chev" style="font-size:14px;color:#5f6368">▾</span>
       </div>
     </div>
@@ -610,30 +1035,33 @@ function renderAllMatchingBkgPanel(bookings, scopeKey) {
 function describeActiveFilters() {
   const parts = [];
   const f = STATE.filters;
-  parts.push(`분기 ${f.quarter.toUpperCase()}`);
-  if (f.month !== 'ALL') parts.push(`월 ${formatMonth(f.month)}`);
-  if (f.origin !== 'ALL') parts.push(`선적지 ${f.origin}`);
-  if (f.sales !== 'ALL') parts.push(`영업사원 ${f.sales}`);
-  if (f.grade !== 'ALL') parts.push(`등급 ${f.grade}`);
-  if (f.profit !== 'ALL') parts.push(f.profit === 'HI' ? '고수익만' : '고수익 제외');
-  if (f.wos === 'W3') parts.push('WOS-3'); else parts.push('WOS 전체');
+  const lang = STATE.lang;
+  parts.push(`${tr('fQuarter')} ${f.quarter.toUpperCase()}`);
+  if (f.month !== 'ALL') parts.push(`${tr('fMonth')} ${formatMonth(f.month)}`);
+  if (f.countries.length) parts.push(`${tr('fCountry')} ${f.countries.join(',')}`);
+  if (f.origins.length) parts.push(`${tr('fOrigin')} ${f.origins.join(',')}`);
+  if (f.sales.length) parts.push(`${tr('fSales')} ${f.sales.join(',')}`);
+  if (f.grade !== 'ALL') parts.push(`${tr('fGrade')} ${f.grade}`);
+  if (f.profit !== 'ALL') parts.push(f.profit === 'HI' ? tr('profitHi') : tr('profitNotHi'));
+  parts.push(f.wos === 'W3' ? 'WOS-3' : (lang === 'en' ? 'WOS all' : 'WOS 전체'));
   return parts.join(' · ');
 }
 
 function buildFlatBkgTable(bookings) {
-  if (!bookings.length) return `<div class="empty">조건에 맞는 BKG가 없습니다.</div>`;
+  const cols = I18N[STATE.lang].columns;
+  if (!bookings.length) return `<div class="empty">${tr('noMatches')}</div>`;
   const sorted = bookings.slice().sort((a, b) => (b.fst_teu || 0) - (a.fst_teu || 0));
   const cap = 1000;
   const limited = sorted.slice(0, cap);
   let h = '';
   if (sorted.length > cap) {
-    h += `<div style="font-size:11px;color:#b06000;margin-bottom:8px">대용량(${fmtNum(sorted.length)}건)이라 상위 ${fmtNum(cap)}건만 표시합니다. 전체는 CSV 내보내기를 사용하세요.</div>`;
+    h += `<div style="font-size:11px;color:#b06000;margin-bottom:8px">${STATE.lang === 'en' ? `Showing top ${fmtNum(cap)} of ${fmtNum(sorted.length)} rows. Use CSV export for the full set.` : `대용량(${fmtNum(sorted.length)}건)이라 상위 ${fmtNum(cap)}건만 표시합니다. 전체는 CSV 내보내기를 사용하세요.`}</div>`;
   }
   h += `<table class="dt"><thead><tr>
-    <th>BKG_NO</th><th>선적지</th><th>영업사원</th><th>월</th>
-    <th>화주</th><th>등급</th><th>POL→POD</th><th>VSL/VOY</th>
-    <th>Booking</th><th>FST TEU</th><th>LST TEU</th><th>CM1</th><th>CM1/TEU</th>
-    <th>WOS</th><th>고수익</th><th>상태</th>
+    <th>${cols.bkgNo}</th><th>${cols.origin}</th><th>${cols.sales}</th><th>${cols.month}</th>
+    <th>${cols.shipper}</th><th>${cols.grade}</th><th>${cols.polPod}</th><th>${cols.vslVoy}</th>
+    <th>${cols.booking}</th><th>${cols.fstTeu}</th><th>${cols.lstTeu}</th><th>${cols.cm1}</th><th>${cols.cm1PerTeu}</th>
+    <th>${cols.wos}</th><th>${cols.hi}</th><th>${cols.status}</th>
   </tr></thead><tbody>`;
   limited.forEach(b => {
     const route = `${escapeHtml(b.pol || '')}→${escapeHtml(b.pod || '')}${b.dly_plc && b.dly_plc !== b.pod ? '/' + escapeHtml(b.dly_plc) : ''}`;
@@ -723,12 +1151,13 @@ function csvEscape(v) {
 }
 
 function renderBkgDetail(shipperKey, allBookings) {
+  const cols = I18N[STATE.lang].columns;
   const bks = allBookings.filter(b => (b.shipper_no || b.shipper_name) === shipperKey);
-  if (!bks.length) return `<div class="detail-box"><div class="empty">BKG 없음</div></div>`;
+  if (!bks.length) return `<div class="detail-box"><div class="empty">${tr('noMatches')}</div></div>`;
   bks.sort((a, b) => (b.week_start_date || '').localeCompare(a.week_start_date || ''));
-  let h = `<div class="detail-box"><h4>BKG_NO 상세 (${bks.length}건)</h4>
+  let h = `<div class="detail-box"><h4>${cols.bkgNo} (${bks.length})</h4>
     <table class="dt"><thead><tr>
-      <th>BKG_NO</th><th>POL→POD</th><th>VSL/VOY</th><th>Booking일</th><th>FST TEU</th><th>LST TEU</th><th>CM1</th><th>CM1/TEU</th><th>WOS</th><th>등급</th><th>고수익</th><th>상태</th>
+      <th>${cols.bkgNo}</th><th>${cols.polPod}</th><th>${cols.vslVoy}</th><th>${cols.booking}</th><th>${cols.fstTeu}</th><th>${cols.lstTeu}</th><th>${cols.cm1}</th><th>${cols.cm1PerTeu}</th><th>${cols.wos}</th><th>${cols.grade}</th><th>${cols.hi}</th><th>${cols.status}</th>
     </tr></thead><tbody>`;
   bks.forEach(b => {
     const route = `${escapeHtml(b.pol || '')}→${escapeHtml(b.pod || '')}${b.dly_plc && b.dly_plc !== b.pod ? '/' + escapeHtml(b.dly_plc) : ''}`;
@@ -756,55 +1185,57 @@ function renderBkgDetail(shipperKey, allBookings) {
 // View 3: Pivot — user-selected row / column dimensions over BKG-level booking data
 function renderPivotView() {
   const months = monthsForFilter();
-  const allOriginsScope = STATE.filters.origin === 'ALL';
-  const allSalesScope = STATE.filters.sales === 'ALL';
-  // Performance warning: full-cube load can be heavy. Recommend narrowing.
+  const scope = effectiveOrigins();
+  const salesSel = STATE.filters.sales;
+  const salesSet = salesSel.length ? new Set(salesSel) : null;
   const chunkEstimate = (STATE.manifest.chunks || []).filter(c => {
-    if (STATE.filters.origin !== 'ALL' && c.origin !== STATE.filters.origin) return false;
-    if (STATE.filters.sales !== 'ALL' && c.salesman !== STATE.filters.sales) return false;
+    if (!scope.has(c.origin)) return false;
+    if (salesSet && !salesSet.has(c.salesman)) return false;
     return months.includes(c.yyyymm);
   }).length;
   const containerId = 'pivot-body';
+  const dim = I18N[STATE.lang].dimNames;
+  const met = I18N[STATE.lang].metricNames;
   let h = `<div class="pivot-config">
-    <span>행:</span>
+    <span>${tr('pivotRowLabel')}:</span>
     <select id="pivotRow">
-      <option value="origin">선적지</option>
-      <option value="salesman">영업사원</option>
-      <option value="shipper">화주</option>
-      <option value="grade">등급</option>
-      <option value="pod_country">POD 국가</option>
-      <option value="pod">POD 항구</option>
-      <option value="yyyymm">월</option>
+      <option value="origin">${dim.origin}</option>
+      <option value="salesman">${dim.salesman}</option>
+      <option value="shipper">${dim.shipper}</option>
+      <option value="grade">${dim.grade}</option>
+      <option value="pod_country">${dim.pod_country}</option>
+      <option value="pod">${dim.pod}</option>
+      <option value="yyyymm">${dim.yyyymm}</option>
     </select>
-    <span style="margin-left:8px">열:</span>
+    <span style="margin-left:8px">${tr('pivotColLabel')}:</span>
     <select id="pivotCol">
-      <option value="-">(없음)</option>
-      <option value="yyyymm">월</option>
-      <option value="origin">선적지</option>
-      <option value="salesman">영업사원</option>
-      <option value="grade">등급</option>
-      <option value="pod_country">POD 국가</option>
-      <option value="hi">고수익 여부</option>
-      <option value="wos">WOS 단계</option>
+      <option value="-">${tr('pivotNone')}</option>
+      <option value="yyyymm">${dim.yyyymm}</option>
+      <option value="origin">${dim.origin}</option>
+      <option value="salesman">${dim.salesman}</option>
+      <option value="grade">${dim.grade}</option>
+      <option value="pod_country">${dim.pod_country}</option>
+      <option value="hi">${dim.hi}</option>
+      <option value="wos">${dim.wos}</option>
     </select>
-    <span style="margin-left:8px">값:</span>
+    <span style="margin-left:8px">${tr('pivotMetric')}:</span>
     <select id="pivotMetric">
-      <option value="fst">FST TEU</option>
-      <option value="lst">LST TEU</option>
-      <option value="w3_fst">WOS-3 FST TEU</option>
-      <option value="w3_lst">WOS-3 LST TEU</option>
-      <option value="bkg_count">BKG 건수</option>
-      <option value="bkg_unique">고유 BKG_NO</option>
-      <option value="shipper_unique">화주 수</option>
-      <option value="cm1">CM1</option>
-      <option value="cm1_per_teu">CM1/TEU</option>
+      <option value="fst">${met.fst}</option>
+      <option value="lst">${met.lst}</option>
+      <option value="w3_fst">${met.w3_fst}</option>
+      <option value="w3_lst">${met.w3_lst}</option>
+      <option value="bkg_count">${met.bkg_count}</option>
+      <option value="bkg_unique">${met.bkg_unique}</option>
+      <option value="shipper_unique">${met.shipper_unique}</option>
+      <option value="cm1">${met.cm1}</option>
+      <option value="cm1_per_teu">${met.cm1_per_teu}</option>
     </select>
-    <span style="margin-left:auto;color:#80868b">스코프: ${chunkEstimate} chunks</span>
+    <span style="margin-left:auto;color:#80868b">${tr('pivotScope')}: ${chunkEstimate} chunks</span>
   </div>`;
   if (chunkEstimate > 200) {
-    h += `<div class="error-banner">현재 필터 범위가 ${chunkEstimate}개 chunk 입니다. 응답이 느릴 수 있습니다. 선적지·영업사원·분기 필터로 범위를 좁히는 것을 권장합니다.</div>`;
+    h += `<div class="error-banner">${I18N[STATE.lang].pivotHeavy(chunkEstimate)}</div>`;
   }
-  h += `<div id="${containerId}"><div class="loading">Pivot 데이터 준비 중...</div></div>`;
+  h += `<div id="${containerId}"><div class="loading">${tr('loadingDetail')}</div></div>`;
   queueMicrotask(() => {
     document.getElementById('pivotRow').value = STATE.pivot.row;
     document.getElementById('pivotCol').value = STATE.pivot.col;
@@ -823,9 +1254,12 @@ function renderPivotView() {
 
 async function rebuildPivot(containerId) {
   const months = monthsForFilter();
+  const scope = effectiveOrigins();
+  const salesSel = STATE.filters.sales;
+  const salesSet = salesSel.length ? new Set(salesSel) : null;
   const chunkList = (STATE.manifest.chunks || []).filter(c => {
-    if (STATE.filters.origin !== 'ALL' && c.origin !== STATE.filters.origin) return false;
-    if (STATE.filters.sales !== 'ALL' && c.salesman !== STATE.filters.sales) return false;
+    if (!scope.has(c.origin)) return false;
+    if (salesSet && !salesSet.has(c.salesman)) return false;
     return months.includes(c.yyyymm);
   });
   const el = document.getElementById(containerId);
@@ -910,10 +1344,11 @@ function renderPivotTable(bookings) {
   STATE.pivotColOrder = colOrder;
   STATE.pivotRowOrder = rowOrder;
 
-  let h = `<div style="font-size:11px;color:#80868b;margin-bottom:6px">셀 클릭 → 해당 조건에 맞는 BKG_NO 리스트 보기</div>`;
+  const totalLabel = I18N[STATE.lang].columns.totalLabel;
+  let h = `<div style="font-size:11px;color:#80868b;margin-bottom:6px">${tr('cluePivot')}</div>`;
   h += `<table class="dt"><thead><tr><th>${escapeHtml(rowLabel(row))}</th>`;
-  colOrder.forEach(ck => h += `<th>${ck === '__total__' ? '합계' : escapeHtml(ck)}</th>`);
-  if (col !== '-') h += '<th>합계</th>';
+  colOrder.forEach(ck => h += `<th>${ck === '__total__' ? totalLabel : escapeHtml(ck)}</th>`);
+  if (col !== '-') h += `<th>${totalLabel}</th>`;
   h += '</tr></thead><tbody>';
   // Compute column totals
   const colTotals = {};
@@ -933,7 +1368,7 @@ function renderPivotTable(bookings) {
     }
     h += '</tr>';
   });
-  h += `<tr class="row-total"><td class="txt">합계</td>`;
+  h += `<tr class="row-total"><td class="txt">${totalLabel}</td>`;
   let grandList = [];
   colOrder.forEach(ck => {
     const list = colTotals[ck] || [];
@@ -968,7 +1403,8 @@ function attachPivotCellHandlers(bookings, colTotals) {
         subset = (STATE.pivotCube.get(rk)?.get(ck)) || [];
       }
       const panel = document.getElementById('pivotBkgPanel');
-      const label = `행 ${rk === '__col_total__' ? '합계' : rk} · 열 ${ck === '__row_total__' || ck === '__total__' ? '합계' : ck}`;
+      const totalLbl = I18N[STATE.lang].columns.totalLabel;
+      const label = `${tr('pivotRowLabel')} ${rk === '__col_total__' ? totalLbl : rk} · ${tr('pivotColLabel')} ${ck === '__row_total__' || ck === '__total__' ? totalLbl : ck}`;
       panel.innerHTML = renderPivotCellDetail(subset, label);
       panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
       const exp = panel.querySelector('[data-action="export-pivot-cell"]');
@@ -982,10 +1418,10 @@ function attachPivotCellHandlers(bookings, colTotals) {
 function renderPivotCellDetail(subset, label) {
   return `<div style="border:1px solid #dadce0;border-radius:8px;background:#fff;padding:0;overflow:hidden">
     <div style="padding:10px 14px;background:#f8fafd;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #dadce0">
-      <div><b>Pivot 셀 상세</b> <span style="color:#5f6368;font-size:12px;margin-left:8px">${escapeHtml(label)} · ${fmtNum(subset.length)}건</span></div>
+      <div><b>${tr('pivotCellDetail')}</b> <span style="color:#5f6368;font-size:12px;margin-left:8px">${escapeHtml(label)} · ${fmtNum(subset.length)}</span></div>
       <div style="display:flex;gap:6px">
-        <button class="reset" data-action="export-pivot-cell" type="button">CSV 내보내기</button>
-        <button class="reset" data-action="close-pivot-cell" type="button">닫기</button>
+        <button class="reset" data-action="export-pivot-cell" type="button">${tr('btnCsv')}</button>
+        <button class="reset" data-action="close-pivot-cell" type="button">${tr('btnClose')}</button>
       </div>
     </div>
     <div style="padding:10px 14px">${buildFlatBkgTable(subset)}</div>
@@ -993,21 +1429,24 @@ function renderPivotCellDetail(subset, label) {
 }
 
 function rowLabel(dim) {
-  return ({
-    origin: '선적지', salesman: '영업사원', shipper: '화주', grade: '등급',
-    pod_country: 'POD 국가', pod: 'POD 항구', yyyymm: '월',
-    hi: '고수익', wos: 'WOS 단계',
-  }[dim]) || dim;
+  return I18N[STATE.lang].dimNames[dim] || dim;
 }
 
 function attachRowHandlers() {
   document.querySelectorAll('[data-action="drill"]').forEach(row => {
     row.addEventListener('click', () => {
-      STATE.filters.origin = row.dataset.origin;
-      STATE.filters.sales = row.dataset.sales;
-      document.getElementById('fOrigin').value = STATE.filters.origin;
+      const origin = row.dataset.origin;
+      const sales = row.dataset.sales;
+      const country = COUNTRY_OF_PORT.get(origin);
+      STATE.filters.countries = country ? [country] : [];
+      STATE.filters.origins = [origin];
+      if (STATE.multiSelect.msCountry) STATE.multiSelect.msCountry.setSelected(STATE.filters.countries);
+      refreshPortOptions();
+      if (STATE.multiSelect.msPort) STATE.multiSelect.msPort.setSelected(STATE.filters.origins);
+      // refreshSalesOptions resets STATE.filters.sales from the multi-select state, so re-apply afterwards.
       refreshSalesOptions();
-      document.getElementById('fSales').value = STATE.filters.sales;
+      STATE.filters.sales = [sales];
+      if (STATE.multiSelect.msSales) STATE.multiSelect.msSales.setSelected(STATE.filters.sales);
       STATE.view = 'drill';
       $$('.view-tabs .vtab').forEach(el => el.classList.toggle('active', el.dataset.view === 'drill'));
       render();

@@ -78,6 +78,7 @@ li{margin:4px 0}
     <li><a href="#data" data-id="data">데이터 기준</a></li>
     <li><a href="#update" data-id="update">자동 업데이트</a></li>
     <li><a href="#scheduler" data-id="scheduler">스케줄러</a></li>
+    <li><a href="#sales-target-link" data-id="sales-target-link">🎯 Sales Target</a></li>
   </ul>
   <ul class="en" style="display:none">
     <li><a href="#overview" data-id="overview">Overview</a></li>
@@ -94,6 +95,7 @@ li{margin:4px 0}
     <li><a href="#data" data-id="data">Data Defs</a></li>
     <li><a href="#update" data-id="update">Auto Updates</a></li>
     <li><a href="#scheduler" data-id="scheduler">Scheduler</a></li>
+    <li><a href="#sales-target-link" data-id="sales-target-link">🎯 Sales Target</a></li>
   </ul>
 </nav>
 
@@ -962,8 +964,57 @@ document.addEventListener('DOMContentLoaded', function() {
   <div class="tip"><strong>Note:</strong> 3W_BKG_Dashboard (weekday 09:03) is the primary task. Results are automatically emailed.</div>
 </div>
 
+<!-- SALES TARGET -->
+<span class="anchor" id="sales-target-link"></span>
+<h2 class="ko">🎯 Sales Target &amp; Progress</h2>
+<h2 class="en" style="display:none">🎯 Sales Target &amp; Progress</h2>
+
+<div class="card ko">
+  <p>영업사원별 <strong>목표 대비 실적</strong>을 구간별(선적지) → 영업사원 → 화주 → 부킹번호까지 디테일하게 보는 별도 화면입니다.</p>
+  <p>접근: 상단 헤더의 <strong>🎯 Sales Target</strong> 버튼 또는 ② 부킹 트렌드 → 영업사원별 표의 <strong>→</strong> 아이콘.</p>
+  <h3>한눈에 보기</h3>
+  <ul>
+    <li><strong>① Target 요약</strong>: 선적지 × 영업사원 매트릭스. 3W Booking Rate / Actual Lifting Rate / High-Profit Rate 각각 Target / Perform / +-</li>
+    <li><strong>② Drill</strong>: 선택한 영업사원의 화주별 실적 → 화주 클릭 시 BKG_NO 리스트 펼침</li>
+    <li><strong>③ 조합 Pivot</strong>: 행/열/측정값 자유 조합. 셀 클릭 시 매칭 BKG_NO 리스트 표시</li>
+  </ul>
+  <h3>핵심 기능</h3>
+  <ul>
+    <li><strong>국가 + 포트 다중선택</strong> (화이트리스트 11개 국가, 23개 포트만 노출)</li>
+    <li><strong>영업사원 다중선택</strong> (위 선적지 범위 안의 영업사원만 옵션으로 나옴)</li>
+    <li><strong>전체 매칭 BKG_NO 보기</strong> + CSV 내보내기 (현재 필터 조건에 맞는 모든 BKG)</li>
+    <li><strong>EN / KO 언어 토글</strong></li>
+  </ul>
+  <p>상세 가이드: <a href="sales-target/guide.html"><strong>📖 Sales Target 전용 가이드</strong></a></p>
+  <h3>데이터 갱신</h3>
+  <p>매일 평일 09:03의 <code>3W_BKG_Dashboard</code> 작업이 끝나면 자동으로 sales-target chunks (~1,592개)도 함께 빌드되어 dist에 push됩니다. 헤더의 "데이터 기준일"이 오늘이 아니면 운영 담당자에게 문의.</p>
+  <div class="tip"><strong>딥링크 예:</strong> <code>sales-target/?country=CN&amp;origin=CN_SHA&amp;sales=WUXIAOCHEN&amp;quarter=q1&amp;view=drill</code></div>
+</div>
+
+<div class="card en" style="display:none">
+  <p>A dedicated screen that drills into salesperson <strong>target vs performance</strong>: Origin → Salesperson → Shipper → BKG_NO.</p>
+  <p>Open from: header <strong>🎯 Sales Target</strong> button or click the <strong>→</strong> icon in ② Trends → By Salesperson.</p>
+  <h3>At a glance</h3>
+  <ul>
+    <li><strong>① Target Summary</strong>: Origin × Salesperson matrix, 3 KPIs with Target / Perform / +-</li>
+    <li><strong>② Drill</strong>: shipper aggregates → click a shipper to expand BKG_NO list</li>
+    <li><strong>③ Pivot</strong>: free row × col × metric; cell click → matching BKG list + CSV</li>
+  </ul>
+  <h3>Key features</h3>
+  <ul>
+    <li><strong>Country + Port multi-select</strong> (whitelist: 11 countries, 23 ports)</li>
+    <li><strong>Salesperson multi-select</strong> (scoped to current origin)</li>
+    <li><strong>All matching BKG_NO panel</strong> + CSV export</li>
+    <li><strong>EN / KO language toggle</strong></li>
+  </ul>
+  <p>Full guide: <a href="sales-target/guide.html"><strong>📖 Sales Target dedicated guide</strong></a></p>
+  <h3>Refresh</h3>
+  <p>Weekday 09:03 <code>3W_BKG_Dashboard</code> task automatically rebuilds the sales-target chunks (~1,592) and pushes to dist.</p>
+  <div class="tip"><strong>Deep link example:</strong> <code>sales-target/?country=CN&amp;origin=CN_SHA&amp;sales=WUXIAOCHEN&amp;quarter=q1&amp;view=drill</code></div>
+</div>
+
 <div style="text-align:center;padding:40px;color:#5f6368;font-size:12px">
-  -3W Booking Dashboard Guide | Last updated: 2026-04-23
+  -3W Booking Dashboard Guide | Last updated: 2026-05-19
 </div>
 
 </div>

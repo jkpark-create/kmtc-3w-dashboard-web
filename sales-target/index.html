@@ -10,63 +10,65 @@
 <div class="app-top">
   <div class="header">
     <div>
-      <h1>Sales Target &amp; Progress</h1>
+      <h1 id="hdrTitle">Sales Target &amp; Progress</h1>
       <div class="info" id="dataInfo">데이터 로딩 중...</div>
     </div>
     <div class="nav-links">
-      <a href="../index.html">← -3W Booking Dashboard</a>
-      <a id="workbookLink" href="#" target="_blank" rel="noopener">Target Workbook ↗</a>
+      <button id="langBtn" type="button" onclick="toggleLang()" style="background:rgba(255,255,255,.25);color:#fff;border:1px solid rgba(255,255,255,.5);padding:4px 12px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600">EN</button>
+      <a href="../index.html" data-i18n="backDash">← -3W Booking Dashboard</a>
+      <a id="workbookLink" href="#" target="_blank" rel="noopener" data-i18n="workbook">Target Workbook ↗</a>
+      <a href="guide.html" data-i18n="guide">📖 가이드</a>
     </div>
   </div>
 
   <div class="filters" id="filterBar">
     <div class="group">
-      <label>분기</label>
+      <label data-i18n="fQuarter">분기</label>
       <select id="fQuarter">
         <option value="q1">1Q 2026</option>
-        <option value="q2">2Q 2026 (Progress)</option>
+        <option value="q2" data-i18n-attr="text:q2Label">2Q 2026 (Progress)</option>
       </select>
     </div>
     <div class="group">
-      <label>선적지</label>
-      <select id="fOrigin"><option value="ALL">전체</option></select>
+      <label data-i18n="fCountry">국가</label>
+      <div class="ms" id="msCountry" data-msname="country"></div>
     </div>
     <div class="group">
-      <label>영업사원</label>
-      <select id="fSales"><option value="ALL">전체</option></select>
+      <label data-i18n="fOrigin">선적포트</label>
+      <div class="ms" id="msPort" data-msname="port"></div>
     </div>
     <div class="group">
-      <label>월(상세)</label>
-      <select id="fMonth"><option value="ALL">전체 (분기 합산)</option></select>
+      <label data-i18n="fSales">영업사원</label>
+      <div class="ms" id="msSales" data-msname="sales"></div>
     </div>
     <div class="group">
-      <label>등급</label>
+      <label data-i18n="fMonth">월(상세)</label>
+      <select id="fMonth"><option value="ALL" data-i18n-attr="text:monthAll">전체 (분기 합산)</option></select>
+    </div>
+    <div class="group">
+      <label data-i18n="fGrade">등급</label>
       <select id="fGrade">
-        <option value="ALL">전체</option>
+        <option value="ALL" data-i18n-attr="text:all">전체</option>
         <option value="AB">A+B</option>
         <option value="CD">C+D</option>
-        <option value="A">A</option>
-        <option value="B">B</option>
-        <option value="C">C</option>
-        <option value="D">D</option>
       </select>
     </div>
     <div class="group">
-      <label>고수익</label>
+      <label data-i18n="fProfit">고수익</label>
       <select id="fProfit">
-        <option value="ALL">전체</option>
-        <option value="HI">고수익만</option>
-        <option value="NOTHI">고수익 제외</option>
+        <option value="ALL" data-i18n-attr="text:all">전체</option>
+        <option value="HI" data-i18n-attr="text:profitHi">고수익만</option>
+        <option value="NOTHI" data-i18n-attr="text:profitNotHi">고수익 제외</option>
       </select>
     </div>
     <div class="group">
-      <label>WOS</label>
+      <label data-i18n="fWos">WOS</label>
       <select id="fWos">
         <option value="W3">WOS-3 only</option>
-        <option value="ALL">전체</option>
+        <option value="ALL" data-i18n-attr="text:all">전체</option>
       </select>
     </div>
-    <button class="reset" id="btnReset">필터 초기화</button>
+    <button class="reset" id="btnReset" data-i18n="btnReset">필터 초기화</button>
   </div>
 </div>
 
@@ -75,43 +77,43 @@
 
   <div class="cards-row" id="kpiCards">
     <div class="card summary-card">
-      <div class="label">대상 영업사원</div>
+      <div class="label" data-i18n="cardScope">대상 영업사원</div>
       <div class="kpi-grid">
-        <div class="kpi-cell"><span class="k-label">선적지</span><span class="k-val" id="cOrigin">-</span></div>
-        <div class="kpi-cell"><span class="k-label">영업사원</span><span class="k-val" id="cSales">-</span></div>
-        <div class="kpi-cell"><span class="k-label">화주 (A/C)</span><span class="k-val" id="cCust">-</span></div>
+        <div class="kpi-cell"><span class="k-label" data-i18n="originCount">선적지</span><span class="k-val" id="cOrigin">-</span></div>
+        <div class="kpi-cell"><span class="k-label" data-i18n="salesCount">영업사원</span><span class="k-val" id="cSales">-</span></div>
+        <div class="kpi-cell"><span class="k-label" data-i18n="custCount">화주 (A/C)</span><span class="k-val" id="cCust">-</span></div>
       </div>
     </div>
     <div class="card" style="border-left-color:#1a73e8">
-      <div class="label">3W Before Booking Rate (vs BSA)</div>
+      <div class="label" data-i18n="bkLabel">3W Before Booking Rate (vs BSA)</div>
       <div class="kpi-grid">
-        <div class="kpi-cell"><span class="k-label">Target</span><span class="k-val" id="cBkT">-</span></div>
-        <div class="kpi-cell"><span class="k-label">Perform</span><span class="k-val" id="cBkP">-</span></div>
+        <div class="kpi-cell"><span class="k-label" data-i18n="kT">Target</span><span class="k-val" id="cBkT">-</span></div>
+        <div class="kpi-cell"><span class="k-label" data-i18n="kP">Perform</span><span class="k-val" id="cBkP">-</span></div>
         <div class="kpi-cell"><span class="k-label">+/-</span><span class="k-val" id="cBkG">-</span></div>
       </div>
     </div>
     <div class="card" style="border-left-color:#34a853">
-      <div class="label">3W Before Actual Lifting Rate</div>
+      <div class="label" data-i18n="lfLabel">3W Before Actual Lifting Rate</div>
       <div class="kpi-grid">
-        <div class="kpi-cell"><span class="k-label">Target</span><span class="k-val" id="cLfT">-</span></div>
-        <div class="kpi-cell"><span class="k-label">Perform</span><span class="k-val" id="cLfP">-</span></div>
+        <div class="kpi-cell"><span class="k-label" data-i18n="kT">Target</span><span class="k-val" id="cLfT">-</span></div>
+        <div class="kpi-cell"><span class="k-label" data-i18n="kP">Perform</span><span class="k-val" id="cLfP">-</span></div>
         <div class="kpi-cell"><span class="k-label">+/-</span><span class="k-val" id="cLfG">-</span></div>
       </div>
     </div>
     <div class="card" style="border-left-color:#f9ab00">
-      <div class="label">3W Before High-Profit Rate</div>
+      <div class="label" data-i18n="hpLabel">3W Before High-Profit Rate</div>
       <div class="kpi-grid">
-        <div class="kpi-cell"><span class="k-label">Target</span><span class="k-val" id="cHpT">-</span></div>
-        <div class="kpi-cell"><span class="k-label">Perform</span><span class="k-val" id="cHpP">-</span></div>
+        <div class="kpi-cell"><span class="k-label" data-i18n="kT">Target</span><span class="k-val" id="cHpT">-</span></div>
+        <div class="kpi-cell"><span class="k-label" data-i18n="kP">Perform</span><span class="k-val" id="cHpP">-</span></div>
         <div class="kpi-cell"><span class="k-label">+/-</span><span class="k-val" id="cHpG">-</span></div>
       </div>
     </div>
   </div>
 
   <div class="view-tabs">
-    <div class="vtab active" data-view="summary">① Target 요약 (선적지 × 영업사원)</div>
-    <div class="vtab" data-view="drill">② 영업사원 → 화주 → BKG 상세</div>
-    <div class="vtab" data-view="pivot">③ 조합 Pivot</div>
+    <div class="vtab active" data-view="summary" data-i18n="vSummary">① Target 요약 (선적지 × 영업사원)</div>
+    <div class="vtab" data-view="drill" data-i18n="vDrill">② 영업사원 → 화주 → BKG 상세</div>
+    <div class="vtab" data-view="pivot" data-i18n="vPivot">③ 조합 Pivot</div>
   </div>
   <div class="panel" id="viewPanel">
     <div class="loading" id="initLoading">데이터 로딩 중...</div>

@@ -133,6 +133,7 @@ table.summary th.hi-head{white-space:normal !important;line-height:1.25;font-siz
     <button onclick="toggleLang()" id="langBtn" style="background:rgba(255,255,255,.25);color:#fff;border:1px solid rgba(255,255,255,.5);padding:4px 12px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600">EN</button>
     <a href="guide.html" style="background:rgba(255,255,255,.15);color:#fff;font-size:12px;text-decoration:none;padding:4px 12px;border-radius:4px;border:1px solid rgba(255,255,255,.3)" id="guideLink">📖 Guide</a>
     <a href="obt-exception-monitor/" target="_blank" rel="noopener noreferrer" style="background:rgba(255,255,255,.15);color:#fff;font-size:12px;text-decoration:none;padding:4px 12px;border-radius:4px;border:1px solid rgba(255,255,255,.3)" id="exceptionLink">OBT Monitor</a>
+    <a href="sales-target/" target="_blank" rel="noopener noreferrer" style="background:rgba(255,255,255,.15);color:#fff;font-size:12px;text-decoration:none;padding:4px 12px;border-radius:4px;border:1px solid rgba(255,255,255,.3)" id="salesTargetLink">🎯 Sales Target</a>
   </div>
   <div style="display:flex;align-items:center;gap:12px">
     <select id="dataDateSel" onchange="loadHistoricalData()" style="padding:3px 6px;border-radius:4px;font-size:11px;border:1px solid rgba(255,255,255,.4);background:rgba(255,255,255,.15);color:#fff">
@@ -2375,6 +2376,7 @@ const T = {
     title: '-3W Booking Dashboard',
     guide: '사용가이드',
     exceptionMonitor: 'OBT 모니터',
+    salesTarget: 'Sales Target',
     team: '팀', origin: '선적지', oriPort: '선적포트', dest: '도착지', dstPort: '도착포트',
     view: '보기', month: '월', week: '주차', profitType: '구간수익', grade: '등급', sales: '영업사원',
     viewDest: '도착지별', viewOri: '선적지별', all: '전체', hi: '구간별고수익', lo: '구간별저수익',
@@ -2395,6 +2397,7 @@ const T = {
     title: '-3W Booking Dashboard',
     guide: 'Guide',
     exceptionMonitor: 'OBT Monitor',
+    salesTarget: 'Sales Target',
     team: 'Team', origin: 'Origin', oriPort: 'Ori Port', dest: 'Dest', dstPort: 'Dst Port',
     view: 'View', month: 'Month', week: 'Week', profitType: 'Route Profit', grade: 'Grade', sales: 'Salesperson',
     viewDest: 'By Dest', viewOri: 'By Origin', all: 'All', hi: 'Route High', lo: 'Route Low',
@@ -2428,6 +2431,8 @@ function applyLang() {
   document.getElementById('langBtn').textContent = _lang === 'ko' ? 'EN' : 'KO';
   document.getElementById('guideLink').textContent = t.guide;
   document.getElementById('exceptionLink').textContent = t.exceptionMonitor;
+  const stLink = document.getElementById('salesTargetLink');
+  if (stLink) stLink.innerHTML = '🎯 ' + t.salesTarget;
   // Filter labels
   document.querySelectorAll('.filters label').forEach((el, i) => {
     const keys = ['team','origin','oriPort','dest','dstPort','view','month','week','profitType','grade','sales'];
