@@ -96,6 +96,17 @@ table.summary.monthly-summary-table tr.summary-data-row:hover td.lbl{background:
   .chart-card{padding:12px}
 }
 .loading{text-align:center;padding:60px;color:#5f6368;font-size:16px}
+table.summary td.tgt-mini{padding:2px 4px;line-height:1.25;min-width:74px}
+table.summary td.tgt-mini .tg-row{display:flex;justify-content:space-between;font-size:10px;color:#5f6368;gap:4px}
+table.summary td.tgt-mini .tg-row .tg-l{color:#80868b;font-weight:600}
+table.summary td.tgt-mini .tg-row .tg-v{font-weight:600;color:#202124}
+table.summary td.tgt-mini .tg-row.tg-gap.pos .tg-v{color:#137333}
+table.summary td.tgt-mini .tg-row.tg-gap.warn .tg-v{color:#b06000}
+table.summary td.tgt-mini .tg-row.tg-gap.neg .tg-v{color:#a50e0e}
+table.summary th.tgt-head{background:#fef7e0;font-size:10px;line-height:1.2}
+table.summary th.hi-head{white-space:normal !important;line-height:1.25;font-size:11px;word-break:keep-all;min-width:68px;padding:4px 6px}
+.tgt-link{display:inline-block;padding:2px 6px;background:#1a73e8;color:#fff!important;text-decoration:none;border-radius:3px;font-size:10px;font-weight:600}
+.tgt-link:hover{background:#1557b0}
 </style>
 </head>
 <body>
@@ -173,6 +184,31 @@ const DRIVE_FOLDER_ID = '1JIxg6Y-_gRfI1HueXZ1Q9j4-Z5bxvNgv';
 const REDIRECT_URI = location.origin + '/kmtc-3w-dashboard-web/';
 
 let gToken = null, gUser = null, DATA = null;
+
+// Sales-target summary (loaded best-effort from sales-target/index.json)
+// Used by Tab 2 / bySales table to overlay Target / Performance / GAP next to each salesperson.
+const SALES_TARGET = { byName: new Map(), loaded: false, dataDate: null };
+function loadSalesTargetSummary() {
+  fetch('sales-target/index.json', {cache:'no-cache'})
+    .then(r => r.ok ? r.json() : null)
+    .then(json => {
+      if (!json || !Array.isArray(json.rows)) return;
+      json.rows.forEach(row => {
+        if (row.row_type !== 'SALES') return;
+        const existing = SALES_TARGET.byName.get(row.name);
+        if (!existing || (row.accounts?.total || 0) > (existing.accounts?.total || 0)) {
+          SALES_TARGET.byName.set(row.name, row);
+        }
+      });
+      SALES_TARGET.loaded = true;
+      SALES_TARGET.dataDate = json.data_date;
+      // If currently looking at the bySales sub-tab, re-render so columns populate.
+      if (typeof currentTab !== 'undefined' && currentTab === 't2' && typeof t2sub !== 'undefined' && t2sub === 'sales') {
+        if (typeof renderTab2 === 'function') renderTab2();
+      }
+    })
+    .catch(() => {});
+}
 
 function doLogin() {
   const authUrl = 'https://accounts.google.com/o/oauth2/v2/auth' +
@@ -267,6 +303,8 @@ async function loadData() {
     render();
     // Load available dates from Drive in background
     loadDriveFileList();
+    // Best-effort: load sales-target summary so bySales table can show Target/Perform/GAP columns.
+    loadSalesTargetSummary();
   } catch(e) {
     document.getElementById('loading').textContent = `${L('데이터 로드 실패','Data load failed')}: ${e.message}`;
   }
@@ -1908,43 +1946,109 @@ function renderSalesDestDetail(rows, sourceRows, month) {
   return h;
 }
 
+function fmtPctFrac(v, digits) {
+  if (v === null || v === undefined || Number.isNaN(v)) return '-';
+  const d = (digits == null) ? 1 : digits;
+  return (v*100).toFixed(d) + '%';
+}
+function fmtPctSignedFrac(v, digits) {
+  if (v === null || v === undefined || Number.isNaN(v)) return '-';
+  const d = (digits == null) ? 1 : digits;
+  const p = v*100;
+  return (p>0?'+':'') + p.toFixed(d) + '%';
+}
+function tgtGapClass(gap) {
+  if (gap === null || gap === undefined || Number.isNaN(gap)) return '';
+  if (gap >= 0) return 'pos';
+  if (gap >= -0.02) return 'warn';
+  return 'neg';
+}
+function targetCellsForSalesperson(name, quarter, performKey) {
+  const row = SALES_TARGET.byName.get(name);
+  if (!row) {
+    return `<td class="tgt-mini" style="color:#bdc1c6;text-align:center">-</td><td class="tgt-mini" style="color:#bdc1c6;text-align:center">-</td><td class="tgt-mini" style="color:#bdc1c6;text-align:center">-</td><td style="text-align:center;color:#bdc1c6">-</td>`;
+  }
+  const kpis = ['booking','lifting','high_profit'];
+  let cells = '';
+  kpis.forEach(k => {
+    const kpi = row.kpi?.[k]?.[quarter] || {};
+    const cls = tgtGapClass(kpi.gap);
+    cells += `<td class="tgt-mini">
+      <div class="tg-row"><span class="tg-l">T</span><span class="tg-v">${fmtPctFrac(kpi.target)}</span></div>
+      <div class="tg-row"><span class="tg-l">P</span><span class="tg-v">${fmtPctFrac(kpi[performKey])}</span></div>
+      <div class="tg-row tg-gap ${cls}"><span class="tg-l">±</span><span class="tg-v">${fmtPctSignedFrac(kpi.gap)}</span></div>
+    </td>`;
+  });
+  const origin = row.tab;
+  const url = `sales-target/?origin=${encodeURIComponent(origin)}&sales=${encodeURIComponent(name)}&quarter=${quarter}&view=drill`;
+  cells += `<td style="text-align:center"><a class="tgt-link" href="${url}" target="_blank" rel="noopener">→</a></td>`;
+  return cells;
+}
+
 function renderSalesmanTable(month) {
   const sd = filterShipper(month);
   const wk = DATA.wpm[month]||4;
 
   // Aggregate by salesman
   const bySM = {};
+  // Shipper rows compress hi-LST into the short key `rhn`; routeHiDisplayVal only knows the long key.
+  // Pick rhn first when present, fall back to long key, then to broader hi_norm_lst.
+  const profitForHiShip = gv('fProfit');
+  const hiShipOf = (r) => {
+    if (profitForHiShip === 'lo') return 0;
+    if (Object.prototype.hasOwnProperty.call(r, 'rhn')) return r.rhn || 0;
+    return metricVal(r, 'w3_route_hi_norm_lst', 'w3_hi_norm_lst');
+  };
   sd.forEach(r => {
     const sm = r.Salesman_POR || L('(미지정)','(N/A)');
-    if (!bySM[sm]) bySM[sm] = {bkg:0,ship:0,hi:0,cm1:0,cm1l:0,custs:new Set()};
+    if (!bySM[sm]) bySM[sm] = {bkg:0,ship:0,hi:0,hiShip:0,cm1:0,cm1l:0,custs:new Set()};
     const s = bySM[sm];
     s.bkg += r.w3_fst||0; s.ship += r.w3_norm_lst||0;
     s.hi += routeHiDisplayVal(r,'w3_route_hi_fst','w3_hi_fst');
+    s.hiShip += hiShipOf(r);
     s.cm1 += routeMetricVal(r,'w3_cm1_norm','w3_route_hi_cm1_norm','rhc','w3_hi_cm1_norm', false);
     s.cm1l += routeMetricVal(r,'w3_norm_lst','w3_route_hi_norm_lst','rhn','w3_hi_norm_lst');
     if (r.BKG_SHPR_CST_NO) s.custs.add(r.BKG_SHPR_CST_NO);
   });
 
   let rows = Object.entries(bySM).map(([k,s]) => ({
-    name:k, bkg:s.bkg, ship:s.ship, hi:s.hi, cm1:s.cm1, cm1l:s.cm1l, custCnt:s.custs.size
+    name:k, bkg:s.bkg, ship:s.ship, hi:s.hi, hiShip:s.hiShip, cm1:s.cm1, cm1l:s.cm1l, custCnt:s.custs.size
   })).sort((a,b)=>b.bkg-a.bkg);
 
-  let h = `<div class="chart-card"><h3>${L('영업사원별 실적','Salesperson Performance')} (${fmtMonth(month)})</h3>
-  <table class="summary"><tr><th class="wrap">${L('영업사원','Salesperson')}</th><th>${L('화주수','Shippers')}</th><th>BKG</th><th>${L('실선적','LFT')}</th><th>${L('실선적률','Rate')}</th><th>${L('구간별고수익','Route Hi')}</th><th>${L('구간별고수익%','Route Hi%')}</th><th>CM1</th><th>CM1/TEU</th></tr>`;
+  // Determine target quarter for the currently-selected month.
+  const quarter = (month && month.startsWith('2026') && parseInt(month.slice(4),10) >= 4) ? 'q2' : 'q1';
+  const performKey = quarter === 'q1' ? 'perform' : 'progress';
+  const hasTargets = SALES_TARGET.loaded;
+  const targetHeaderColumns = hasTargets
+    ? `<th class="tgt-head">${L('3W Booking','3W Booking')}<br>T / P / ±</th>
+       <th class="tgt-head">${L('Actual Lifting','Actual Lifting')}<br>T / P / ±</th>
+       <th class="tgt-head">${L('High-Profit','High-Profit')}<br>T / P / ±</th>
+       <th class="tgt-head">${L('상세','Drill')}</th>`
+    : '';
+
+  let h = `<div class="chart-card"><h3>${L('영업사원별 실적','Salesperson Performance')} (${fmtMonth(month)})${hasTargets ? ` · <span style="font-size:11px;color:#80868b">목표: ${quarter.toUpperCase()} 2026</span>` : ''}</h3>
+  <table class="summary"><tr><th class="wrap">${L('영업사원','Salesperson')}</th><th>${L('화주수','Shippers')}</th><th>BKG</th><th>${L('실선적','LFT')}</th><th>${L('실선적률','Rate')}</th><th class="hi-head">${L('구간별고수익<br>부킹','Route Hi<br>BKG')}</th><th>${L('구간별고수익%','Route Hi%')}</th><th class="hi-head">${L('구간별고수익<br>실선적','Route Hi<br>LFT')}</th><th class="hi-head">${L('구간별고수익<br>실선적률','Route Hi<br>LFT%')}</th><th>CM1</th><th>CM1/TEU</th>${targetHeaderColumns}</tr>`;
 
   rows.forEach(r => {
     const ct = r.cm1l>0?r.cm1/r.cm1l:0;
     h += `<tr><td class="lbl">${r.name}</td><td>${r.custCnt}</td><td>${fmt(r.bkg)}</td><td>${fmt(r.ship)}</td><td>${pct(r.ship,r.bkg)}</td>`;
-    h += `<td>${fmt(r.hi)}</td><td>${pct(r.hi,r.bkg)}</td><td>${fmt(Math.round(r.cm1))}</td><td>${fmt(Math.round(ct))}</td></tr>`;
+    h += `<td>${fmt(r.hi)}</td><td>${pct(r.hi,r.bkg)}</td><td>${fmt(r.hiShip)}</td><td>${pct(r.hiShip,r.hi)}</td><td>${fmt(Math.round(r.cm1))}</td><td>${fmt(Math.round(ct))}</td>`;
+    if (hasTargets) h += targetCellsForSalesperson(r.name, quarter, performKey);
+    h += '</tr>';
   });
 
   const tb=rows.reduce((s,r)=>s+r.bkg,0), ts=rows.reduce((s,r)=>s+r.ship,0);
-  const th2=rows.reduce((s,r)=>s+r.hi,0), tc=rows.reduce((s,r)=>s+r.cm1,0);
+  const th2=rows.reduce((s,r)=>s+r.hi,0), thShip=rows.reduce((s,r)=>s+r.hiShip,0), tc=rows.reduce((s,r)=>s+r.cm1,0);
   const tl=rows.reduce((s,r)=>s+r.cm1l,0), tct=tl>0?tc/tl:0;
   const tcust = new Set(sd.map(r=>r.BKG_SHPR_CST_NO).filter(v=>v)).size;
   h += `<tr class="total"><td class="lbl">${L('합계','Total')}</td><td>${tcust}</td><td>${fmt(tb)}</td><td>${fmt(ts)}</td><td>${pct(ts,tb)}</td>`;
-  h += `<td>${fmt(th2)}</td><td>${pct(th2,tb)}</td><td>${fmt(Math.round(tc))}</td><td>${fmt(Math.round(tct))}</td></tr>`;
+  h += `<td>${fmt(th2)}</td><td>${pct(th2,tb)}</td><td>${fmt(thShip)}</td><td>${pct(thShip,th2)}</td><td>${fmt(Math.round(tc))}</td><td>${fmt(Math.round(tct))}</td>`;
+  if (hasTargets) h += `<td colspan="4" style="text-align:center"><a class="tgt-link" href="sales-target/?quarter=${quarter}" target="_blank" rel="noopener">${L('전체 목표 화면','Open Target Screen')} ↗</a></td>`;
+  h += '</tr>';
   h += '</table></div>';
+  if (!hasTargets) {
+    h += `<div style="margin-top:6px;font-size:11px;color:#80868b">${L('영업사원별 목표/실적/GAP을 보려면 sales-target/index.json 이 필요합니다. <code>py -3 scripts/build_sales_target_drill_data.py</code> 를 실행해 주세요.','Run <code>py -3 scripts/build_sales_target_drill_data.py</code> to enable Target/Performance columns.')}</div>`;
+  }
 
   h += `<div class="chart-row">
     <div class="chart-card" style="flex:1"><h3>${L('영업사원별 BKG vs 실선적률','Salesperson BKG vs LFT Rate')}</h3><div id="ch2sm" style="height:350px"></div></div>

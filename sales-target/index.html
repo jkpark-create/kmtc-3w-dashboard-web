@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sales Target & Progress — -3W Booking Dashboard</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app-top">
+  <div class="header">
+    <div>
+      <h1>Sales Target &amp; Progress</h1>
+      <div class="info" id="dataInfo">데이터 로딩 중...</div>
+    </div>
+    <div class="nav-links">
+      <a href="../index.html">← -3W Booking Dashboard</a>
+      <a id="workbookLink" href="#" target="_blank" rel="noopener">Target Workbook ↗</a>
+    </div>
+  </div>
+
+  <div class="filters" id="filterBar">
+    <div class="group">
+      <label>분기</label>
+      <select id="fQuarter">
+        <option value="q1">1Q 2026</option>
+        <option value="q2">2Q 2026 (Progress)</option>
+      </select>
+    </div>
+    <div class="group">
+      <label>선적지</label>
+      <select id="fOrigin"><option value="ALL">전체</option></select>
+    </div>
+    <div class="group">
+      <label>영업사원</label>
+      <select id="fSales"><option value="ALL">전체</option></select>
+    </div>
+    <div class="group">
+      <label>월(상세)</label>
+      <select id="fMonth"><option value="ALL">전체 (분기 합산)</option></select>
+    </div>
+    <div class="group">
+      <label>등급</label>
+      <select id="fGrade">
+        <option value="ALL">전체</option>
+        <option value="AB">A+B</option>
+        <option value="CD">C+D</option>
+        <option value="A">A</option>
+        <option value="B">B</option>
+        <option value="C">C</option>
+        <option value="D">D</option>
+      </select>
+    </div>
+    <div class="group">
+      <label>고수익</label>
+      <select id="fProfit">
+        <option value="ALL">전체</option>
+        <option value="HI">고수익만</option>
+        <option value="NOTHI">고수익 제외</option>
+      </select>
+    </div>
+    <div class="group">
+      <label>WOS</label>
+      <select id="fWos">
+        <option value="W3">WOS-3 only</option>
+        <option value="ALL">전체</option>
+      </select>
+    </div>
+    <button class="reset" id="btnReset">필터 초기화</button>
+  </div>
+</div>
+
+<div class="content">
+  <div id="errorArea"></div>
+
+  <div class="cards-row" id="kpiCards">
+    <div class="card summary-card">
+      <div class="label">대상 영업사원</div>
+      <div class="kpi-grid">
+        <div class="kpi-cell"><span class="k-label">선적지</span><span class="k-val" id="cOrigin">-</span></div>
+        <div class="kpi-cell"><span class="k-label">영업사원</span><span class="k-val" id="cSales">-</span></div>
+        <div class="kpi-cell"><span class="k-label">화주 (A/C)</span><span class="k-val" id="cCust">-</span></div>
+      </div>
+    </div>
+    <div class="card" style="border-left-color:#1a73e8">
+      <div class="label">3W Before Booking Rate (vs BSA)</div>
+      <div class="kpi-grid">
+        <div class="kpi-cell"><span class="k-label">Target</span><span class="k-val" id="cBkT">-</span></div>
+        <div class="kpi-cell"><span class="k-label">Perform</span><span class="k-val" id="cBkP">-</span></div>
+        <div class="kpi-cell"><span class="k-label">+/-</span><span class="k-val" id="cBkG">-</span></div>
+      </div>
+    </div>
+    <div class="card" style="border-left-color:#34a853">
+      <div class="label">3W Before Actual Lifting Rate</div>
+      <div class="kpi-grid">
+        <div class="kpi-cell"><span class="k-label">Target</span><span class="k-val" id="cLfT">-</span></div>
+        <div class="kpi-cell"><span class="k-label">Perform</span><span class="k-val" id="cLfP">-</span></div>
+        <div class="kpi-cell"><span class="k-label">+/-</span><span class="k-val" id="cLfG">-</span></div>
+      </div>
+    </div>
+    <div class="card" style="border-left-color:#f9ab00">
+      <div class="label">3W Before High-Profit Rate</div>
+      <div class="kpi-grid">
+        <div class="kpi-cell"><span class="k-label">Target</span><span class="k-val" id="cHpT">-</span></div>
+        <div class="kpi-cell"><span class="k-label">Perform</span><span class="k-val" id="cHpP">-</span></div>
+        <div class="kpi-cell"><span class="k-label">+/-</span><span class="k-val" id="cHpG">-</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="view-tabs">
+    <div class="vtab active" data-view="summary">① Target 요약 (선적지 × 영업사원)</div>
+    <div class="vtab" data-view="drill">② 영업사원 → 화주 → BKG 상세</div>
+    <div class="vtab" data-view="pivot">③ 조합 Pivot</div>
+  </div>
+  <div class="panel" id="viewPanel">
+    <div class="loading" id="initLoading">데이터 로딩 중...</div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
