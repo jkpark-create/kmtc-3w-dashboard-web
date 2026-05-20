@@ -348,6 +348,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <table>
 <tr><th>컬럼</th><th>의미</th></tr>
 <tr><td>'25 비중</td><td>2025년 해당 영업사원의 Total Lifting 비중</td></tr>
+<tr><td>'25 3주전 BKG</td><td>2025년 해당 (선적지·영업사원) 의 WOS-3 시점 FST TEU 합계. 현재 고객 소유자 기준(salesman.csv)으로 remap 적용.</td></tr>
 <tr><td>3W Booking (vs BSA)</td><td>WOS-3 시점 BKG TEU ÷ BSA TEU</td></tr>
 <tr><td>Actual Lifting Rate</td><td>WOS-3 BKG 중 실제 선적된 비율</td></tr>
 <tr><td>High-Profit Rate</td><td>WOS-3 BKG 중 고수익 화주 BKG 비중</td></tr>
@@ -361,6 +362,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <table>
 <tr><th>Column</th><th>Meaning</th></tr>
 <tr><td>'25 share</td><td>Salesperson's 2025 share of Total Lifting at that origin</td></tr>
+<tr><td>'25 WOS-3 BKG</td><td>2025 WOS-3 FST TEU sum for that (origin, salesperson). Re-attributed to the current customer owner per salesman.csv.</td></tr>
 <tr><td>3W Booking (vs BSA)</td><td>WOS-3 BKG TEU ÷ BSA TEU</td></tr>
 <tr><td>Actual Lifting Rate</td><td>Loaded / WOS-3 BKG</td></tr>
 <tr><td>High-Profit Rate</td><td>Hi-profit BKG / WOS-3 BKG</td></tr>
