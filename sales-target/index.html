@@ -5,6 +5,42 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sales Target & Progress — -3W Booking Dashboard</title>
 <link rel="stylesheet" href="styles.css">
+<style>html.auth-pending body{visibility:hidden}</style>
+<script>
+// Auth gate — mirrors the main dashboard's company-domain check. The main
+// dashboard stores the OAuth token + user object in sessionStorage on login;
+// since GitHub Pages serves both screens from the same origin, we just verify
+// the stored credentials here. If missing/invalid, bounce to the main login
+// page and remember where to return.
+(function authGate() {
+  const ALLOWED_DOMAINS = ['ekmtc.com'];
+  // Hide page contents until we confirm auth, to avoid a flash of the dashboard.
+  document.documentElement.classList.add('auth-pending');
+  let user = null;
+  try { user = JSON.parse(sessionStorage.getItem('guser') || 'null'); } catch (_) {}
+  const token = sessionStorage.getItem('gtoken');
+  function bounceToLogin(reason) {
+    try {
+      sessionStorage.setItem('obtReturnPath', location.pathname + location.search);
+    } catch (_) {}
+    // '..' resolves to the main dashboard root on GitHub Pages (one level above /sales-target/).
+    // Append a query so the user gets a hint if needed.
+    location.replace('../');
+  }
+  if (!token || !user) {
+    bounceToLogin('no-session');
+    return;
+  }
+  const domain = ((user.email || '').split('@')[1] || '').toLowerCase();
+  if (ALLOWED_DOMAINS.length && !ALLOWED_DOMAINS.includes(domain)) {
+    try { sessionStorage.clear(); } catch (_) {}
+    bounceToLogin('bad-domain');
+    return;
+  }
+  // Authenticated — reveal the page.
+  document.documentElement.classList.remove('auth-pending');
+})();
+</script>
 </head>
 <body>
 <div class="app-top">

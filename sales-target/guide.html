@@ -4,6 +4,27 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sales Target &amp; Progress — User Guide</title>
+<script>
+// Same auth gate as the screen — see sales-target/index.html for the rationale.
+(function authGate() {
+  const ALLOWED_DOMAINS = ['ekmtc.com'];
+  document.documentElement.style.visibility = 'hidden';
+  let user = null;
+  try { user = JSON.parse(sessionStorage.getItem('guser') || 'null'); } catch (_) {}
+  const token = sessionStorage.getItem('gtoken');
+  function bounce() {
+    try { sessionStorage.setItem('obtReturnPath', location.pathname + location.search); } catch (_) {}
+    location.replace('../');
+  }
+  if (!token || !user) return bounce();
+  const domain = ((user.email || '').split('@')[1] || '').toLowerCase();
+  if (ALLOWED_DOMAINS.length && !ALLOWED_DOMAINS.includes(domain)) {
+    try { sessionStorage.clear(); } catch (_) {}
+    return bounce();
+  }
+  document.documentElement.style.visibility = '';
+})();
+</script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:#f8f9fa;color:#202124;line-height:1.7}
@@ -176,6 +197,8 @@ document.addEventListener('DOMContentLoaded', () => {
 <li>URL: <code>https://jkpark-create.github.io/kmtc-3w-dashboard-web/sales-target/</code></li>
 <li>메인 대시보드 ②부킹 트렌드 → 영업사원별 표의 우측 "→" — 해당 영업사원으로 자동 드릴</li>
 </ul>
+<div class="tip"><strong>🔐 로그인:</strong> 이 화면은 메인 대시보드와 동일한 <strong>회사 Google 계정(@ekmtc.com)</strong> 로그인이 필요합니다. 로그인되어 있지 않거나 외부 도메인 계정이면 자동으로 메인 대시보드의 로그인 화면으로 이동했다가 로그인 후 다시 돌아옵니다.</div>
+<div class="tip"><strong>📊 시트 권한과 무관:</strong> 대시보드 데이터는 매일 빌드되어 정적 JSON 파일로 배포됩니다 (<code>index.json</code> / <code>manifest.json</code> / <code>data/*.json</code>). 사용자 본인이 Target 워크북에 권한이 없어도 데이터는 정상 표시됩니다. 단, 헤더의 <strong>Target Workbook ↗</strong> 직접 링크는 시트 view 권한이 있는 ekmtc 계정만 열립니다 (기본적으로 모든 ekmtc 직원은 view 권한 보유).</div>
 </div>
 <div class="card en" style="display:none">
 <ul>
@@ -183,6 +206,8 @@ document.addEventListener('DOMContentLoaded', () => {
 <li>URL: <code>https://jkpark-create.github.io/kmtc-3w-dashboard-web/sales-target/</code></li>
 <li>The "→" link in the bySales table of the main dashboard's ② Booking Trends tab — auto-drills to that salesperson.</li>
 </ul>
+<div class="tip"><strong>🔐 Login:</strong> Same company Google sign-in (@ekmtc.com) as the main dashboard. Without a session you're redirected to the main login and bounced back here after authenticating.</div>
+<div class="tip"><strong>📊 Sheet permission is not required for viewing:</strong> the dashboard reads pre-built static JSON files (<code>index.json</code>, <code>manifest.json</code>, <code>data/*.json</code>), so users without write/view access to the Target workbook still see the dashboard correctly. The header's <strong>Target Workbook ↗</strong> direct link only opens for ekmtc accounts (every ekmtc user has view access by default).</div>
 </div>
 
 <!-- 3. HEADER -->
@@ -581,6 +606,14 @@ document.addEventListener('DOMContentLoaded', () => {
 <li><code>sales-target/manifest.json</code> — chunk 카탈로그 + 도착국가 / 도착포트 옵션</li>
 <li><code>sales-target/data/&lt;origin&gt;__&lt;salesman&gt;__&lt;YYYYMM&gt;.json</code> — lazy load</li>
 </ul>
+<h4>권한 모델 (2026-05 갱신)</h4>
+<table>
+<tr><th>대상</th><th>역할</th><th>비고</th></tr>
+<tr><td><strong>대시보드 사용자</strong> (모든 ekmtc 직원)</td><td>화면 view + 자신의 영업사원 데이터 조회</td><td>OAuth 로그인 후 정적 JSON 파일을 fetch함. 시트 권한과 무관하게 데이터 보임.</td></tr>
+<tr><td><strong>Target 워크북 view</strong></td><td>ekmtc.com 도메인 reader</td><td>모든 ekmtc 직원이 시트를 열람 가능. 헤더 Target Workbook ↗ 링크 정상 작동.</td></tr>
+<tr><td><strong>Target_Input 편집</strong></td><td>jkpark@ekmtc.com (owner), kdh@ekmtc.com (writer)</td><td>입력 %p 변경은 관리자만 가능. 다른 사용자가 실수로 수정할 수 없음.</td></tr>
+<tr><td><strong>빌드 서버</strong></td><td>jkpark@ekmtc.com 토큰</td><td>매일 09:03 daily build가 시트를 읽어 JSON 생성. 사용자 권한 영향 없음.</td></tr>
+</table>
 <div class="tip">헤더의 "데이터 기준일"이 오늘이 아니면 일일 작업이 안 끝났거나 실패한 상태입니다.</div>
 </div>
 <div class="card en" style="display:none">
@@ -596,6 +629,14 @@ document.addEventListener('DOMContentLoaded', () => {
 <li><code>sales-target/manifest.json</code> — chunk catalogue + dest country / port options</li>
 <li><code>sales-target/data/&lt;origin&gt;__&lt;salesman&gt;__&lt;YYYYMM&gt;.json</code> — lazy</li>
 </ul>
+<h4>Permission model (updated 2026-05)</h4>
+<table>
+<tr><th>Subject</th><th>Role</th><th>Notes</th></tr>
+<tr><td><strong>Dashboard users</strong> (any ekmtc employee)</td><td>View screen + own salesperson data</td><td>OAuth login, then fetches static JSON. No sheet permission needed.</td></tr>
+<tr><td><strong>Target workbook view</strong></td><td>ekmtc.com domain reader</td><td>Any ekmtc user can open the sheet — header "Target Workbook ↗" link works for everyone.</td></tr>
+<tr><td><strong>Target_Input edit</strong></td><td>jkpark@ekmtc.com (owner), kdh@ekmtc.com (writer)</td><td>Only admins can change input %p; other users can't edit by mistake.</td></tr>
+<tr><td><strong>Build server</strong></td><td>jkpark@ekmtc.com token</td><td>Daily 09:03 build reads the sheet and emits JSON; independent of any user's permission.</td></tr>
+</table>
 <div class="tip">If "Data date" in the header isn't today, the daily job didn't run or didn't finish.</div>
 </div>
 

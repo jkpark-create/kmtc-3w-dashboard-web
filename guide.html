@@ -1000,6 +1000,12 @@ document.addEventListener('DOMContentLoaded', function() {
     <li><strong>EN / KO 언어 토글</strong></li>
   </ul>
   <p>바로 가기: <a href="sales-target/" style="background:#1a73e8;color:#fff!important;padding:4px 10px;border-radius:4px;text-decoration:none;font-weight:600"><strong>🎯 Sales Target 화면 열기</strong></a> &nbsp; · &nbsp; <a href="sales-target/guide.html"><strong>📖 Sales Target 전용 가이드</strong></a></p>
+  <div class="tip"><strong>🔐 인증 / 권한:</strong>
+    <ul>
+      <li>Sales Target 화면도 메인 대시보드와 동일한 <strong>회사 Google 계정(@ekmtc.com)</strong> 로그인 필요. 미인증 시 자동으로 메인 로그인으로 이동했다가 로그인 후 복귀.</li>
+      <li>Target 워크북 시트 권한과 <strong>대시보드 표시는 무관</strong>합니다 (정적 JSON으로 빌드). 모든 ekmtc 직원이 시트를 view 가능하고, 입력은 관리자(jkpark/kdh)만 가능.</li>
+    </ul>
+  </div>
   <h3>데이터 갱신</h3>
   <p>매일 평일 09:03의 <code>3W_BKG_Dashboard</code> 작업이 끝나면 자동으로 sales-target chunks (~1,592개)도 함께 빌드되어 dist에 push됩니다. 헤더의 "데이터 기준일"이 오늘이 아니면 운영 담당자에게 문의.</p>
   <div class="tip"><strong>딥링크 예:</strong> <code>sales-target/?country=CN&amp;origin=CN_SHA&amp;sales=WUXIAOCHEN&amp;quarter=q1&amp;view=drill</code></div>
@@ -1022,6 +1028,12 @@ document.addEventListener('DOMContentLoaded', function() {
     <li><strong>EN / KO language toggle</strong></li>
   </ul>
   <p>Quick links: <a href="sales-target/" style="background:#1a73e8;color:#fff!important;padding:4px 10px;border-radius:4px;text-decoration:none;font-weight:600"><strong>🎯 Open Sales Target screen</strong></a> &nbsp; · &nbsp; <a href="sales-target/guide.html"><strong>📖 Sales Target dedicated guide</strong></a></p>
+  <div class="tip"><strong>🔐 Auth / permissions:</strong>
+    <ul>
+      <li>Sales Target screen requires the same <strong>company Google sign-in (@ekmtc.com)</strong>. Unauthenticated visits redirect to the main login and bounce back here after authenticating.</li>
+      <li>Target workbook sheet permission is <strong>not required to view the dashboard</strong> — data is built into static JSON. All ekmtc employees can view the sheet; only admins (jkpark/kdh) can edit the inputs.</li>
+    </ul>
+  </div>
   <h3>Refresh</h3>
   <p>Weekday 09:03 <code>3W_BKG_Dashboard</code> task automatically rebuilds the sales-target chunks (~1,592) and pushes to dist.</p>
   <div class="tip"><strong>Deep link example:</strong> <code>sales-target/?country=CN&amp;origin=CN_SHA&amp;sales=WUXIAOCHEN&amp;quarter=q1&amp;view=drill</code></div>
