@@ -256,6 +256,26 @@ function fmtPctSigned(frac, digits = 1) {
   const sign = pct > 0 ? '+' : '';
   return sign + pct.toFixed(digits) + '%';
 }
+function fmtBookingDate(s) {
+  if (s === null || s === undefined) return '';
+  const str = String(s).trim();
+  if (!str) return '';
+  // Tableau exports Booking_date as "YYYY년 M월 D일". Normalise to ISO when EN
+  // (2026-02-13) and to a zero-padded Korean form when KO (2026년 02월 13일).
+  const m = str.match(/(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일/);
+  if (!m) {
+    // ISO-ish input — pass-through; if EN keep as-is, if KO try to localise
+    const iso = str.match(/(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})/);
+    if (!iso) return str;
+    const [_, y, mo, d] = iso;
+    if (STATE.lang === 'en') return `${y}-${mo.padStart(2, '0')}-${d.padStart(2, '0')}`;
+    return `${y}년 ${mo.padStart(2, '0')}월 ${d.padStart(2, '0')}일`;
+  }
+  const y = m[1], mo = m[2].padStart(2, '0'), d = m[3].padStart(2, '0');
+  if (STATE.lang === 'en') return `${y}-${mo}-${d}`;
+  return `${y}년 ${mo}월 ${d}일`;
+}
+
 function fmtNum(n, digits = 0) {
   if (n === null || n === undefined || Number.isNaN(n)) return '-';
   return Number(n).toLocaleString('ko-KR', { maximumFractionDigits: digits, minimumFractionDigits: digits });
@@ -1160,7 +1180,7 @@ function buildFlatBkgTable(bookings) {
       <td>${gradeBadge(b.grade)}</td>
       <td class="txt">${route}</td>
       <td class="txt">${vsl}</td>
-      <td>${escapeHtml(b.booking_date)}</td>
+      <td>${escapeHtml(fmtBookingDate(b.booking_date))}</td>
       <td>${fmtNum(b.fst_teu)}</td>
       <td>${fmtNum(b.lst_teu)}</td>
       <td>${fmtNum(b.cm1)}</td>
@@ -1251,7 +1271,7 @@ function renderBkgDetail(shipperKey, allBookings) {
       <td><span class="bkg-no">${escapeHtml(b.bkg_no)}</span></td>
       <td class="txt">${route}</td>
       <td class="txt">${vsl}</td>
-      <td>${escapeHtml(b.booking_date)}</td>
+      <td>${escapeHtml(fmtBookingDate(b.booking_date))}</td>
       <td>${fmtNum(b.fst_teu)}</td>
       <td>${fmtNum(b.lst_teu)}</td>
       <td>${fmtNum(b.cm1)}</td>
