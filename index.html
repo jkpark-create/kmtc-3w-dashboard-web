@@ -1864,12 +1864,19 @@ function buildSalesDestRows(month) {
     if (r.BKG_SHPR_CST_NO) s.custs.add(r.BKG_SHPR_CST_NO);
   });
 
-  return Object.values(bySD).map(s => ({
+  let out = Object.values(bySD).map(s => ({
     sales:s.sales, dest:s.dest, custCnt:s.custs.size, bkg:s.bkg, ship:s.ship, cancel:s.cancel,
     hi:s.hi, cm1:s.cm1, cm1l:s.cm1l,
     shipRate:ratio(s.ship,s.bkg) ?? 0, cancelRate:ratio(s.cancel,s.bkg) ?? 0,
     hiRate:ratio(s.hi,s.bkg) ?? 0, cm1teu:s.cm1l>0 ? s.cm1/s.cm1l : 0
-  })).sort((a,b)=>b.bkg-a.bkg);
+  }));
+  // Mirror the bySales table filter: under team=OBT, drop KR/JP-based reps.
+  if (gv('fTeam') === 'OBT' && Array.isArray(DATA.obt_salesmen)) {
+    const obtSet = new Set(DATA.obt_salesmen);
+    const missingLabel = L('(미지정)','(N/A)');
+    out = out.filter(r => obtSet.has(r.sales) || r.sales === missingLabel);
+  }
+  return out.sort((a,b)=>b.bkg-a.bkg);
 }
 
 function salesDestVal(rows, sales, dest, topDests, otherLabel) {
@@ -2016,6 +2023,16 @@ function renderSalesmanTable(month) {
     name:k, bkg:s.bkg, ship:s.ship, hi:s.hi, hiShip:s.hiShip, cm1:s.cm1, cm1l:s.cm1l, custCnt:s.custs.size
   })).sort((a,b)=>b.bkg-a.bkg);
 
+  // When viewing the OBT team, restrict the bySales table to OBT-territory
+  // salespeople only. KR/JP-based salespeople (per salesman.csv) sometimes
+  // own OBT accounts but should not appear under "OBT 영업사원별".
+  const teamSel = gv('fTeam');
+  if (teamSel === 'OBT' && Array.isArray(DATA.obt_salesmen)) {
+    const obtSet = new Set(DATA.obt_salesmen);
+    const missingLabel = L('(미지정)','(N/A)');
+    rows = rows.filter(r => obtSet.has(r.name) || r.name === missingLabel);
+  }
+
   // Determine target quarter for the currently-selected month.
   const quarter = (month && month.startsWith('2026') && parseInt(month.slice(4),10) >= 4) ? 'q2' : 'q1';
   const performKey = quarter === 'q1' ? 'perform' : 'progress';
@@ -2027,8 +2044,24 @@ function renderSalesmanTable(month) {
        <th class="tgt-head">${L('상세','Drill')}</th>`
     : '';
 
+  // Compute totals from the filtered rows so 합계 reflects the bySales scope.
+  const tb=rows.reduce((s,r)=>s+r.bkg,0), ts=rows.reduce((s,r)=>s+r.ship,0);
+  const th2=rows.reduce((s,r)=>s+r.hi,0), thShip=rows.reduce((s,r)=>s+r.hiShip,0), tc=rows.reduce((s,r)=>s+r.cm1,0);
+  const tl=rows.reduce((s,r)=>s+r.cm1l,0), tct=tl>0?tc/tl:0;
+  const keepNames = new Set(rows.map(r=>r.name));
+  const tcust = new Set(sd.filter(r=>{
+    const nm = r.Salesman_POR || L('(미지정)','(N/A)');
+    return keepNames.has(nm) && r.BKG_SHPR_CST_NO;
+  }).map(r=>r.BKG_SHPR_CST_NO)).size;
+
   let h = `<div class="chart-card"><h3>${L('영업사원별 실적','Salesperson Performance')} (${fmtMonth(month)})${hasTargets ? ` · <span style="font-size:11px;color:#80868b">목표: ${quarter.toUpperCase()} 2026</span>` : ''}</h3>
   <table class="summary"><tr><th class="wrap">${L('영업사원','Salesperson')}</th><th>${L('화주수','Shippers')}</th><th>BKG</th><th>${L('실선적','LFT')}</th><th>${L('실선적률','Rate')}</th><th class="hi-head">${L('구간별고수익<br>부킹','Route Hi<br>BKG')}</th><th>${L('구간별고수익%','Route Hi%')}</th><th class="hi-head">${L('구간별고수익<br>실선적','Route Hi<br>LFT')}</th><th class="hi-head">${L('구간별고수익<br>실선적률','Route Hi<br>LFT%')}</th><th>CM1</th><th>CM1/TEU</th>${targetHeaderColumns}</tr>`;
+
+  // Total row first (above the data rows) so it's visible without scrolling.
+  h += `<tr class="total"><td class="lbl">${L('합계','Total')}</td><td>${tcust}</td><td>${fmt(tb)}</td><td>${fmt(ts)}</td><td>${pct(ts,tb)}</td>`;
+  h += `<td>${fmt(th2)}</td><td>${pct(th2,tb)}</td><td>${fmt(thShip)}</td><td>${pct(thShip,th2)}</td><td>${fmt(Math.round(tc))}</td><td>${fmt(Math.round(tct))}</td>`;
+  if (hasTargets) h += `<td colspan="4" style="text-align:center"><a class="tgt-link" href="sales-target/?quarter=${quarter}" target="_blank" rel="noopener">${L('전체 목표 화면','Open Target Screen')} ↗</a></td>`;
+  h += '</tr>';
 
   rows.forEach(r => {
     const ct = r.cm1l>0?r.cm1/r.cm1l:0;
@@ -2038,14 +2071,6 @@ function renderSalesmanTable(month) {
     h += '</tr>';
   });
 
-  const tb=rows.reduce((s,r)=>s+r.bkg,0), ts=rows.reduce((s,r)=>s+r.ship,0);
-  const th2=rows.reduce((s,r)=>s+r.hi,0), thShip=rows.reduce((s,r)=>s+r.hiShip,0), tc=rows.reduce((s,r)=>s+r.cm1,0);
-  const tl=rows.reduce((s,r)=>s+r.cm1l,0), tct=tl>0?tc/tl:0;
-  const tcust = new Set(sd.map(r=>r.BKG_SHPR_CST_NO).filter(v=>v)).size;
-  h += `<tr class="total"><td class="lbl">${L('합계','Total')}</td><td>${tcust}</td><td>${fmt(tb)}</td><td>${fmt(ts)}</td><td>${pct(ts,tb)}</td>`;
-  h += `<td>${fmt(th2)}</td><td>${pct(th2,tb)}</td><td>${fmt(thShip)}</td><td>${pct(thShip,th2)}</td><td>${fmt(Math.round(tc))}</td><td>${fmt(Math.round(tct))}</td>`;
-  if (hasTargets) h += `<td colspan="4" style="text-align:center"><a class="tgt-link" href="sales-target/?quarter=${quarter}" target="_blank" rel="noopener">${L('전체 목표 화면','Open Target Screen')} ↗</a></td>`;
-  h += '</tr>';
   h += '</table></div>';
   if (!hasTargets) {
     h += `<div style="margin-top:6px;font-size:11px;color:#80868b">${L('영업사원별 목표/실적/GAP을 보려면 sales-target/index.json 이 필요합니다. <code>py -3 scripts/build_sales_target_drill_data.py</code> 를 실행해 주세요.','Run <code>py -3 scripts/build_sales_target_drill_data.py</code> to enable Target/Performance columns.')}</div>`;
