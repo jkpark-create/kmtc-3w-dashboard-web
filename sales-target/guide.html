@@ -214,9 +214,9 @@ document.addEventListener('DOMContentLoaded', () => {
 <tr><td><b>월(상세)</b></td><td>분기 합산 또는 단일 월. ② / ③ view에 적용</td></tr>
 <tr><td><b>선적국가</b></td><td>다중선택. 화이트리스트 11개 국가만 노출</td></tr>
 <tr><td><b>선적포트</b></td><td>다중선택. 위 국가에 속한 포트로 좁아짐. 화이트리스트 23개 포트만 노출</td></tr>
+<tr><td><b>영업사원</b></td><td>다중선택. 위 선적지 범위 안의 영업사원만 옵션으로 노출</td></tr>
 <tr><td><b>도착국가</b></td><td>다중선택. ② / ③ view의 BKG에서 POD 국가 기준 필터</td></tr>
 <tr><td><b>도착포트</b></td><td>다중선택. 위 도착국가에 속한 항구만 보임</td></tr>
-<tr><td><b>영업사원</b></td><td>다중선택. 위 선적지 범위 안의 영업사원만 옵션으로 노출</td></tr>
 <tr><td><b>등급</b></td><td>전체 / A+B / C+D</td></tr>
 <tr><td><b>고수익</b></td><td>전체 / 고수익만 / 고수익 제외</td></tr>
 <tr><td><b>WOS</b></td><td>WOS-3 only (기본) 또는 전체</td></tr>
@@ -232,9 +232,9 @@ document.addEventListener('DOMContentLoaded', () => {
 <tr><td><b>Month</b></td><td>Quarter total or a single YYYYMM. Drives ② and ③ scope.</td></tr>
 <tr><td><b>Origin country</b></td><td>Multi-select. 11 whitelisted countries.</td></tr>
 <tr><td><b>Origin port</b></td><td>Multi-select. Narrowed by country. 23 whitelisted ports.</td></tr>
+<tr><td><b>Salesperson</b></td><td>Multi-select. Only salespeople in the current origin scope.</td></tr>
 <tr><td><b>Dest country</b></td><td>Multi-select. Filters BKG by POD country in ② / ③.</td></tr>
 <tr><td><b>Dest port</b></td><td>Multi-select. Narrowed by dest country.</td></tr>
-<tr><td><b>Salesperson</b></td><td>Multi-select. Only salespeople in the current origin scope.</td></tr>
 <tr><td><b>Grade</b></td><td>All / A+B / C+D</td></tr>
 <tr><td><b>Hi-Profit</b></td><td>All / Only / Exclude</td></tr>
 <tr><td><b>WOS</b></td><td>WOS-3 only (default) or All</td></tr>
@@ -409,16 +409,132 @@ document.addEventListener('DOMContentLoaded', () => {
 <!-- 11. PIVOT -->
 <h2 id="view3" class="ko">11. ③ 조합 Pivot</h2><h2 id="view3" class="en" style="display:none">11. ③ Pivot</h2>
 <div class="card ko">
+<p>행 × 하위행 × 열 × 측정값을 자유롭게 조합. 정렬·정규화·히트맵·Top N 옵션으로 한눈에 파악. <b>셀 클릭 시 매칭 BKG_NO 리스트</b>가 표 아래 패널로 펼침 + CSV 내보내기.</p>
 <div class="shot"><img src="guide-img/08_pivot_pod_grade.png" alt="pivot"><div class="cap"><b>화면 8.</b> 행=POD 국가, 열=등급, 값=WOS-3 FST TEU.</div></div>
-<p>행/열/측정값을 자유롭게 조합. <b>셀 클릭 시 BKG_NO 리스트</b>가 표 아래 패널로 펼침 + CSV 내보내기.</p>
-<div class="shot"><img src="guide-img/13_pivot_cell.png" alt="pivot-cell"><div class="cap"><b>화면 9.</b> 셀 클릭 결과 — 24건 BKG.</div></div>
-<div class="warn">필터 범위 200 chunk 초과 시 경고. 응답 빠르게 하려면 좁히세요.</div>
+
+<h3>11.1 Pivot 옵션</h3>
+<table>
+<tr><th width="14%">옵션</th><th>의미</th><th>값</th></tr>
+<tr><td><b>행</b></td><td>주 행 차원</td><td>선적지 / 영업사원 / 화주 / 등급 / POD 국가 / POD 항구 / 월 / 고수익 / WOS 단계</td></tr>
+<tr><td><b>하위행</b></td><td>2단 계층. 메인 행 아래에 <code>↳ 값</code>으로 들여쓰여 표시. (없음) 또는 차원 1개</td><td>예: 선적지 › 영업사원, 영업사원 › 화주</td></tr>
+<tr><td><b>열</b></td><td>열 차원. (없음) 선택 시 단일 합계 열</td><td>월(시계열), 등급, POD 국가, 고수익 여부, WOS 단계, …</td></tr>
+<tr><td><b>값(측정값)</b></td><td>셀에 표시되는 값</td><td>FST/LST TEU, WOS-3 FST/LST TEU, BKG 건수, 고유 BKG_NO, 화주 수, CM1, CM1/TEU, <b>실선적률 W3%</b>, <b>고수익 비중 W3%</b>, <b>캔슬률 %</b></td></tr>
+<tr><td><b>표시</b></td><td>실값 / 행% / 열% / 전체%. 비율(%) metric은 자기 자신이 %라 정규화 비활성</td><td>실값 (raw), 행% (= 셀/행합), 열% (= 셀/열합), 전체%</td></tr>
+<tr><td><b>Top N</b></td><td>상위 N행만 표시 (행 정렬 후 잘라냄)</td><td>전체, 10, 20, 50, 100</td></tr>
+<tr><td><b>히트맵</b></td><td>셀 값에 비례해 파란 강도 그라데이션</td><td>체크박스 toggle. 비율 metric에선 자동 비활성</td></tr>
+<tr><td><b>정렬</b></td><td>컬럼 헤더 클릭 → 내림 → 오름 → 기본(행 합계 desc) 순환. 화살표 표시</td><td>모든 컬럼 (합계 포함)</td></tr>
+</table>
+
+<h3>11.2 측정값 상세</h3>
+<table>
+<tr><th width="22%">measure</th><th>계산식</th><th>해석</th></tr>
+<tr><td>FST TEU</td><td>Σ FST_TEU</td><td>발주된 총 컨테이너 양</td></tr>
+<tr><td>LST TEU</td><td>Σ LST_TEU</td><td>실제 선적된 양</td></tr>
+<tr><td>WOS-3 FST / LST</td><td>WOS-3 row만 합계</td><td>3주전 예측치 — 영업 목표 추적 지표</td></tr>
+<tr><td>BKG 건수</td><td>row count</td><td>건수 (중복 BKG_NO 포함)</td></tr>
+<tr><td>고유 BKG_NO</td><td>distinct BKG_NO</td><td>실제 부킹 건수</td></tr>
+<tr><td>화주 수</td><td>distinct shipper</td><td>다양성 — 작은 셀에서 1이면 단일 화주 집중</td></tr>
+<tr><td>CM1</td><td>Σ CM1</td><td>총 수익</td></tr>
+<tr><td>CM1/TEU</td><td>Σ CM1 ÷ Σ LST</td><td>TEU당 평균 수익 — 수익성 비교</td></tr>
+<tr><td><b>실선적률 W3%</b></td><td>Σ w3_lst ÷ Σ w3_fst</td><td>3주전 예측 대비 실선적 전환율</td></tr>
+<tr><td><b>고수익 비중 W3%</b></td><td>Σ w3_hi_fst ÷ Σ w3_fst</td><td>3주전 BKG 중 고수익 화주 비중</td></tr>
+<tr><td><b>캔슬률 %</b></td><td>Σ cancel ÷ Σ fst</td><td>발주 대비 캔슬 비율</td></tr>
+</table>
+<div class="tip">% metric은 단순 평균이 아니라 <b>분자/분모 합산 후 비율</b>로 계산되어 합계 행에서도 정확히 가중평균으로 나옵니다.</div>
+
+<h3>11.3 셀 클릭 → BKG_NO 상세</h3>
+<p>값이 있는 셀(또는 합계 셀)을 클릭하면 그 행×열에 속한 BKG 리스트가 표 아래 패널로 펼침. <b>CSV 내보내기</b> / 닫기 버튼 포함. 합계 행/열 셀도 클릭 가능 (해당 행 또는 열 전체).</p>
+<div class="shot"><img src="guide-img/13_pivot_cell.png" alt="pivot-cell"><div class="cap"><b>화면 9.</b> Pivot 셀 클릭 → 매칭 24건 BKG.</div></div>
+
+<h3>11.4 추천 조합 예시 (실무에서 자주 쓰는 패턴)</h3>
+<table>
+<tr><th width="22%">목적</th><th>조합</th><th>읽는 법</th></tr>
+<tr><td><b>영업사원별 월별 부킹 추세</b></td><td>행=영업사원 · 열=월 · 값=WOS-3 FST · 히트맵 ON · Top 20</td><td>특정 영업사원의 월 추세를 한 줄에 보고, 색이 짙은 셀에서 피크/하락 식별. 클릭하면 그 (월 × 영업사원) BKG 리스트로 드릴.</td></tr>
+<tr><td><b>화주 집중도 — 누가 매출의 80%를 만드는가</b></td><td>행=화주 · 열=(없음) · 값=CM1 · Top 50 · 표시=전체%</td><td>각 행이 전체 CM1의 몇 %인지 표시. 누적 80% 도달 지점이 핵심 화주군. (Pareto 분석)</td></tr>
+<tr><td><b>지역×영업사원 매트릭스</b></td><td>행=선적지 · 하위행=영업사원 · 열=POD 국가 · 값=WOS-3 FST · 히트맵 ON</td><td>선적지별 영업사원이 어느 도착국가에 강한지 한눈에 본다. 빈 셀은 미진출, 진한 셀은 주력 라인.</td></tr>
+<tr><td><b>실선적률 낮은 노선 찾기</b></td><td>행=선적지 · 열=POD 국가 · 값=실선적률 W3% · 정렬=오름차순</td><td>비율이 낮은 순으로 정렬되어 부킹 후 캔슬 많은 노선 우선 표시. 클릭 시 그 노선 BKG 리스트 → 화주별 패턴 점검.</td></tr>
+<tr><td><b>고수익 비중이 낮은 영업사원</b></td><td>행=영업사원 · 열=(없음) · 값=고수익 비중 W3% · 정렬=오름차순 · Top 20</td><td>고수익 화주 비중이 낮은 영업사원 식별 → 화주 믹스 개선 대화의 출발점.</td></tr>
+<tr><td><b>캔슬률이 높은 화주</b></td><td>행=화주 · 열=(없음) · 값=캔슬률% · 정렬=내림차순 · Top 30</td><td>캔슬 잦은 화주 상위. 단, 행 클릭이 아니라 BKG 건수가 낮은 화주는 노이즈(1건 캔슬 = 100%)이므로 BKG 건수와 함께 비교.</td></tr>
+<tr><td><b>월별 수익성 추세</b></td><td>행=월 · 열=등급 · 값=CM1/TEU · 히트맵 ON</td><td>등급별 TEU당 수익 추세. A+B vs C+D의 수익 격차가 좁아지면 등급 정책 점검 필요.</td></tr>
+<tr><td><b>WOS 전환 funnel</b></td><td>행=영업사원 · 열=WOS 단계 · 값=FST TEU · 표시=행%</td><td>각 영업사원의 WOS-1 → WOS-2 → WOS-3 → 실선적 전환 비율. 특정 단계에서 갑자기 떨어지는 패턴 식별.</td></tr>
+<tr><td><b>화주 등급별 TEU 분포</b></td><td>행=등급 · 열=POD 국가 · 값=WOS-3 FST TEU · 표시=열% · 히트맵 ON</td><td>각 도착국가에서 A+B가 얼마나 차지하는가. 70%↑ 국가는 대형화주 의존, 30%↓ 국가는 분산.</td></tr>
+<tr><td><b>고수익 화주 매출 — 누구로부터</b></td><td>행=화주 · 열=POD 국가 · 값=CM1 · 필터: 고수익만 · Top 30</td><td>고수익 BKG의 CM1을 화주×도착국가로 보기. 셀 클릭 시 정확히 어떤 BKG_NO가 기여하는지 확인.</td></tr>
+<tr><td><b>대형 BKG 한 건 찾기</b></td><td>행=BKG_NO는 불가 (행 차원에 없음) — 대신 행=화주 · Top 5 · 셀 클릭 → BKG 리스트에서 FST 큰 순 정렬</td><td>가장 큰 단일 부킹을 찾는 방법. Pivot은 집계 도구이므로 BKG_NO 단위는 셀 클릭 결과 패널에서 본다.</td></tr>
+</table>
+
+<h3>11.5 워크플로 권장</h3>
+<ol>
+  <li>먼저 ① Target 요약에서 GAP이 큰 영업사원/선적지를 식별</li>
+  <li>해당 영업사원으로 필터를 좁힌 뒤 ③ Pivot에서 (월 × POD 국가)로 추세 확인</li>
+  <li>비율 metric으로 전환해 실선적률/고수익 비중 약점 노출</li>
+  <li>약점 셀 클릭 → BKG_NO 리스트 → CSV 내보내기로 1:1 점검 자료 준비</li>
+</ol>
+
+<div class="warn">필터 범위 200 chunk 초과 시 경고가 뜹니다. 응답을 빠르게 하려면 선적지·영업사원·분기로 좁히세요. 히트맵·정렬은 이미 표시 중인 데이터 위에서 작동하므로 추가 비용 없음.</div>
 </div>
 <div class="card en" style="display:none">
+<p>Combine row × sub-row × col × metric freely. Sort, normalise, heatmap and Top-N options at the top. <b>Click any cell</b> for the matching BKG_NO list + CSV export.</p>
 <div class="shot"><img src="guide-img/08_pivot_pod_grade.png" alt="pivot"><div class="cap"><b>Fig. 8.</b> Row=POD country, Col=Grade, Metric=WOS-3 FST TEU.</div></div>
-<p>Pick any row, column, and metric. <b>Clicking a cell</b> opens the matching BKG list below the table, with CSV export.</p>
+
+<h3>11.1 Pivot options</h3>
+<table>
+<tr><th width="14%">Option</th><th>Meaning</th><th>Values</th></tr>
+<tr><td><b>Row</b></td><td>Primary row dimension</td><td>Origin / Salesperson / Shipper / Grade / POD country / POD port / Month / Hi-profit / WOS</td></tr>
+<tr><td><b>Sub-row</b></td><td>Second-level row, rendered with <code>↳ value</code> indent under each main row</td><td>e.g. Origin › Salesperson, Salesperson › Shipper</td></tr>
+<tr><td><b>Col</b></td><td>Column dimension. "(none)" → single total column</td><td>Month (time-series), Grade, POD country, Hi-profit, WOS, …</td></tr>
+<tr><td><b>Value</b></td><td>Cell metric</td><td>FST/LST TEU, WOS-3 FST/LST, BKG count, Unique BKG_NO, Shipper count, CM1, CM1/TEU, <b>LFT% W3</b>, <b>Hi-profit% W3</b>, <b>Cancel%</b></td></tr>
+<tr><td><b>Show</b></td><td>Raw / Row% / Col% / Total%. Ratio metrics ignore normalisation</td><td>Raw, Row%, Col%, Total%</td></tr>
+<tr><td><b>Top N</b></td><td>Limit to top N rows after sort</td><td>All, 10, 20, 50, 100</td></tr>
+<tr><td><b>Heatmap</b></td><td>Blue intensity gradient by cell value</td><td>Toggle. Auto-off for ratio metrics</td></tr>
+<tr><td><b>Sort</b></td><td>Click a column header → desc → asc → default (row total desc). Arrow indicator.</td><td>Any column including totals</td></tr>
+</table>
+
+<h3>11.2 Metric reference</h3>
+<table>
+<tr><th width="22%">Measure</th><th>Formula</th><th>Reading</th></tr>
+<tr><td>FST TEU</td><td>Σ FST_TEU</td><td>Total booked TEU</td></tr>
+<tr><td>LST TEU</td><td>Σ LST_TEU</td><td>Loaded TEU</td></tr>
+<tr><td>WOS-3 FST / LST</td><td>Sum over WOS-3 rows</td><td>3-week-out forecast — main KPI baseline</td></tr>
+<tr><td>BKG count</td><td>Row count</td><td>Rows incl. duplicates</td></tr>
+<tr><td>Unique BKG_NO</td><td>Distinct BKG_NO</td><td>Real booking count</td></tr>
+<tr><td>Shipper count</td><td>Distinct shipper</td><td>Concentration check — "1" = single shipper</td></tr>
+<tr><td>CM1</td><td>Σ CM1</td><td>Total margin</td></tr>
+<tr><td>CM1/TEU</td><td>Σ CM1 ÷ Σ LST</td><td>Margin per TEU — profitability comparison</td></tr>
+<tr><td><b>LFT% W3</b></td><td>Σ w3_lst ÷ Σ w3_fst</td><td>Loading conversion vs forecast</td></tr>
+<tr><td><b>Hi-profit% W3</b></td><td>Σ w3_hi_fst ÷ Σ w3_fst</td><td>Hi-profit shipper share of WOS-3 BKG</td></tr>
+<tr><td><b>Cancel%</b></td><td>Σ cancel ÷ Σ fst</td><td>Cancellation ratio</td></tr>
+</table>
+<div class="tip">Ratio metrics compute as <b>numerator/denominator at the aggregate level</b> — totals are exact weighted averages, not naive means.</div>
+
+<h3>11.3 Cell click → BKG_NO detail</h3>
+<p>Any non-empty cell (incl. totals) opens the matching BKG list below the table with <b>CSV export</b> + close. Row-total and column-total cells drill into the union of their cells.</p>
 <div class="shot"><img src="guide-img/13_pivot_cell.png" alt="pivot-cell"><div class="cap"><b>Fig. 9.</b> Cell click → 24 BKGs.</div></div>
-<div class="warn">A warning appears when scope exceeds 200 chunks — narrow filters for speed.</div>
+
+<h3>11.4 Practical combinations</h3>
+<table>
+<tr><th width="22%">Goal</th><th>Combination</th><th>How to read</th></tr>
+<tr><td><b>Salesperson month-by-month trend</b></td><td>Row=Salesperson · Col=Month · Value=WOS-3 FST · Heatmap ON · Top 20</td><td>One row per salesperson, color picks out peak/drop months. Click a cell to drill.</td></tr>
+<tr><td><b>Shipper concentration (Pareto)</b></td><td>Row=Shipper · Col=(none) · Value=CM1 · Top 50 · Show=Total%</td><td>Each row as % of total CM1. Identify the shippers that produce 80% of margin.</td></tr>
+<tr><td><b>Origin × Salesperson matrix</b></td><td>Row=Origin · Sub-row=Salesperson · Col=POD country · Value=WOS-3 FST · Heatmap ON</td><td>Where each rep is strong by destination. Blank cells = no presence, dense cells = main lane.</td></tr>
+<tr><td><b>Lanes with poor loading</b></td><td>Row=Origin · Col=POD country · Value=LFT% W3 · Sort asc</td><td>Sorted lowest-first — lanes losing bookings to cancellation. Click → BKG list to check shipper patterns.</td></tr>
+<tr><td><b>Reps with low hi-profit share</b></td><td>Row=Salesperson · Col=(none) · Value=Hi-profit% W3 · Sort asc · Top 20</td><td>Starts the conversation about shipper-mix improvement.</td></tr>
+<tr><td><b>Shippers with high cancel rate</b></td><td>Row=Shipper · Col=(none) · Value=Cancel% · Sort desc · Top 30</td><td>Watch out for small-BKG noise (1 cancel of 1 BKG = 100%). Compare with BKG count.</td></tr>
+<tr><td><b>Monthly profitability</b></td><td>Row=Month · Col=Grade · Value=CM1/TEU · Heatmap ON</td><td>Margin per TEU trend by grade. Narrowing A+B vs C+D gap suggests grade policy review.</td></tr>
+<tr><td><b>WOS conversion funnel</b></td><td>Row=Salesperson · Col=WOS · Value=FST TEU · Show=Row%</td><td>WOS-1 → WOS-2 → WOS-3 → Loaded conversion ratios per rep.</td></tr>
+<tr><td><b>Grade distribution per destination</b></td><td>Row=Grade · Col=POD country · Value=WOS-3 FST · Show=Col% · Heatmap ON</td><td>What share of each destination comes from A+B. 70%+ = key-account-dependent.</td></tr>
+<tr><td><b>Hi-profit by shipper × destination</b></td><td>Row=Shipper · Col=POD country · Value=CM1 · Filter Hi-profit ONLY · Top 30</td><td>Click a cell to see the BKG_NO that contributed.</td></tr>
+<tr><td><b>Find a single big BKG</b></td><td>Row=Shipper · Top 5 · Click cell → BKG list sorted by FST</td><td>Pivot is an aggregator; BKG-level lives in the click-detail panel.</td></tr>
+</table>
+
+<h3>11.5 Recommended workflow</h3>
+<ol>
+  <li>Open ① Target Summary, find salespeople / origins with the biggest GAP.</li>
+  <li>Narrow the filters to those names → ③ Pivot with Row=Month, Col=POD country.</li>
+  <li>Switch to a ratio metric (LFT% / Hi-profit% / Cancel%) to surface weak points.</li>
+  <li>Click the weak cell → BKG_NO list → CSV export for the 1:1 review meeting.</li>
+</ol>
+
+<div class="warn">A warning appears when the scope exceeds 200 chunks — narrow by origin, salesperson, or quarter. Heatmap and sort run on already-loaded rows so they cost nothing extra.</div>
 </div>
 
 <!-- 12. DEEP LINK -->
@@ -532,7 +648,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <h4>Q4. CSV가 한글 깨짐.</h4>
 <p>UTF-8 BOM 포함이므로 Excel에서 바로 열어야 합니다. 메모장에서 열면 깨지는 경우가 있습니다.</p>
 <h4>Q5. 영어로 전환?</h4>
-<p>헤더 우측의 <b>EN</b> 버튼. 선택은 브라우저에 저장.</p>
+<p>헤더 우측의 <b>EN</b> 버튼. 선택은 브라우저에 저장. 화면 라벨뿐 아니라 BKG 상세 / Pivot 셀 상세의 <b>Booking 날짜 형식도 함께 전환</b>됩니다 (KO: <code>2026년 03월 05일</code> ↔ EN: <code>2026-03-05</code>).</p>
 <h4>Q6. 데이터가 오래 됐어요.</h4>
 <p>매일 평일 09:03 자동 빌드. 헤더의 "데이터 기준일" 확인 후 24시간 이상 지났으면 운영 담당자에게 문의.</p>
 </div>
@@ -546,7 +662,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <h4>Q4. CSV shows garbled Korean.</h4>
 <p>It's UTF-8 with BOM — open it in Excel directly. Notepad sometimes mis-detects the encoding.</p>
 <h4>Q5. How do I switch to English?</h4>
-<p>The <b>EN</b> button on the top right. Your choice is saved in localStorage.</p>
+<p>The <b>EN</b> button on the top right. Your choice is saved in localStorage. The toggle covers labels <i>and</i> the Booking date format in BKG / Pivot detail rows (KO: <code>2026년 03월 05일</code> ↔ EN: <code>2026-03-05</code>).</p>
 <h4>Q6. Data looks stale.</h4>
 <p>Daily build runs at 09:03 weekday. Check the "Data date" in the header. Older than 24 h → contact the operator.</p>
 </div>
