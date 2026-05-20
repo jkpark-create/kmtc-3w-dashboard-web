@@ -59,6 +59,7 @@ body{font-family:'Segoe UI',sans-serif;background:#f0f2f5;color:#202124}
 .pivot-config select{padding:4px 8px;border:1px solid #dadce0;border-radius:4px;font-size:12px}
 table.dt{width:100%;border-collapse:collapse;font-size:12px}
 table.dt th{background:#e8f0fe;padding:6px 8px;text-align:center;border:1px solid #dadce0;font-weight:600;white-space:normal;word-break:keep-all;overflow-wrap:break-word;line-height:1.25;position:sticky;top:0;z-index:1;min-width:60px}
+table.dt th.narrow-col, table.dt td.narrow-col{min-width:64px;max-width:78px;width:72px}
 table.dt th.nowrap{white-space:nowrap;word-break:normal}
 table.dt td{padding:5px 8px;text-align:right;border:1px solid #dadce0;white-space:nowrap}
 table.dt td.txt{text-align:left;font-weight:600;background:#fafafa}
