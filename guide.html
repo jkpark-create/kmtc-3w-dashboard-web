@@ -447,15 +447,15 @@ document.addEventListener('DOMContentLoaded', function() {
   <table>
     <tr><th>서브탭</th><th>내용</th></tr>
     <tr><td><strong>지역별</strong></td><td>도착지/선적지별(보기 필터 연동) BKG, 실선적, 구간별 고수익 비중 + 주차별 차트</td></tr>
-    <tr><td><strong>화주별</strong></td><td>화주명(한 줄 표시), <strong>등급(A+B/C+D)</strong>, <span class="tag tag-hi">고수익태그</span>, 영업사원, BKG, 실선적, CM1/TEU</td></tr>
+    <tr><td><strong>화주별</strong></td><td>화주명(한 줄 표시), <strong>등급(A+B/C+D)</strong>, 영업사원, BKG, 실선적, CM1/TEU</td></tr>
     <tr><td><strong>영업사원별</strong></td><td>화주수(코드 기준 중복제거), BKG, 실선적, 구간별 고수익 비중 + 영업사원×도착국가 매트릭스/상세</td></tr>
     <tr><td><strong>AB vs CD</strong></td><td>지역별 A+B / C+D 등급 BKG 비교 + 실선적률 + 스택 바 차트 + 분석 가이드</td></tr>
   </table>
-  <p>화주명은 줄바꿈 없이 한 줄로 표시합니다. 영업사원이 3명 이상인 경우에는 앞 2명과 <code>...</code>로 축약 표시합니다.</p>
+  <p>화주명은 줄바꿈 없이 한 줄로 표시합니다. 영업사원이 3명 이상인 경우에는 앞 2명과 <code>...</code>로 축약 표시합니다. 화주별 표의 합계 행은 헤더 바로 아래에 표시합니다.</p>
   <h3>Tab 2를 읽는 순서</h3>
   <ol>
     <li><strong>지역별</strong>에서 어느 도착국가/선적지가 물량 변화를 만들었는지 확인합니다.</li>
-    <li><strong>화주별</strong>에서 해당 지역의 핵심 화주와 등급, 고수익태그, CM1/TEU를 확인합니다.</li>
+    <li><strong>화주별</strong>에서 해당 지역의 핵심 화주와 등급, CM1/TEU를 확인합니다.</li>
     <li><strong>영업사원별</strong>에서 물량을 담당하는 영업사원과 도착국가 집중도를 봅니다.</li>
     <li><strong>AB vs CD</strong>에서 대형화주(A+B) 의존도와 중소화주(C+D) 기반의 안정성을 비교합니다.</li>
   </ol>
@@ -476,8 +476,8 @@ document.addEventListener('DOMContentLoaded', function() {
   </ul>
   <h3>화주별 화면 활용</h3>
   <ul>
-    <li><strong>등급</strong>은 A+B/C+D 기반의 화주 규모 구분이고, <strong>고수익화주</strong>는 선적지 기준 CM1/TEU 비교 태그입니다. 두 지표는 서로 다른 기준입니다.</li>
-    <li><strong>구간별고수익</strong>은 루트 평균 대비 해당 부킹의 수익성 분류입니다. 화주가 고수익화주가 아니더라도 특정 구간에서는 구간별고수익일 수 있습니다.</li>
+    <li><strong>등급</strong>은 A+B/C+D 기반의 화주 규모 구분입니다.</li>
+    <li><strong>구간별고수익</strong>은 루트 평균 대비 해당 부킹의 수익성 분류입니다. 같은 화주라도 특정 구간에서는 수익성이 다르게 나타날 수 있습니다.</li>
     <li><strong>CM1/TEU</strong>는 실선적된 Normal 물량 기준 수익성입니다. BKG가 큰데 CM1/TEU가 낮으면 영업/운임 조건 점검이 필요합니다.</li>
   </ul>
   <h3>영업사원별 도착국가 분석</h3>
@@ -529,15 +529,15 @@ document.addEventListener('DOMContentLoaded', function() {
   <table>
     <tr><th>Sub-tab</th><th>Content</th></tr>
     <tr><td><strong>By Region</strong></td><td>BKG, LFT, Route High ratio (follows View filter) + weekly chart</td></tr>
-    <tr><td><strong>By Shipper</strong></td><td>Single-line shipper name, <strong>Grade(A+B/C+D)</strong>, <span class="tag tag-hi">Profit Tag</span>, Salesperson, BKG, LFT, CM1/TEU</td></tr>
+    <tr><td><strong>By Shipper</strong></td><td>Single-line shipper name, <strong>Grade(A+B/C+D)</strong>, Salesperson, BKG, LFT, CM1/TEU</td></tr>
     <tr><td><strong>By Salesperson</strong></td><td>Shipper count, BKG, LFT, Route High ratio + salesperson x destination country matrix/detail</td></tr>
     <tr><td><strong>AB vs CD</strong></td><td>A+B vs C+D BKG comparison by region + LFT rate + stacked bar chart + analysis guide</td></tr>
   </table>
-  <p>Shipper names are shown on a single line without wrapping. When a shipper has three or more salesperson names, the table shows the first two followed by <code>...</code>.</p>
+  <p>Shipper names are shown on a single line without wrapping. When a shipper has three or more salesperson names, the table shows the first two followed by <code>...</code>. The total row in the By Shipper table appears directly under the header.</p>
   <h3>How to Read Tab 2</h3>
   <ol>
     <li>Use <strong>By Region</strong> to find which destination/origin is driving the volume movement.</li>
-    <li>Use <strong>By Shipper</strong> to identify key shippers, grade, profit tag, and CM1/TEU.</li>
+    <li>Use <strong>By Shipper</strong> to identify key shippers, grade, and CM1/TEU.</li>
     <li>Use <strong>By Salesperson</strong> to see ownership and destination-country concentration.</li>
     <li>Use <strong>AB vs CD</strong> to compare large-shipper dependency against SME-base stability.</li>
   </ol>
@@ -558,8 +558,8 @@ document.addEventListener('DOMContentLoaded', function() {
   </ul>
   <h3>By Shipper</h3>
   <ul>
-    <li><strong>Grade</strong> is A+B/C+D shipper scale classification, while <strong>Profit Tag</strong> is based on POR-level CM1/TEU. They are different dimensions.</li>
-    <li><strong>Route High</strong> compares each booking against the route average. A shipper can be low-profit overall but route-high on a specific lane.</li>
+    <li><strong>Grade</strong> is A+B/C+D shipper scale classification.</li>
+    <li><strong>Route High</strong> compares each booking against the route average. The same shipper can show different profitability by lane.</li>
     <li><strong>CM1/TEU</strong> is profitability based on loaded Normal TEU. High BKG with low CM1/TEU should be reviewed for pricing or shipper mix.</li>
   </ul>
   <h3>Salesperson x Destination Country Analysis</h3>
@@ -1007,7 +1007,7 @@ document.addEventListener('DOMContentLoaded', function() {
     </ul>
   </div>
   <h3>데이터 갱신</h3>
-  <p>매일 평일 09:03의 <code>3W_BKG_Dashboard</code> 작업이 끝나면 자동으로 sales-target chunks (~1,592개)도 함께 빌드되어 dist에 push됩니다. 헤더의 "데이터 기준일"이 오늘이 아니면 운영 담당자에게 문의.</p>
+  <p>매일 평일 09:03의 <code>3W_BKG_Dashboard</code> 작업에서 booking snapshot 처리가 끝난 직후, 같은 <code>booking_snapshot_result_YYYYMMDD.csv</code> 기준으로 sales-target chunks (~1,592개)를 함께 빌드해 dist에 push합니다. 헤더의 "데이터 기준일"이 메인 대시보드와 다르면 운영 담당자에게 문의.</p>
   <div class="tip"><strong>딥링크 예:</strong> <code>sales-target/?country=CN&amp;origin=CN_SHA&amp;sales=WUXIAOCHEN&amp;quarter=q1&amp;view=drill</code></div>
 </div>
 
@@ -1035,7 +1035,7 @@ document.addEventListener('DOMContentLoaded', function() {
     </ul>
   </div>
   <h3>Refresh</h3>
-  <p>Weekday 09:03 <code>3W_BKG_Dashboard</code> task automatically rebuilds the sales-target chunks (~1,592) and pushes to dist.</p>
+  <p>The weekday 09:03 <code>3W_BKG_Dashboard</code> task rebuilds the sales-target chunks (~1,592) immediately after booking snapshot processing, using the same <code>booking_snapshot_result_YYYYMMDD.csv</code>, then pushes them to dist.</p>
   <div class="tip"><strong>Deep link example:</strong> <code>sales-target/?country=CN&amp;origin=CN_SHA&amp;sales=WUXIAOCHEN&amp;quarter=q1&amp;view=drill</code></div>
 </div>
 

@@ -1156,6 +1156,23 @@ function switchTab(tab) {
   render();
 }
 
+const PLOT_CONFIG = {displayModeBar:false, responsive:true};
+const NON_CARTESIAN_TRACES = new Set(['pie','sunburst','treemap','table','indicator']);
+
+function plot(target, traces, layout, config) {
+  const out = {...(layout || {})};
+  out.margin = {...(out.margin || {})};
+  const usesCartesian = (traces || []).some(t => !NON_CARTESIAN_TRACES.has((t && t.type) || 'scatter'));
+  if (usesCartesian) {
+    out.xaxis = {...(out.xaxis || {}), automargin:true};
+    out.yaxis = {...(out.yaxis || {}), automargin:true};
+  }
+  ['xaxis2','yaxis2'].forEach(axis => {
+    if (out[axis]) out[axis] = {...out[axis], automargin:true};
+  });
+  return Plotly.newPlot(target, traces, out, {...PLOT_CONFIG, ...(config || {})});
+}
+
 function render() {
   if (!DATA) return;
   resetFilterMemo();
@@ -1294,7 +1311,7 @@ function renderTab1() {
     });
     _oP.push(res[0]); _wbP.push(res[1]); _woP.push(res[2]);
   });
-  Plotly.newPlot('ch1bar', [
+  plot('ch1bar', [
     {x:xl, y:w3bkgM, type:'bar', name:L('3주전BKG','WOS-3 BKG'), marker:{color:'#6c5ce7',opacity:.7}, text:w3bkgM.map(fmt), textposition:'outside', textfont:{size:9}},
     {x:xl, y:shipM, type:'bar', name:L('실선적(Normal)','LFT(Normal)'), marker:{color:'#1a73e8',opacity:.85}, text:shipM.map(fmt), textposition:'outside', textfont:{size:10}},
     {x:xl, y:bsaM, type:'bar', name:'BSA', marker:{color:'#dadce0',opacity:.5}, text:bsaM.map(fmt), textposition:'outside', textfont:{size:10}},
@@ -1355,7 +1372,7 @@ function drawOccChart() {
     const num = mode==='w3' ? r.w3bkg : r.ship;
     return `(${fmt(num)} / ${fmt(r.bsa)})  ${r.name}`;
   });
-  Plotly.newPlot('ch1occ', [{
+  plot('ch1occ', [{
     y: labels, x: vals, type:'bar', orientation:'h',
     marker:{color:vals.map(v => v>=65?'#34a853':v>=50?'#f9ab00':'#ea4335')},
     text:vals.map(v=>v.toFixed(0)+'%'), textposition:'outside', textfont:{size:11}, cliponaxis:false
@@ -1607,7 +1624,7 @@ function renderTab2() {
     const smRows = Object.entries(bySM).map(([k,s])=>({name:k,bkg:s.bkg/wk,ship:s.ship/wk,sr:ratio(s.ship,s.bkg) ?? 0}))
       .sort((a,b)=>b.bkg-a.bkg).slice(0,20);
     if (document.getElementById('ch2sm')) {
-      Plotly.newPlot('ch2sm', [
+      plot('ch2sm', [
         {y:smRows.map(r=>r.name).reverse(), x:smRows.map(r=>r.bkg).reverse(), type:'bar', orientation:'h', name:'BKG', marker:{color:'#1a73e8',opacity:.7}},
         {y:smRows.map(r=>r.name).reverse(), x:smRows.map(r=>r.ship).reverse(), type:'bar', orientation:'h', name:L('실선적(Normal)','LFT(Normal)'), marker:{color:'#34a853',opacity:.7}},
       ], {barmode:'group',margin:{l:80,r:30,t:20,b:30},xaxis:{title:L('TEU (주간평균)','TEU (Weekly Avg)'),gridcolor:'#f0f0f0'},
@@ -1627,7 +1644,7 @@ function renderTab2() {
       const destSeries = hasOther ? [...topDests, otherLabel] : topDests;
       const ySales = topSales.slice().reverse();
       const colors = ['#1a73e8','#34a853','#f9ab00','#ea4335','#5f6368','#00acc1','#ab47bc','#ff7043','#9aa0a6'];
-      Plotly.newPlot('ch2smdeststack', destSeries.map((dest,i) => {
+      plot('ch2smdeststack', destSeries.map((dest,i) => {
         const vals = ySales.map(sm => salesDestRows
           .filter(r => r.sales === sm && (dest === otherLabel ? !topDests.includes(r.dest) : r.dest === dest))
           .reduce((s,r)=>s+r.bkg,0));
@@ -1680,7 +1697,7 @@ function renderTab2() {
       type:'bar', name:d
     }));
     const wkLabels = weeks.map(w=>fmtWeekLabel(w));
-    Plotly.newPlot('ch2wk', traces, {barmode:'stack',margin:{l:40,r:20,t:20,b:30},
+    plot('ch2wk', traces, {barmode:'stack',margin:{l:40,r:20,t:20,b:30},
       xaxis:{type:'category',categoryorder:'array',categoryarray:wkLabels},
       yaxis:{title:'TEU',gridcolor:'#f0f0f0'},legend:{orientation:'h',y:1.12},
       plot_bgcolor:'#fff',paper_bgcolor:'#fff'}, {displayModeBar:false});
@@ -1696,7 +1713,7 @@ function renderTab2() {
     const hiPcts = wosKeys.map(k => hiTotal > 0 ? sum(hiSD,k)/hiTotal*100 : 0);
     const loPcts = wosKeys.map(k => loTotal > 0 ? sum(loSD,k)/loTotal*100 : 0);
 
-    Plotly.newPlot('ch2lt', [
+    plot('ch2lt', [
       {x: wosLabels, y: hiPcts, type:'bar', name: L('고수익화주','Hi-Shipper'), marker:{color:'#34a853'},
        text: hiPcts.map(v=>v.toFixed(0)+'%'), textposition:'auto', textfont:{size:12}},
       {x: wosLabels, y: loPcts, type:'bar', name: L('저수익화주','Lo-Shipper'), marker:{color:'#ea4335'},
@@ -1713,7 +1730,7 @@ function renderTab2() {
       const hi = sum(msd.filter(r => shipperTag(r) === '고수익화주'), 'w3_fst');
       return ratio(hi,total);
     });
-    Plotly.newPlot('ch2hi', [{
+    plot('ch2hi', [{
       x: DATA.months.map(fmtMonth), y: hiTrend,
       mode:'lines+markers+text', line:{color:'#1a73e8',width:3}, marker:{size:8},
       text: hiTrend.map(v => v !== null ? v.toFixed(0)+'%' : ''), textposition:'top center'
@@ -1732,7 +1749,7 @@ function renderTab2() {
       name:k, ab:sum(arr,'w3_ab_fst'), cd:sum(arr,'w3_cd_fst')
     })).sort((a,b)=>(b.ab+b.cd)-(a.ab+a.cd)).slice(0,10);
     if (document.getElementById('ch2abcd')) {
-      Plotly.newPlot('ch2abcd', [
+      plot('ch2abcd', [
         {x:abcdRows.map(r=>r.name), y:abcdRows.map(r=>r.ab), type:'bar', name:'A+B', marker:{color:'#1a73e8'}},
         {x:abcdRows.map(r=>r.name), y:abcdRows.map(r=>r.cd), type:'bar', name:'C+D', marker:{color:'#f9ab00'}},
       ], {barmode:'stack', margin:{l:40,r:20,t:20,b:30},
@@ -1838,25 +1855,24 @@ function renderShipperTable(month) {
   const hasTargets = SALES_TARGET.loaded;
   const targetHeaderColumns = hasTargets ? targetHeaderColumnsHtml() : '';
   let h = `<div class="chart-card"><h3>${L('화주별 3주전 BKG','WOS-3 BKG by Shipper')} (${fmtMonth(month)})</h3>
-  <table class="summary shipper-table"><tr><th class="shipper-col">${L('화주','Shipper')}</th><th>${L('등급','Grade')}</th><th>${L('고수익화주','Hi-Shipper')}</th><th class="sales-col"><span>${L('영업사원','Salesperson')}</span></th><th>BKG</th><th>${L('실선적','LFT')}</th><th>${L('실선적률','Rate')}</th><th class="hi-head">${L('구간별고수익<br>부킹','Route Hi<br>BKG')}</th><th>${L('구간별고수익%','Route Hi%')}</th><th class="hi-head">${L('구간별고수익<br>실선적','Route Hi<br>LFT')}</th><th class="hi-head">${L('구간별고수익<br>실선적률','Route Hi<br>LFT%')}</th><th>CM1</th><th>CM1/TEU</th>${targetHeaderColumns}</tr>`;
-
-  rows.forEach(r => {
-    const ct = r.cm1l>0 ? r.cm1/r.cm1l : 0;
-    const tagStyle = r.tag==='고수익화주' ? 'color:#34a853;font-weight:600' : r.tag==='저수익화주' ? 'color:#ea4335' : '';
-    const gradeStyle = r.grade==='A+B' ? 'color:#1a73e8;font-weight:600' : 'color:#f9ab00';
-    h += `<tr><td class="lbl shipper-col">${r.name}</td><td style="${gradeStyle}">${r.grade}</td><td style="${tagStyle}">${tagLabel(r.tag)}</td><td class="sales-col"><span>${r.sales}</span></td><td>${fmt(r.bkg)}</td><td>${fmt(r.ship)}</td><td>${pct(r.ship,r.bkg)}</td>`;
-    h += `<td>${fmt(r.hi)}</td><td>${pct(r.hi,r.bkg)}</td><td>${fmt(r.hiShip)}</td><td>${pct(r.hiShip,r.hi)}</td><td>${fmt(Math.round(r.cm1))}</td><td>${fmt(Math.round(ct))}</td>`;
-    if (hasTargets) h += targetCellsForSalespeople(r.salesArray, quarter, performKey);
-    h += '</tr>';
-  });
+  <table class="summary shipper-table"><tr><th class="shipper-col">${L('화주','Shipper')}</th><th>${L('등급','Grade')}</th><th class="sales-col"><span>${L('영업사원','Salesperson')}</span></th><th>BKG</th><th>${L('실선적','LFT')}</th><th>${L('실선적률','Rate')}</th><th class="hi-head">${L('구간별고수익<br>부킹','Route Hi<br>BKG')}</th><th>${L('구간별고수익%','Route Hi%')}</th><th class="hi-head">${L('구간별고수익<br>실선적','Route Hi<br>LFT')}</th><th class="hi-head">${L('구간별고수익<br>실선적률','Route Hi<br>LFT%')}</th><th>CM1</th><th>CM1/TEU</th>${targetHeaderColumns}</tr>`;
 
   const tb=rows.reduce((s,r)=>s+r.bkg,0), ts=rows.reduce((s,r)=>s+r.ship,0);
   const th2=rows.reduce((s,r)=>s+r.hi,0), thShip=rows.reduce((s,r)=>s+r.hiShip,0), tc=rows.reduce((s,r)=>s+r.cm1,0);
   const tl=rows.reduce((s,r)=>s+r.cm1l,0), tct=tl>0?tc/tl:0;
-  h += `<tr class="total"><td class="lbl shipper-col">${L('합계','Total')}</td><td></td><td></td><td></td><td>${fmt(tb)}</td><td>${fmt(ts)}</td><td>${pct(ts,tb)}</td>`;
+  h += `<tr class="total"><td class="lbl shipper-col">${L('합계','Total')}</td><td></td><td></td><td>${fmt(tb)}</td><td>${fmt(ts)}</td><td>${pct(ts,tb)}</td>`;
   h += `<td>${fmt(th2)}</td><td>${pct(th2,tb)}</td><td>${fmt(thShip)}</td><td>${pct(thShip,th2)}</td><td>${fmt(Math.round(tc))}</td><td>${fmt(Math.round(tct))}</td>`;
   if (hasTargets) h += `<td colspan="4" style="text-align:center"><a class="tgt-link" href="sales-target/?quarter=${quarter}" target="_blank" rel="noopener">${L('전체 목표 화면','Open Target Screen')} ↗</a></td>`;
   h += '</tr>';
+
+  rows.forEach(r => {
+    const ct = r.cm1l>0 ? r.cm1/r.cm1l : 0;
+    const gradeStyle = r.grade==='A+B' ? 'color:#1a73e8;font-weight:600' : 'color:#f9ab00';
+    h += `<tr><td class="lbl shipper-col">${r.name}</td><td style="${gradeStyle}">${r.grade}</td><td class="sales-col"><span>${r.sales}</span></td><td>${fmt(r.bkg)}</td><td>${fmt(r.ship)}</td><td>${pct(r.ship,r.bkg)}</td>`;
+    h += `<td>${fmt(r.hi)}</td><td>${pct(r.hi,r.bkg)}</td><td>${fmt(r.hiShip)}</td><td>${pct(r.hiShip,r.hi)}</td><td>${fmt(Math.round(r.cm1))}</td><td>${fmt(Math.round(ct))}</td>`;
+    if (hasTargets) h += targetCellsForSalespeople(r.salesArray, quarter, performKey);
+    h += '</tr>';
+  });
   h += '</table></div>';
   return h;
 }
@@ -2164,7 +2180,7 @@ function renderTab3() {
   document.getElementById('tabContent').innerHTML = html;
 
   // Funnel
-  Plotly.newPlot('ch3fn', [{type:'funnel', y:[L('3주전 BKG','WOS-3 BKG'),L('캔슬 제외','Cancel Removed'),L('실선적(Normal)','LFT(Normal)')],
+  plot('ch3fn', [{type:'funnel', y:[L('3주전 BKG','WOS-3 BKG'),L('캔슬 제외','Cancel Removed'),L('실선적(Normal)','LFT(Normal)')],
     x:[w3b, w3b-w3c, w3n], textinfo:'value+percent initial',
     marker:{color:['#1a73e8','#f9ab00','#34a853']}}],
     {margin:{l:20,r:20,t:20,b:20},plot_bgcolor:'#fff',paper_bgcolor:'#fff'}, {displayModeBar:false});
@@ -2172,7 +2188,7 @@ function renderTab3() {
   // 실선적률 추이
   const topItems = Object.entries(groupByKey(fd, vk))
     .sort((a,b)=>profitSum(b[1],'w3_fst')-profitSum(a[1],'w3_fst')).slice(0,8).map(e=>e[0]);
-  Plotly.newPlot('ch3tr', topItems.map(it => ({
+  plot('ch3tr', topItems.map(it => ({
     x: DATA.months.map(fmtMonth),
     y: DATA.months.map(m => {
       const d = filterMonthly(m).filter(r=>r[vk]===it);
@@ -2184,7 +2200,7 @@ function renderTab3() {
 
   // 캔슬률 바 차트
   const top12 = byDest.slice(0,12);
-  Plotly.newPlot('ch3cancel', [
+  plot('ch3cancel', [
     {y:top12.map(r=>r.name).reverse(), x:top12.map(r=>r.cancelRate).reverse(), type:'bar', orientation:'h', name:L('캔슬률','Cancel Rate'),
      marker:{color:top12.map(r=>r.cancelRate>30?'#ea4335':r.cancelRate>20?'#f9ab00':'#34a853').reverse()},
      text:top12.map(r=>r.cancelRate.toFixed(0)+'%').reverse(), textposition:'outside', textfont:{size:11}}
@@ -2192,7 +2208,7 @@ function renderTab3() {
       plot_bgcolor:'#fff',paper_bgcolor:'#fff',showlegend:false}, {displayModeBar:false});
 
   // 월별 캔슬률 추이
-  Plotly.newPlot('ch3ctrend', [{
+  plot('ch3ctrend', [{
     x: DATA.months.map(fmtMonth),
     y: DATA.months.map(m => { const d=filterMonthly(m); const b=profitSum(d,'w3_fst'),c=profitSum(d,'w3_canc_fst'); return b>0?c/b*100:null; }),
     mode:'lines+markers+text', name:L('전체 캔슬률','Overall Cancel Rate'), line:{color:'#ea4335',width:3}, marker:{size:8},
@@ -2268,7 +2284,7 @@ function renderTab4() {
 
   // CM1/TEU bar by dest
   const sortedDest = [...items].sort((a,b) => (a.cm1l>0?a.cm1/a.cm1l:0) - (b.cm1l>0?b.cm1/b.cm1l:0));
-  Plotly.newPlot('ch4cm', [{
+  plot('ch4cm', [{
     y:sortedDest.map(r=>r.name), x:sortedDest.map(r=>r.cm1l>0?Math.round(r.cm1/r.cm1l):0),
     type:'bar', orientation:'h', marker:{color:'#1a73e8',opacity:.85},
     text:sortedDest.map(r=>r.cm1l>0?fmt(Math.round(r.cm1/r.cm1l)):'0'), textposition:'auto', textfont:{color:'#fff'}
@@ -2277,7 +2293,7 @@ function renderTab4() {
 
   // CM1/TEU 월별 추이
   const trendItems = items.slice(0,6).map(r=>r.name);
-  Plotly.newPlot('ch4trend', trendItems.map(it => ({
+  plot('ch4trend', trendItems.map(it => ({
     x: DATA.months.map(fmtMonth),
     y: DATA.months.map(m => {
       const d = filterMonthly(m).filter(r=>r[vk]===it);
@@ -2290,7 +2306,7 @@ function renderTab4() {
   // 수익 집중도 (누적 %)
   let cumPct = 0;
   const concData = sorted.slice(0,30).map((r,i) => { cumPct += r.cm1/totalCM1*100; return {x:i+1, y:cumPct}; });
-  Plotly.newPlot('ch4conc', [{
+  plot('ch4conc', [{
     x:concData.map(r=>r.x), y:concData.map(r=>r.y), mode:'lines+markers',
     line:{color:'#1a73e8',width:2}, marker:{size:5},
     text:concData.map(r=>r.y.toFixed(0)+'%'), textposition:'top center'
@@ -2379,7 +2395,7 @@ function renderTab5() {
   // Render 100% stacked bar (지역별 비중)
   const colors = ['#1a73e8','#f9ab00','#ea4335','#5f6368'];
   const top10 = destRows.slice(0,10);
-  Plotly.newPlot('ch5wos', wosLabels.map((lbl,i) => ({
+  plot('ch5wos', wosLabels.map((lbl,i) => ({
     x: top10.map(r=>r.name),
     y: top10.map(r=> r.total>0 ? [r.w3,r.w2,r.w1,r.wos][i]/r.total*100 : 0),
     type:'bar', name:lbl, marker:{color:colors[i]},
@@ -2394,7 +2410,7 @@ function renderTab5() {
   const loSD5 = sd.filter(r => shipperTag(r) === '저수익화주');
   const hiT5 = wosKeys.reduce((s,k) => s + sum(hiSD5,k), 0);
   const loT5 = wosKeys.reduce((s,k) => s + sum(loSD5,k), 0);
-  Plotly.newPlot('ch5lt', [
+  plot('ch5lt', [
     {x:wosLabels, y:wosKeys.map(k => hiT5>0 ? sum(hiSD5,k)/hiT5*100 : 0), type:'bar',
      name:L('고수익화주','Hi-Shipper'), marker:{color:'#34a853'},
      text:wosKeys.map(k => hiT5>0 ? (sum(hiSD5,k)/hiT5*100).toFixed(0)+'%' : ''), textposition:'auto', textfont:{size:12}},
@@ -2413,7 +2429,7 @@ function renderTab5() {
     const hi = sum(msd.filter(r => shipperTag(r) === '고수익화주'), 'w3_fst');
     return ratio(hi,total);
   });
-  Plotly.newPlot('ch5hi', [{
+  plot('ch5hi', [{
     x: DATA.months.map(fmtMonth), y: hiTrend5,
     mode:'lines+markers+text', line:{color:'#1a73e8',width:3}, marker:{size:8},
     text: hiTrend5.map(v => v !== null ? v.toFixed(0)+'%' : ''), textposition:'top center'

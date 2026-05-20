@@ -232,37 +232,37 @@ document.addEventListener('DOMContentLoaded', () => {
 <!-- 4. FILTERS -->
 <h2 id="filters" class="ko">4. 필터 바 사용법</h2><h2 id="filters" class="en" style="display:none">4. Filter bar</h2>
 <div class="card ko">
-<p>필터 바는 9개 그룹으로 구성됩니다. 모두 즉시 반영되며 변경 시 화면이 자동 갱신됩니다.</p>
+<p>필터 바는 10개 그룹으로 구성됩니다. 모두 즉시 반영되며 변경 시 화면이 자동 갱신됩니다.</p>
 <table>
 <tr><th width="14%">필터</th><th>역할</th></tr>
 <tr><td><b>분기</b></td><td>1Q 2026 (Perform) 또는 2Q 2026 (Progress)</td></tr>
-<tr><td><b>월(상세)</b></td><td>분기 합산 또는 단일 월. ② / ③ view에 적용</td></tr>
+<tr><td><b>월(상세)</b></td><td>분기 합산 또는 단일 월. 상단 KPI 카드, ① Target 요약, ② / ③ view에 적용</td></tr>
 <tr><td><b>선적국가</b></td><td>다중선택. 화이트리스트 11개 국가만 노출</td></tr>
 <tr><td><b>선적포트</b></td><td>다중선택. 위 국가에 속한 포트로 좁아짐. 화이트리스트 23개 포트만 노출</td></tr>
 <tr><td><b>영업사원</b></td><td>다중선택. 위 선적지 범위 안의 영업사원만 옵션으로 노출</td></tr>
-<tr><td><b>도착국가</b></td><td>다중선택. ② / ③ view의 BKG에서 POD 국가 기준 필터</td></tr>
-<tr><td><b>도착포트</b></td><td>다중선택. 위 도착국가에 속한 항구만 보임</td></tr>
-<tr><td><b>등급</b></td><td>전체 / A+B / C+D</td></tr>
-<tr><td><b>고수익</b></td><td>전체 / 고수익만 / 고수익 제외</td></tr>
-<tr><td><b>WOS</b></td><td>WOS-3 only (기본) 또는 전체</td></tr>
+<tr><td><b>도착국가</b></td><td>다중선택. BKG의 POD 국가 기준으로 카드 / ① / ② / ③ 모두 필터</td></tr>
+<tr><td><b>도착포트</b></td><td>다중선택. 위 도착국가에 속한 항구만 보이며 카드 / ① / ② / ③ 모두 필터</td></tr>
+<tr><td><b>등급</b></td><td>전체 / A+B / C+D. 카드, ① 요약, ② Drill, ③ Pivot에 적용</td></tr>
+<tr><td><b>고수익</b></td><td>전체 / 고수익만 / 고수익 제외. 카드, ① 요약, ② Drill, ③ Pivot에 적용</td></tr>
+<tr><td><b>WOS</b></td><td>WOS-3 only (기본) 또는 전체. 카드의 KPI 성과율은 3W 지표 정의를 유지하고, Scope/A-C 및 상세 표는 선택값을 따릅니다.</td></tr>
 <tr><td><b>필터 초기화</b></td><td>모든 선택을 기본값으로 리셋</td></tr>
 </table>
 <div class="tip"><strong>💡 팁:</strong> 처음에는 ① 요약에서 관심 영업사원을 찾고 행을 클릭하면 자동으로 ② 드릴로 이동합니다.</div>
 </div>
 <div class="card en" style="display:none">
-<p>The filter bar has nine groups. All changes apply immediately.</p>
+<p>The filter bar has ten groups. All changes apply immediately.</p>
 <table>
 <tr><th width="14%">Filter</th><th>Effect</th></tr>
 <tr><td><b>Quarter</b></td><td>1Q 2026 (Perform) or 2Q 2026 (Progress)</td></tr>
-<tr><td><b>Month</b></td><td>Quarter total or a single YYYYMM. Drives ② and ③ scope.</td></tr>
+<tr><td><b>Month</b></td><td>Quarter total or a single YYYYMM. Applies to KPI cards, ① Target Summary, ② Drill, and ③ Pivot.</td></tr>
 <tr><td><b>Origin country</b></td><td>Multi-select. 11 whitelisted countries.</td></tr>
 <tr><td><b>Origin port</b></td><td>Multi-select. Narrowed by country. 23 whitelisted ports.</td></tr>
 <tr><td><b>Salesperson</b></td><td>Multi-select. Only salespeople in the current origin scope.</td></tr>
-<tr><td><b>Dest country</b></td><td>Multi-select. Filters BKG by POD country in ② / ③.</td></tr>
-<tr><td><b>Dest port</b></td><td>Multi-select. Narrowed by dest country.</td></tr>
-<tr><td><b>Grade</b></td><td>All / A+B / C+D</td></tr>
-<tr><td><b>Hi-Profit</b></td><td>All / Only / Exclude</td></tr>
-<tr><td><b>WOS</b></td><td>WOS-3 only (default) or All</td></tr>
+<tr><td><b>Dest country</b></td><td>Multi-select. Filters KPI cards and all three views by booking POD country.</td></tr>
+<tr><td><b>Dest port</b></td><td>Multi-select. Narrowed by dest country; filters KPI cards and all three views.</td></tr>
+<tr><td><b>Grade</b></td><td>All / A+B / C+D. Applies to cards, ① Summary, ② Drill, and ③ Pivot.</td></tr>
+<tr><td><b>Hi-Profit</b></td><td>All / Only / Exclude. Applies to cards, ① Summary, ② Drill, and ③ Pivot.</td></tr>
+<tr><td><b>WOS</b></td><td>WOS-3 only (default) or All. KPI rates keep the 3W metric definition; Scope/A-C and detail tables follow the selected WOS.</td></tr>
 <tr><td><b>Reset</b></td><td>Reset every filter</td></tr>
 </table>
 <div class="tip"><strong>💡 Tip:</strong> Start in ① Summary, find a salesperson, click the row — that auto-drills to ②.</div>
@@ -328,7 +328,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <ul>
 <li>옵션은 매일 일일 빌드에서 부킹 스냅샷에 등장한 모든 도착지를 자동으로 모아 만듭니다.</li>
 <li>도착국가를 먼저 선택하면 도착포트 드롭다운이 그 국가의 항구만 보여줍니다.</li>
-<li>이 필터는 상단 KPI 카드, ② Drill의 화주표·BKG 리스트, ③ Pivot 결과에 반영됩니다. ① Target 요약 표는 시트 기반 집계라 도착지 필터의 영향을 받지 않습니다.</li>
+<li>이 필터는 상단 KPI 카드, ① Target 요약, ② Drill의 화주표·BKG 리스트, ③ Pivot 결과에 모두 반영됩니다.</li>
 </ul>
 <div class="tip">예: <b>선적국가 CN</b> + <b>도착국가 KR</b> 으로 한국향 중국 부킹만 보기. <b>도착포트 KR/PUS</b>까지 좁히면 부산향만 필터.</div>
 </div>
@@ -337,7 +337,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <ul>
 <li>Options are built automatically from every destination that appears in the daily booking snapshot.</li>
 <li>Selecting a dest country narrows the dest port dropdown.</li>
-<li>These filters affect the top KPI cards, the ② Drill shipper / BKG views, and the ③ Pivot results. The ① Target summary table is sheet-aggregated and is unaffected.</li>
+<li>These filters affect the top KPI cards, ① Target Summary, ② Drill shipper / BKG views, and ③ Pivot results.</li>
 </ul>
 <div class="tip">Example: <b>Origin CN</b> + <b>Dest KR</b> → only China-to-Korea bookings. Add <b>Dest port KR/PUS</b> for Busan-only.</div>
 </div>
@@ -353,6 +353,8 @@ document.addEventListener('DOMContentLoaded', () => {
 <tr><td><b>High-Profit Rate</b></td><td>3W before High-Profit Customer Rate</td></tr>
 </table>
 <p>+- 색상: <span class="tag tag-ok">달성</span> / <span class="tag tag-warn">-2%p 이내</span> / <span class="tag tag-neg">미달</span></p>
+<div class="tip"><strong>필터 반영 기준:</strong> 선적지/영업사원만 선택된 상태에서는 워크북 요약값을 그대로 사용합니다. 월·도착지·등급·고수익·WOS 같은 상세 필터가 켜지면 BKG chunk를 읽어 Scope, Perform, +/-를 다시 계산하고, Target도 필터 후 남은 물량의 선적지·영업사원 구성으로 재가중합니다.</div>
+<div class="warn"><strong>Target 해석:</strong> 원천 Target은 도착지나 등급별이 아니라 <b>선적지 × 영업사원</b> 단위입니다. 따라서 한 영업사원 한 선적지로 이미 좁힌 상태에서는 도착지를 바꿔도 Target 자체는 같고, Perform과 +/-가 변합니다.</div>
 </div>
 <div class="card en" style="display:none">
 <table>
@@ -363,6 +365,8 @@ document.addEventListener('DOMContentLoaded', () => {
 <tr><td><b>High-Profit Rate</b></td><td>3W before High-Profit Customer Rate</td></tr>
 </table>
 <p>+- colors: <span class="tag tag-ok">on target</span> / <span class="tag tag-warn">within -2%p</span> / <span class="tag tag-neg">behind</span></p>
+<div class="tip"><strong>Filter behavior:</strong> When only origin/salesperson filters are active, cards use the workbook summary directly. When detail filters such as month, destination, grade, hi-profit, or WOS are active, the screen loads BKG chunks and recalculates Scope, Perform, and +/-. Target is re-weighted by the origin/salesperson mix of the filtered bookings.</div>
+<div class="warn"><strong>Target interpretation:</strong> Source targets exist at <b>origin × salesperson</b> level, not by destination or grade. If the scope is already narrowed to one salesperson at one origin, changing destination will keep Target unchanged while Perform and +/- change.</div>
 </div>
 
 <!-- 8. VIEW 1 -->
@@ -379,6 +383,8 @@ document.addEventListener('DOMContentLoaded', () => {
 <tr><td>High-Profit Rate</td><td>WOS-3 BKG 중 고수익 화주 BKG 비중</td></tr>
 <tr><td>Target / Perform / +-</td><td>2025_base + Input %p / 실적 / 차이</td></tr>
 </table>
+<div class="tip"><strong>상세 필터 적용 시:</strong> 월·도착지·등급·고수익·WOS 필터가 선택되면 ① 요약도 필터에 맞는 BKG 기준으로 다시 그려집니다. 행 수, Target, Perform, +/-, A/C 수가 모두 현재 필터 조건에 맞춰 변동됩니다.</div>
+<div class="warn"><strong>주의:</strong> '25 비중과 '25 3W/BSA는 Target 워크북의 기준값입니다. 상세 필터가 켜져도 기준 참고값으로 표시되며, 실제 필터 반영은 Target/Perform/+/- 및 A/C 컬럼에서 확인합니다.</div>
 <div class="tip">행 클릭 → 해당 영업사원으로 자동 드릴.</div>
 </div>
 <div class="card en" style="display:none">
@@ -393,6 +399,8 @@ document.addEventListener('DOMContentLoaded', () => {
 <tr><td>High-Profit Rate</td><td>Hi-profit BKG / WOS-3 BKG</td></tr>
 <tr><td>Target / Perform / +-</td><td>2025 base + Input %p / Actual / Diff</td></tr>
 </table>
+<div class="tip"><strong>With detail filters:</strong> When month, destination, grade, hi-profit, or WOS filters are selected, ① Summary is rebuilt from the matching BKG rows. Row count, Target, Perform, +/-, and A/C counts all follow the current filter.</div>
+<div class="warn"><strong>Note:</strong> '25 share and '25 W3/BSA are baseline reference fields from the Target workbook. They stay as reference values; use Target/Perform/+/- and A/C columns for the filtered result.</div>
 <div class="tip">Click a row → auto-drill to that salesperson.</div>
 </div>
 
@@ -597,7 +605,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <ol>
 <li><b>Tableau 다운로드</b> → 부킹 스냅샷 (booking_snapshot_result_*.csv)</li>
 <li><b>대시보드 빌드</b> (dashboard_summary_*.json) → salesman.csv로 영업사원 remap → dist/data.json</li>
-<li><b>Sales Target 빌드</b> — Summary_All + 스냅샷 집계 → index.json + manifest.json + 1700여 chunks</li>
+<li><b>Sales Target 빌드</b> — 메인 대시보드와 같은 <code>booking_snapshot_result_YYYYMMDD.csv</code> + Summary_All 집계 → index.json + manifest.json + 1700여 chunks</li>
 <li><b>GitHub Pages push</b> → ~1시간 내 라이브</li>
 </ol>
 <h4>출력 파일</h4>
@@ -612,15 +620,15 @@ document.addEventListener('DOMContentLoaded', () => {
 <tr><td><strong>대시보드 사용자</strong> (모든 ekmtc 직원)</td><td>화면 view + 자신의 영업사원 데이터 조회</td><td>OAuth 로그인 후 정적 JSON 파일을 fetch함. 시트 권한과 무관하게 데이터 보임.</td></tr>
 <tr><td><strong>Target 워크북 view</strong></td><td>ekmtc.com 도메인 reader</td><td>모든 ekmtc 직원이 시트를 열람 가능. 헤더 Target Workbook ↗ 링크 정상 작동.</td></tr>
 <tr><td><strong>Target_Input 편집</strong></td><td>jkpark@ekmtc.com (owner), kdh@ekmtc.com (writer)</td><td>입력 %p 변경은 관리자만 가능. 다른 사용자가 실수로 수정할 수 없음.</td></tr>
-<tr><td><strong>빌드 서버</strong></td><td>jkpark@ekmtc.com 토큰</td><td>매일 09:03 daily build가 시트를 읽어 JSON 생성. 사용자 권한 영향 없음.</td></tr>
+<tr><td><strong>빌드 서버</strong></td><td>jkpark@ekmtc.com 토큰</td><td>매일 09:03 daily build에서 booking snapshot 처리 직후 같은 스냅샷으로 JSON 생성. 사용자 권한 영향 없음.</td></tr>
 </table>
-<div class="tip">헤더의 "데이터 기준일"이 오늘이 아니면 일일 작업이 안 끝났거나 실패한 상태입니다.</div>
+<div class="tip">헤더의 "데이터 기준일"이 메인 대시보드와 다르면 Sales Target 빌드가 완료되지 않았거나 실패한 상태입니다.</div>
 </div>
 <div class="card en" style="display:none">
 <ol>
 <li><b>Tableau download</b> → booking_snapshot_result_*.csv</li>
 <li><b>Dashboard build</b> (dashboard_summary_*.json) → salesman.csv remap → dist/data.json</li>
-<li><b>Sales target build</b> — Summary_All + snapshot rollup → index.json + manifest.json + ~1,700 chunks</li>
+<li><b>Sales target build</b> — same <code>booking_snapshot_result_YYYYMMDD.csv</code> as the main dashboard + Summary_All rollup → index.json + manifest.json + ~1,700 chunks</li>
 <li><b>GitHub Pages push</b> → live within ~1 hour</li>
 </ol>
 <h4>Output</h4>
@@ -635,9 +643,9 @@ document.addEventListener('DOMContentLoaded', () => {
 <tr><td><strong>Dashboard users</strong> (any ekmtc employee)</td><td>View screen + own salesperson data</td><td>OAuth login, then fetches static JSON. No sheet permission needed.</td></tr>
 <tr><td><strong>Target workbook view</strong></td><td>ekmtc.com domain reader</td><td>Any ekmtc user can open the sheet — header "Target Workbook ↗" link works for everyone.</td></tr>
 <tr><td><strong>Target_Input edit</strong></td><td>jkpark@ekmtc.com (owner), kdh@ekmtc.com (writer)</td><td>Only admins can change input %p; other users can't edit by mistake.</td></tr>
-<tr><td><strong>Build server</strong></td><td>jkpark@ekmtc.com token</td><td>Daily 09:03 build reads the sheet and emits JSON; independent of any user's permission.</td></tr>
+<tr><td><strong>Build server</strong></td><td>jkpark@ekmtc.com token</td><td>The daily 09:03 build emits JSON from the same snapshot immediately after booking snapshot processing; independent of any user's permission.</td></tr>
 </table>
-<div class="tip">If "Data date" in the header isn't today, the daily job didn't run or didn't finish.</div>
+<div class="tip">If "Data date" in the header differs from the main dashboard, the Sales Target build did not finish or failed.</div>
 </div>
 
 <!-- 14. TARGETS -->
@@ -684,28 +692,28 @@ document.addEventListener('DOMContentLoaded', () => {
 <p>국가/포트/영업사원/도착지 필터가 너무 좁지 않은지 확인. "필터 초기화"로 리셋. 화이트리스트 외 origin은 표시되지 않습니다.</p>
 <h4>Q2. Target 컬럼이 비어 있어요.</h4>
 <p>2025_basis가 없는 신규 진입이거나 Targets 탭에 row가 없는 경우. 관리자에게 입력 요청.</p>
-<h4>Q3. 도착지 필터가 ① 요약에 안 먹어요.</h4>
-<p>① 요약은 시트 기반 집계라 BKG 단위 필터(도착지·등급·고수익·WOS)의 영향을 받지 않습니다. ② / ③에서 사용하세요.</p>
+<h4>Q3. 도착지를 바꿨는데 Target이 그대로예요.</h4>
+<p>① 요약과 상단 카드는 도착지 필터를 반영합니다. 다만 원천 Target은 도착지별이 아니라 선적지 × 영업사원 단위라, 한 영업사원 한 선적지로 좁힌 상태에서는 Target이 같을 수 있습니다. 이 경우 Perform, +/-, A/C는 필터에 맞춰 변합니다.</p>
 <h4>Q4. CSV가 한글 깨짐.</h4>
 <p>UTF-8 BOM 포함이므로 Excel에서 바로 열어야 합니다. 메모장에서 열면 깨지는 경우가 있습니다.</p>
 <h4>Q5. 영어로 전환?</h4>
 <p>헤더 우측의 <b>EN</b> 버튼. 선택은 브라우저에 저장. 화면 라벨뿐 아니라 BKG 상세 / Pivot 셀 상세의 <b>Booking 날짜 형식도 함께 전환</b>됩니다 (KO: <code>2026년 03월 05일</code> ↔ EN: <code>2026-03-05</code>).</p>
 <h4>Q6. 데이터가 오래 됐어요.</h4>
-<p>매일 평일 09:03 자동 빌드. 헤더의 "데이터 기준일" 확인 후 24시간 이상 지났으면 운영 담당자에게 문의.</p>
+<p>매일 평일 09:03 자동 빌드. 헤더의 "데이터 기준일"이 메인 대시보드와 다르거나 24시간 이상 지났으면 운영 담당자에게 문의.</p>
 </div>
 <div class="card en" style="display:none">
 <h4>Q1. I can't see my data.</h4>
 <p>Check that the origin / port / salesperson / destination filters aren't too narrow. Click "Reset filters". Non-whitelisted origins never appear.</p>
 <h4>Q2. Target columns are empty.</h4>
 <p>That salesperson has no 2025 basis (newly onboarded in Q1) or the Targets tab is missing their row. Ask the admin to enter it.</p>
-<h4>Q3. Dest filter doesn't affect ① Summary.</h4>
-<p>① Summary is sheet-aggregated, so BKG-level filters (destination, grade, hi-profit, WOS) don't apply there. Use ② / ③ instead.</p>
+<h4>Q3. I changed destination but Target stayed the same.</h4>
+<p>① Summary and KPI cards do apply destination filters. Source targets, however, exist at origin × salesperson level, not by destination. If the scope is already one salesperson at one origin, Target can stay the same while Perform, +/-, and A/C change.</p>
 <h4>Q4. CSV shows garbled Korean.</h4>
 <p>It's UTF-8 with BOM — open it in Excel directly. Notepad sometimes mis-detects the encoding.</p>
 <h4>Q5. How do I switch to English?</h4>
 <p>The <b>EN</b> button on the top right. Your choice is saved in localStorage. The toggle covers labels <i>and</i> the Booking date format in BKG / Pivot detail rows (KO: <code>2026년 03월 05일</code> ↔ EN: <code>2026-03-05</code>).</p>
 <h4>Q6. Data looks stale.</h4>
-<p>Daily build runs at 09:03 weekday. Check the "Data date" in the header. Older than 24 h → contact the operator.</p>
+<p>Daily build runs at 09:03 weekday. If the header "Data date" differs from the main dashboard or is older than 24 h, contact the operator.</p>
 </div>
 
 <hr>
