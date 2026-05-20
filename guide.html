@@ -330,7 +330,7 @@ document.addEventListener('DOMContentLoaded', function() {
   <h3>동작 방식</h3>
   <table>
     <tr><th>선택</th><th>데이터 소스</th><th>설명</th></tr>
-    <tr><td>최신 (기본)</td><td>GitHub Pages <code>data.json</code></td><td>매일 09:03 자동 업데이트된 최신 스냅샷</td></tr>
+    <tr><td>최신 (기본)</td><td>GitHub Pages <code>data.json</code></td><td>매일 10:00 KST 자동 업데이트된 최신 스냅샷</td></tr>
     <tr><td>과거 날짜</td><td>Google Drive</td><td>해당 날짜에 생성된 <code>dashboard_summary_YYYYMMDD.json</code> 파일</td></tr>
   </table>
   <div class="tip"><strong>활용 예시:</strong> 지난주와 이번주의 소석률 변화를 비교하거나, 특정 시점의 부킹 현황을 확인할 때 유용합니다. 최대 30개의 과거 날짜가 표시됩니다.</div>
@@ -347,7 +347,7 @@ document.addEventListener('DOMContentLoaded', function() {
   <h3>How It Works</h3>
   <table>
     <tr><th>Selection</th><th>Data Source</th><th>Description</th></tr>
-    <tr><td>Latest (default)</td><td>GitHub Pages <code>data.json</code></td><td>Latest snapshot, auto-updated daily at 09:03</td></tr>
+    <tr><td>Latest (default)</td><td>GitHub Pages <code>data.json</code></td><td>Latest snapshot, auto-updated daily at 10:00 KST</td></tr>
     <tr><td>Past date</td><td>Google Drive</td><td><code>dashboard_summary_YYYYMMDD.json</code> from that date</td></tr>
   </table>
   <div class="tip"><strong>Use case:</strong> Compare this week's occupancy vs last week, or review booking status at a specific point in time. Up to 30 past dates are shown.</div>
@@ -907,11 +907,12 @@ document.addEventListener('DOMContentLoaded', function() {
 <span class="anchor" id="update"></span>
 <h2 class="ko">자동 업데이트</h2><h2 class="en" style="display:none">Auto Updates</h2>
 <div class="card ko">
-  <h3>매일 09:03 자동 실행</h3>
+  <h3>매일 10:00 KST 자동 실행</h3>
   <ol>
     <li>Tableau에서 1.csv + 2.csv + BSA + grade(분기별) 다운로드</li>
     <li>Booking Snapshot 처리 (수식, 필터, 등급, 고수익태그)</li>
     <li>JSON 생성 → Google Drive 업로드 + dist/data.json 복사</li>
+    <li>salesman.csv 기준 영업사원 remap (메인 대시보드 + sales-target chunks)</li>
     <li><strong>GitHub Pages 자동 push</strong> → 웹 배포 완료</li>
   </ol>
   <h3>데이터 범위</h3>
@@ -923,11 +924,12 @@ document.addEventListener('DOMContentLoaded', function() {
   </table>
 </div>
 <div class="card en" style="display:none">
-  <h3>Daily at 09:03 (auto)</h3>
+  <h3>Daily at 10:00 KST (auto)</h3>
   <ol>
     <li>Download from Tableau (1.csv + 2.csv + BSA + grade quarterly)</li>
     <li>Process booking snapshot (formulas, filters, grades, profit tags)</li>
     <li>Generate JSON → Google Drive + dist/data.json</li>
+    <li>Re-attribute Salesman_POR via salesman.csv (main dashboard + sales-target chunks)</li>
     <li><strong>Auto push to GitHub Pages</strong></li>
   </ol>
   <h3>Data Range</h3>
@@ -941,41 +943,45 @@ document.addEventListener('DOMContentLoaded', function() {
   <p>프로젝트 관련 <strong>Windows Task Scheduler</strong> 등록 작업 목록입니다.</p>
   <table>
     <tr><th>작업명</th><th>스케줄</th><th>설명</th></tr>
-    <tr><td><strong>3W_BKG_Dashboard</strong></td><td>평일(월~금) 09:03</td><td>대시보드 자동 업데이트 (주력 작업)<br>Tableau 다운로드 → Snapshot 처리 → JSON 생성 → GitHub Pages push → 이메일 알림</td></tr>
-    <tr><td><strong>3W_BKG_Dashboard_Daily</strong></td><td>매일 09:00</td><td>일일 백업 작업 (동일 배치 파일)</td></tr>
-    <tr><td><strong>OBT_Raw_Automation</strong></td><td>매일 09:00</td><td>Tableau OBT Raw 데이터 → Google Sheets 동기화</td></tr>
-    <tr><td><strong>RFQ_GDrive_Sync</strong></td><td>매일 08:00</td><td>Google Drive 비딩(RFQ) 파일 동기화</td></tr>
+    <tr><td><strong>3W_BKG_Dashboard_Daily</strong></td><td><strong>매일 10:00 KST</strong></td><td>대시보드 자동 업데이트 (주력 작업)<br>Tableau 다운로드 → Snapshot 처리 → JSON 생성 → salesman.csv remap → sales-target chunks 빌드 → GitHub Pages push → 이메일 알림</td></tr>
+    <tr><td><strong>3W_BKG_Dashboard</strong> <span style="color:#80868b;font-size:11px">(비활성화)</span></td><td>평일 09:03 (disabled)</td><td>이전 주력 작업. 현재 비활성 — 10:00 작업으로 통합됨.</td></tr>
+    <tr><td><strong>OBT_Raw_Automation</strong></td><td>매일 09:00 KST</td><td>Tableau OBT Raw 데이터 → Google Sheets 동기화</td></tr>
+    <tr><td><strong>RFQ_GDrive_Sync</strong></td><td>매일 08:00 KST</td><td>Google Drive 비딩(RFQ) 파일 동기화</td></tr>
   </table>
-  <h3>실행 순서 (3W_BKG_Dashboard)</h3>
+  <h3>실행 순서 (3W_BKG_Dashboard_Daily)</h3>
   <ol>
     <li>캐시 정리 (<code>_cache_*.parquet</code>, <code>dashboard_summary_*.json</code>)</li>
     <li><code>daily_3w_dashboard.py</code> 실행 (Tableau → 처리 → GDrive → dist/data.json)</li>
-    <li><code>dist/</code> git push (data.json 변경 시만)</li>
+    <li><code>scripts/remap_dashboard_salesman.py</code> 실행 (salesman.csv 기준 영업사원 재할당 + OBT salesman set 주입)</li>
+    <li><code>scripts/build_sales_target_drill_data.py</code> 실행 (sales-target index/manifest/chunks 생성)</li>
+    <li><code>dist/</code> git push (data.json 또는 sales-target 변경 시)</li>
     <li><code>send_notification.py</code> 이메일 알림 (성공/실패 무관)</li>
   </ol>
   <h3>로그 확인</h3>
   <p>실행 로그: <code>logs/run_YYYYMMDD.log</code> | 타임아웃: 72시간</p>
-  <div class="tip"><strong>참고:</strong> 3W_BKG_Dashboard (평일 09:03)가 주력 작업입니다. 실행 결과는 이메일로 자동 발송됩니다.</div>
+  <div class="tip"><strong>참고:</strong> 3W_BKG_Dashboard_Daily (매일 10:00 KST)가 현재 주력 작업입니다. 실행 결과는 이메일로 자동 발송됩니다.</div>
 </div>
 <div class="card en" style="display:none">
   <p>Project-related <strong>Windows Task Scheduler</strong> tasks.</p>
   <table>
     <tr><th>Task Name</th><th>Schedule</th><th>Description</th></tr>
-    <tr><td><strong>3W_BKG_Dashboard</strong></td><td>Weekdays (Mon-Fri) 09:03</td><td>Dashboard auto-update (primary task)<br>Tableau download → Snapshot → JSON → GitHub Pages push → Email</td></tr>
-    <tr><td><strong>3W_BKG_Dashboard_Daily</strong></td><td>Daily 09:00</td><td>Daily backup task (same batch file)</td></tr>
-    <tr><td><strong>OBT_Raw_Automation</strong></td><td>Daily 09:00</td><td>Tableau OBT Raw → Google Sheets sync</td></tr>
-    <tr><td><strong>RFQ_GDrive_Sync</strong></td><td>Daily 08:00</td><td>Google Drive RFQ file sync</td></tr>
+    <tr><td><strong>3W_BKG_Dashboard_Daily</strong></td><td><strong>Daily 10:00 KST</strong></td><td>Dashboard auto-update (primary task)<br>Tableau download → Snapshot → JSON → salesman.csv remap → sales-target chunks → GitHub Pages push → Email</td></tr>
+    <tr><td><strong>3W_BKG_Dashboard</strong> <span style="color:#80868b;font-size:11px">(disabled)</span></td><td>Weekday 09:03 (disabled)</td><td>Former primary task. Currently disabled — folded into the 10:00 run.</td></tr>
+    <tr><td><strong>OBT_Raw_Automation</strong></td><td>Daily 09:00 KST</td><td>Tableau OBT Raw → Google Sheets sync</td></tr>
+    <tr><td><strong>RFQ_GDrive_Sync</strong></td><td>Daily 08:00 KST</td><td>Google Drive RFQ file sync</td></tr>
   </table>
-  <h3>Execution Flow (3W_BKG_Dashboard)</h3>
+  <h3>Execution Flow (3W_BKG_Dashboard_Daily)</h3>
   <ol>
     <li>Clean cache (<code>_cache_*.parquet</code>, <code>dashboard_summary_*.json</code>)</li>
     <li>Run <code>daily_3w_dashboard.py</code> (Tableau → Process → GDrive → dist/data.json)</li>
-    <li><code>dist/</code> git push (only if data.json changed)</li>
+    <li>Run <code>scripts/remap_dashboard_salesman.py</code> (re-attribute Salesman_POR via salesman.csv + inject OBT salesman set)</li>
+    <li>Run <code>scripts/build_sales_target_drill_data.py</code> (sales-target index / manifest / chunks)</li>
+    <li><code>dist/</code> git push (when data.json or sales-target changed)</li>
     <li><code>send_notification.py</code> email alert (runs regardless of success/failure)</li>
   </ol>
   <h3>Log Files</h3>
   <p>Execution log: <code>logs/run_YYYYMMDD.log</code> | Timeout: 72 hours</p>
-  <div class="tip"><strong>Note:</strong> 3W_BKG_Dashboard (weekday 09:03) is the primary task. Results are automatically emailed.</div>
+  <div class="tip"><strong>Note:</strong> 3W_BKG_Dashboard_Daily (daily 10:00 KST) is the current primary task. Results are automatically emailed.</div>
 </div>
 
 <!-- SALES TARGET -->
@@ -1007,7 +1013,7 @@ document.addEventListener('DOMContentLoaded', function() {
     </ul>
   </div>
   <h3>데이터 갱신</h3>
-  <p>매일 평일 09:03의 <code>3W_BKG_Dashboard</code> 작업에서 booking snapshot 처리가 끝난 직후, 같은 <code>booking_snapshot_result_YYYYMMDD.csv</code> 기준으로 sales-target chunks (~1,592개)를 함께 빌드해 dist에 push합니다. 헤더의 "데이터 기준일"이 메인 대시보드와 다르면 운영 담당자에게 문의.</p>
+  <p>매일 10:00 KST <code>3W_BKG_Dashboard_Daily</code> 작업에서 booking snapshot 처리가 끝난 직후, 같은 <code>booking_snapshot_result_YYYYMMDD.csv</code> 기준으로 sales-target chunks를 함께 빌드해 dist에 push합니다. 헤더의 "데이터 기준일"이 메인 대시보드와 다르면 운영 담당자에게 문의.</p>
   <div class="tip"><strong>딥링크 예:</strong> <code>sales-target/?country=CN&amp;origin=CN_SHA&amp;sales=WUXIAOCHEN&amp;quarter=q1&amp;view=drill</code></div>
 </div>
 
@@ -1035,7 +1041,7 @@ document.addEventListener('DOMContentLoaded', function() {
     </ul>
   </div>
   <h3>Refresh</h3>
-  <p>The weekday 09:03 <code>3W_BKG_Dashboard</code> task rebuilds the sales-target chunks (~1,592) immediately after booking snapshot processing, using the same <code>booking_snapshot_result_YYYYMMDD.csv</code>, then pushes them to dist.</p>
+  <p>The daily <code>3W_BKG_Dashboard_Daily</code> task at 10:00 KST rebuilds the sales-target chunks immediately after booking snapshot processing, using the same <code>booking_snapshot_result_YYYYMMDD.csv</code>, then pushes them to dist.</p>
   <div class="tip"><strong>Deep link example:</strong> <code>sales-target/?country=CN&amp;origin=CN_SHA&amp;sales=WUXIAOCHEN&amp;quarter=q1&amp;view=drill</code></div>
 </div>
 

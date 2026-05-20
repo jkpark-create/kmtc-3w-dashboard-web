@@ -620,7 +620,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <tr><td><strong>대시보드 사용자</strong> (모든 ekmtc 직원)</td><td>화면 view + 자신의 영업사원 데이터 조회</td><td>OAuth 로그인 후 정적 JSON 파일을 fetch함. 시트 권한과 무관하게 데이터 보임.</td></tr>
 <tr><td><strong>Target 워크북 view</strong></td><td>ekmtc.com 도메인 reader</td><td>모든 ekmtc 직원이 시트를 열람 가능. 헤더 Target Workbook ↗ 링크 정상 작동.</td></tr>
 <tr><td><strong>Target_Input 편집</strong></td><td>jkpark@ekmtc.com (owner), kdh@ekmtc.com (writer)</td><td>입력 %p 변경은 관리자만 가능. 다른 사용자가 실수로 수정할 수 없음.</td></tr>
-<tr><td><strong>빌드 서버</strong></td><td>jkpark@ekmtc.com 토큰</td><td>매일 09:03 daily build에서 booking snapshot 처리 직후 같은 스냅샷으로 JSON 생성. 사용자 권한 영향 없음.</td></tr>
+<tr><td><strong>빌드 서버</strong></td><td>jkpark@ekmtc.com 토큰</td><td>매일 10:00 KST <code>3W_BKG_Dashboard_Daily</code> 작업에서 booking snapshot 처리 직후 같은 스냅샷으로 JSON 생성. 사용자 권한 영향 없음.</td></tr>
 </table>
 <div class="tip">헤더의 "데이터 기준일"이 메인 대시보드와 다르면 Sales Target 빌드가 완료되지 않았거나 실패한 상태입니다.</div>
 </div>
@@ -643,7 +643,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <tr><td><strong>Dashboard users</strong> (any ekmtc employee)</td><td>View screen + own salesperson data</td><td>OAuth login, then fetches static JSON. No sheet permission needed.</td></tr>
 <tr><td><strong>Target workbook view</strong></td><td>ekmtc.com domain reader</td><td>Any ekmtc user can open the sheet — header "Target Workbook ↗" link works for everyone.</td></tr>
 <tr><td><strong>Target_Input edit</strong></td><td>jkpark@ekmtc.com (owner), kdh@ekmtc.com (writer)</td><td>Only admins can change input %p; other users can't edit by mistake.</td></tr>
-<tr><td><strong>Build server</strong></td><td>jkpark@ekmtc.com token</td><td>The daily 09:03 build emits JSON from the same snapshot immediately after booking snapshot processing; independent of any user's permission.</td></tr>
+<tr><td><strong>Build server</strong></td><td>jkpark@ekmtc.com token</td><td>The daily <code>3W_BKG_Dashboard_Daily</code> task at 10:00 KST emits JSON from the same snapshot immediately after booking snapshot processing; independent of any user's permission.</td></tr>
 </table>
 <div class="tip">If "Data date" in the header differs from the main dashboard, the Sales Target build did not finish or failed.</div>
 </div>
@@ -699,7 +699,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <h4>Q5. 영어로 전환?</h4>
 <p>헤더 우측의 <b>EN</b> 버튼. 선택은 브라우저에 저장. 화면 라벨뿐 아니라 BKG 상세 / Pivot 셀 상세의 <b>Booking 날짜 형식도 함께 전환</b>됩니다 (KO: <code>2026년 03월 05일</code> ↔ EN: <code>2026-03-05</code>).</p>
 <h4>Q6. 데이터가 오래 됐어요.</h4>
-<p>매일 평일 09:03 자동 빌드. 헤더의 "데이터 기준일"이 메인 대시보드와 다르거나 24시간 이상 지났으면 운영 담당자에게 문의.</p>
+<p>매일 10:00 KST 자동 빌드 (<code>3W_BKG_Dashboard_Daily</code>). 헤더의 "데이터 기준일"이 메인 대시보드와 다르거나 24시간 이상 지났으면 운영 담당자에게 문의.</p>
 </div>
 <div class="card en" style="display:none">
 <h4>Q1. I can't see my data.</h4>
@@ -713,7 +713,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <h4>Q5. How do I switch to English?</h4>
 <p>The <b>EN</b> button on the top right. Your choice is saved in localStorage. The toggle covers labels <i>and</i> the Booking date format in BKG / Pivot detail rows (KO: <code>2026년 03월 05일</code> ↔ EN: <code>2026-03-05</code>).</p>
 <h4>Q6. Data looks stale.</h4>
-<p>Daily build runs at 09:03 weekday. If the header "Data date" differs from the main dashboard or is older than 24 h, contact the operator.</p>
+<p>Daily build runs at 10:00 KST (<code>3W_BKG_Dashboard_Daily</code>). If the header "Data date" differs from the main dashboard or is older than 24 h, contact the operator.</p>
 </div>
 
 <hr>
