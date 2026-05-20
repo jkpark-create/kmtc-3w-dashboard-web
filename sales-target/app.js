@@ -54,6 +54,7 @@ const STATE = {
     sort: { col: null, dir: 'desc' },
   },
   kpiCardRequest: 0,
+  summaryRequest: 0,
   initialUrlParams: null,
   lang: 'ko',
   multiSelect: {}, // id -> { values: Set, options: [...], onChange, refresh, render }
@@ -78,6 +79,7 @@ const I18N = {
   ko: {
     title: 'Sales Target & Progress',
     backDash: '← -3W Booking Dashboard',
+    obtMonitor: 'OBT Monitor',
     workbook: 'Target Workbook ↗',
     guide: '📖 가이드',
     fQuarter: '분기', fCountry: '선적국가', fOrigin: '선적포트',
@@ -140,6 +142,7 @@ const I18N = {
   en: {
     title: 'Sales Target & Progress',
     backDash: '← -3W Booking Dashboard',
+    obtMonitor: 'OBT Monitor',
     workbook: 'Target Workbook ↗',
     guide: '📖 Guide',
     fQuarter: 'Quarter', fCountry: 'Origin country', fOrigin: 'Origin port',
@@ -871,6 +874,37 @@ function targetRowsForFilteredBookings(rows, bookings) {
   return filtered.length ? filtered : rows;
 }
 
+function targetRowMaps(rows) {
+  const sales = new Map();
+  const totals = new Map();
+  rows.forEach(r => {
+    if (r.row_type === 'SALES') sales.set(`${r.tab}\u0001${r.name}`, r);
+    else if (r.row_type === 'TOTAL') totals.set(r.tab, r);
+  });
+  return { sales, totals };
+}
+
+function targetRowForBooking(maps, b) {
+  return maps.sales.get(`${b.__origin}\u0001${b.__salesman}`) || maps.totals.get(b.__origin) || null;
+}
+
+function weightedTargetFromBookings(rows, bookings, quarter, kpiKey, weightFn) {
+  const maps = targetRowMaps(rows);
+  let tw = 0;
+  let w = 0;
+  bookings.forEach(b => {
+    const weight = Math.max(0, Number(weightFn(b)) || 0);
+    if (!weight) return;
+    const row = targetRowForBooking(maps, b);
+    const target = Number(row?.kpi?.[kpiKey]?.[quarter]?.target);
+    if (!Number.isFinite(target)) return;
+    tw += target * weight;
+    w += weight;
+  });
+  if (w > 0) return tw / w;
+  return aggregateKpi(targetRowsForFilteredBookings(rows, bookings), quarter, kpiKey).target;
+}
+
 function metricWithTarget(target, perform) {
   return { target, perform, gap: (target == null || perform == null) ? null : perform - target };
 }
@@ -878,10 +912,9 @@ function metricWithTarget(target, perform) {
 function detailedCardValues(allBookings, summaryRows, q) {
   const countBookings = applyBookingFilters(allBookings);
   const kpiBookings = applyBookingFiltersForKpiCards(allBookings);
-  const targetRows = targetRowsForFilteredBookings(summaryRows, kpiBookings);
-  const targetBk = aggregateKpi(targetRows, q, 'booking').target;
-  const targetLf = aggregateKpi(targetRows, q, 'lifting').target;
-  const targetHp = aggregateKpi(targetRows, q, 'high_profit').target;
+  const targetBk = weightedTargetFromBookings(summaryRows, kpiBookings, q, 'booking', b => b.fst_teu || 0);
+  const targetLf = weightedTargetFromBookings(summaryRows, kpiBookings, q, 'lifting', b => b.is_w3 ? (b.fst_teu || 0) : 0);
+  const targetHp = weightedTargetFromBookings(summaryRows, kpiBookings, q, 'high_profit', b => b.is_w3 ? (b.fst_teu || 0) : 0);
 
   const origins = new Set(countBookings.map(b => b.__origin).filter(Boolean));
   const sales = new Set(countBookings.map(b => b.__salesman).filter(Boolean));
@@ -935,9 +968,95 @@ function render() {
 // View 1: Target Summary — origin × salesperson, Target/Perform/Gap across 3 KPIs
 function renderSummaryView() {
   const q = STATE.filters.quarter;
+  const rows = filteredSummaryRows();
+  if (!rows.length) {
+    return `<div class="empty">${tr('noMatches')}</div>`;
+  }
+  if (detailCardFiltersActive()) {
+    renderDetailedSummaryView(rows, q);
+    return `<div class="loading">${tr('loadingDetail')}</div>`;
+  }
+  return renderSummaryTable(rows, q);
+}
+
+function scopedSummaryTargetRows() {
+  const scope = effectiveOrigins();
+  const salesSel = STATE.filters.sales;
+  const salesSet = salesSel.length ? new Set(salesSel) : null;
+  return (STATE.index?.rows || []).filter(r => {
+    if (!scope.has(r.tab)) return false;
+    if (r.row_type === 'SALES' && salesSet && !salesSet.has(r.name)) return false;
+    return r.row_type === 'SALES' || r.row_type === 'TOTAL';
+  });
+}
+
+function summaryRowMatchesBooking(row, b) {
+  if (row.row_type === 'TOTAL') return b.__origin === row.tab;
+  return b.__origin === row.tab && b.__salesman === row.name;
+}
+
+function uniqueShipperCount(bookings, w3Only = false) {
+  const set = new Set();
+  bookings.forEach(b => {
+    if (w3Only && !b.is_w3) return;
+    const key = b.shipper_no || b.shipper_name;
+    if (key) set.add(key);
+  });
+  return set.size;
+}
+
+function detailedSummaryRows(displayRows, targetRows, allBookings, q) {
+  const countBookings = applyBookingFilters(allBookings);
+  const kpiBookings = applyBookingFiltersForKpiCards(allBookings);
+  return displayRows.map(row => {
+    const rowCountBookings = countBookings.filter(b => summaryRowMatchesBooking(row, b));
+    const rowKpiBookings = kpiBookings.filter(b => summaryRowMatchesBooking(row, b));
+    if (!rowCountBookings.length && !rowKpiBookings.length) return null;
+
+    const totalFst = rowKpiBookings.reduce((s, b) => s + (b.fst_teu || 0), 0);
+    const w3Fst = rowKpiBookings.reduce((s, b) => s + (b.is_w3 ? (b.fst_teu || 0) : 0), 0);
+    const w3Lst = rowKpiBookings.reduce((s, b) => s + (b.is_w3 ? (b.lst_teu || 0) : 0), 0);
+    const w3HiFst = rowKpiBookings.reduce((s, b) => s + (b.is_w3 && b.is_hi ? (b.fst_teu || 0) : 0), 0);
+    const acTotal = uniqueShipperCount(rowCountBookings, false);
+    const acW3 = uniqueShipperCount(rowCountBookings, true);
+    const bookingTarget = weightedTargetFromBookings(targetRows, rowKpiBookings, q, 'booking', b => b.fst_teu || 0);
+    const liftingTarget = weightedTargetFromBookings(targetRows, rowKpiBookings, q, 'lifting', b => b.is_w3 ? (b.fst_teu || 0) : 0);
+    const hpTarget = weightedTargetFromBookings(targetRows, rowKpiBookings, q, 'high_profit', b => b.is_w3 ? (b.fst_teu || 0) : 0);
+
+    return {
+      ...row,
+      kpi: {
+        booking: { [q]: metricWithTarget(bookingTarget, safeRatio(w3Fst, totalFst)) },
+        lifting: { [q]: metricWithTarget(liftingTarget, safeRatio(w3Lst, w3Fst)) },
+        high_profit: { [q]: metricWithTarget(hpTarget, safeRatio(w3HiFst, w3Fst)) },
+      },
+      accounts: { total: acTotal, w3: acW3, pct: safeRatio(acW3, acTotal) },
+    };
+  }).filter(Boolean);
+}
+
+function renderDetailedSummaryView(rows, q) {
+  const requestId = ++STATE.summaryRequest;
+  const targetRows = scopedSummaryTargetRows();
+  loadScopedCardBookings()
+    .then(bookings => {
+      if (requestId !== STATE.summaryRequest || STATE.view !== 'summary') return;
+      const panel = document.getElementById('viewPanel');
+      const detailedRows = detailedSummaryRows(rows, targetRows, bookings, q);
+      panel.innerHTML = detailedRows.length ? renderSummaryTable(detailedRows, q) : `<div class="empty">${tr('noMatches')}</div>`;
+      attachRowHandlers();
+    })
+    .catch(() => {
+      if (requestId !== STATE.summaryRequest || STATE.view !== 'summary') return;
+      const panel = document.getElementById('viewPanel');
+      panel.innerHTML = renderSummaryTable(rows, q);
+      attachRowHandlers();
+    });
+}
+
+function renderSummaryTable(rows, q) {
   const cols = I18N[STATE.lang].columns;
   const performLabel = q === 'q1' ? cols.perform : cols.progress;
-  const rows = filteredSummaryRows();
   if (!rows.length) {
     return `<div class="empty">${tr('noMatches')}</div>`;
   }

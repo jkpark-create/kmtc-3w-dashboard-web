@@ -278,6 +278,7 @@ const I18N = {
     refresh: "Refresh",
     guide: "Guide",
     dashboard: "-3W Dashboard",
+    salesTarget: "🎯 Sales Target",
     langToggle: "EN",
     all: "전체",
     high: "High",
@@ -358,6 +359,7 @@ const I18N = {
     refresh: "Refresh",
     guide: "Guide",
     dashboard: "-3W Dashboard",
+    salesTarget: "🎯 Sales Target",
     langToggle: "KR",
     all: "All",
     high: "High",
@@ -490,7 +492,7 @@ function cacheElements() {
     "destFilter", "dstFilter", "salesFilter", "compareFilter", "searchInput", "kpiGrid", "originPaceHeadline",
     "routeTable", "salesTable", "shipperTable", "issueList", "loading",
     "routeSubtitle", "salesSubtitle", "shipperSubtitle", "issueSubtitle",
-    "refreshBtn", "langToggle", "dashboardLink", "guideBtn", "guideOverlay", "guideLangToggle", "guideClose", "guideTitle", "guideSubtitle", "guideBody",
+    "refreshBtn", "langToggle", "dashboardLink", "salesTargetLink", "guideBtn", "guideOverlay", "guideLangToggle", "guideClose", "guideTitle", "guideSubtitle", "guideBody",
     "exceptionsView", "actionMonitorView", "actionKpiGrid", "actionSummaryTitle", "actionSummarySubtitle", "actionSummaryTable",
     "actionSalesTitle", "actionSalesSubtitle", "actionSalesTable", "actionDetailTitle", "actionDetailSubtitle", "actionDetailTable",
     "actionGroupMode"
@@ -621,6 +623,7 @@ function applyLanguage() {
   if (els.guideLangToggle) els.guideLangToggle.textContent = t("langToggle");
   els.guideBtn.textContent = t("guide");
   if (els.dashboardLink) els.dashboardLink.textContent = t("dashboard");
+  if (els.salesTargetLink) els.salesTargetLink.textContent = t("salesTarget");
   els.refreshBtn.textContent = t("refresh");
   document.querySelector("#loading p").textContent = t("loading");
 
@@ -744,7 +747,7 @@ function guideHtmlKo() {
       <h3>3. 주요 KPI</h3>
       <ul>
         <li><strong>전체 BKG</strong>: 선택된 현재 기간의 <code>fst</code> 합계입니다.</li>
-        <li><strong>BSA 대비 BKG</strong>: 현재 전체 BKG / 선택기간 BSA입니다. 낮을수록 선복 미소석 위험이 큽니다.</li>
+        <li><strong>BSA</strong>: 선택기간 총 BSA TEU입니다. 카드의 보조 문구에 BSA 대비 BKG 비율과 Gap이 함께 표시되며, 비율이 낮으면 선복 미소석 위험이 큽니다.</li>
         <li><strong>확인 필요 구간</strong>: 리드타임 트렌드가 낮거나 최근 부킹속도로 예상 Gap을 채우기 어려운 Route 수입니다. 카드 보조문구에서 트렌드 원인, 속도 원인, 예상 Gap을 함께 확인합니다.</li>
         <li><strong>P1 구간</strong>: 오늘 먼저 원인을 확인해야 하는 우선 Route 수입니다.</li>
         <li><strong>3W Booking TEU</strong>: <code>w3_fst</code> 기반 3주전 선행 부킹량입니다.</li>
@@ -3734,10 +3737,12 @@ function renderKpis(analysis) {
       tone: t.deltaTeu < 0 ? "neg" : "pos"
     },
     {
-      key: "bsaUtil",
-      label: state.lang === "en" ? "BKG vs BSA" : "BSA 대비 BKG",
-      value: t.totalBsaTeu ? rpct(bsaUtil) : "-",
-      note: state.lang === "en" ? `Selected BSA ${fmt(t.totalBsaTeu)} TEU · Gap ${fmt(bsaShortfall)}` : `선택기간 BSA ${fmt(t.totalBsaTeu)} TEU · Gap ${fmt(bsaShortfall)}`,
+      key: "bsaTotal",
+      label: "BSA",
+      value: t.totalBsaTeu ? fmt(t.totalBsaTeu) : "-",
+      note: state.lang === "en"
+        ? `BKG vs BSA ${t.totalBsaTeu ? rpct(bsaUtil) : "-"} · Gap ${fmt(bsaShortfall)} TEU`
+        : `BSA 대비 BKG ${t.totalBsaTeu ? rpct(bsaUtil) : "-"} · Gap ${fmt(bsaShortfall)} TEU`,
       tone: t.totalBsaTeu && bsaUtil < .75 ? "neg" : "pos"
     },
     {
