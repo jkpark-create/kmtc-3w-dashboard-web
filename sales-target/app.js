@@ -770,13 +770,24 @@ function kpiOfRow(r, quarter, kpiKey) {
 }
 
 // Aggregate KPI across multiple rows (for filter scope summary cards).
-// Aggregation rule: simple mean of available perform values weighted by accounts.total. Target uses same weighting.
-// (This is approximate when filter spans multiple origins/salespeople; for the in-row values we always show the sheet's own number.)
+// The sheet's Team Total row is a true ratio-of-sums (∑w3 / ∑BSA, etc.) and is
+// always the correct number when the user is looking at a whole origin. Averaging
+// the individual salesperson rows weighted by account count gives a *different*
+// value because mean(x_i/y_i) ≠ Σx_i / Σy_i.
+//
+// Rule:
+//   - If any TOTAL row is in the filtered set, aggregate only over the TOTALs
+//     (single origin → exact match with the table's Team Total; multiple origins
+//     → account-weighted blend of the Team Totals, which is the closest we can
+//     get without underlying TEU numerators/denominators in index.json).
+//   - Otherwise (sales-specific selection drops the TOTALs) fall back to the
+//     account-weighted average of the SALES rows.
 function aggregateKpi(rows, quarter, kpiKey) {
   const performKey = quarter === 'q1' ? 'perform' : 'progress';
+  const totals = rows.filter(r => r.row_type === 'TOTAL');
+  const pool = totals.length ? totals : rows.filter(r => r.row_type === 'SALES');
   let tw = 0, pw = 0, gw = 0, w = 0;
-  rows.forEach(r => {
-    if (r.row_type === 'TOTAL') return;
+  pool.forEach(r => {
     const k = kpiOfRow(r, quarter, kpiKey);
     const weight = Math.max(1, r.accounts?.total || 1);
     if (k.target !== null && k.target !== undefined) { tw += k.target * weight; w += weight; }
