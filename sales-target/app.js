@@ -53,6 +53,7 @@ const STATE = {
     topN: 0,               // 0 = all
     sort: { col: null, dir: 'desc' },
   },
+  kpiCardRequest: 0,
   initialUrlParams: null,
   lang: 'ko',
   multiSelect: {}, // id -> { values: Set, options: [...], onChange, refresh, render }
@@ -84,6 +85,8 @@ const I18N = {
     fSales: '영업사원', fMonth: '월(상세)',
     fGrade: '등급', fProfit: '고수익', fWos: 'WOS',
     btnReset: '필터 초기화',
+    dataLoading: '데이터 로딩 중...',
+    dataInfo: (date, chunks, bkgRows) => `데이터 기준일: ${date} · ${chunks}개 chunk / ${bkgRows}개 BKG`,
     all: '전체', msAll: '전체', msNone: '해제', msSearch: '검색...',
     msPlaceholder: '전체', msSelected: (n) => `${n}개 선택`,
     msNoOptions: '선택 가능한 항목이 없습니다',
@@ -144,6 +147,8 @@ const I18N = {
     fSales: 'Salesperson', fMonth: 'Month',
     fGrade: 'Grade', fProfit: 'Hi-Profit', fWos: 'WOS',
     btnReset: 'Reset filters',
+    dataLoading: 'Loading data...',
+    dataInfo: (date, chunks, bkgRows) => `Data as of: ${date} · ${chunks} chunks / ${bkgRows} BKG`,
     all: 'All', msAll: 'Select all', msNone: 'Clear', msSearch: 'Search...',
     msPlaceholder: 'All', msSelected: (n) => `${n} selected`,
     msNoOptions: 'No options',
@@ -233,6 +238,7 @@ function applyLang() {
   if (monthSel && monthSel.options[0]) monthSel.options[0].textContent = dict.monthAll;
   const qSel = document.getElementById('fQuarter');
   if (qSel && qSel.options[1]) qSel.options[1].textContent = dict.q2Label;
+  updateDataInfo();
 }
 
 const QUARTER_MONTHS = {
@@ -328,7 +334,7 @@ async function init() {
     applyInitialParams();
     applyLang();
     render();
-    setText('dataInfo', `데이터 기준일: ${formatDataDate(index.data_date)} · ${manifest.chunk_count.toLocaleString()}개 chunk / ${manifest.bkg_rows.toLocaleString()}개 BKG`);
+    updateDataInfo();
     const link = document.getElementById('workbookLink');
     if (link) link.href = index.workbook_url || '#';
   } catch (err) {
@@ -340,6 +346,19 @@ async function init() {
 function formatDataDate(s) {
   if (!s || s.length < 8) return s || '-';
   return `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`;
+}
+
+function updateDataInfo() {
+  const el = document.getElementById('dataInfo');
+  if (!el) return;
+  if (!STATE.index || !STATE.manifest) {
+    el.textContent = I18N[STATE.lang].dataLoading;
+    return;
+  }
+  const date = formatDataDate(STATE.index.data_date);
+  const chunks = (STATE.manifest.chunk_count || 0).toLocaleString();
+  const bkgRows = (STATE.manifest.bkg_rows || 0).toLocaleString();
+  el.textContent = I18N[STATE.lang].dataInfo(date, chunks, bkgRows);
 }
 
 function showError(msg) {
@@ -765,19 +784,27 @@ function aggregateKpi(rows, quarter, kpiKey) {
   return { target: tw / w, perform: pw / w, gap: gw / w };
 }
 
-function renderKpiCards() {
-  const rows = filteredSummaryRows();
+function summaryCardValues(rows, q) {
   const sales = rows.filter(r => r.row_type === 'SALES');
   const origins = new Set(sales.map(r => r.tab));
-  const totalAccounts = sales.reduce((s, r) => s + (r.accounts?.total || 0), 0);
-  setText('cOrigin', origins.size ? origins.size : '0');
-  setText('cSales', sales.length);
-  setText('cCust', totalAccounts.toLocaleString());
+  return {
+    originCount: origins.size ? origins.size : 0,
+    salesCount: sales.length,
+    custCount: sales.reduce((s, r) => s + (r.accounts?.total || 0), 0),
+    booking: aggregateKpi(rows, q, 'booking'),
+    lifting: aggregateKpi(rows, q, 'lifting'),
+    highProfit: aggregateKpi(rows, q, 'high_profit'),
+  };
+}
 
-  const q = STATE.filters.quarter;
-  const bk = aggregateKpi(rows, q, 'booking');
-  const lf = aggregateKpi(rows, q, 'lifting');
-  const hp = aggregateKpi(rows, q, 'high_profit');
+function applyKpiCardValues(values) {
+  setText('cOrigin', values.originCount);
+  setText('cSales', values.salesCount);
+  setText('cCust', typeof values.custCount === 'number' ? values.custCount.toLocaleString() : values.custCount);
+
+  const bk = values.booking || {};
+  const lf = values.lifting || {};
+  const hp = values.highProfit || {};
   setText('cBkT', fmtPct(bk.target));
   setText('cBkP', fmtPct(bk.perform));
   setText('cBkG', fmtPctSigned(bk.gap));
@@ -787,13 +814,112 @@ function renderKpiCards() {
   setText('cHpT', fmtPct(hp.target));
   setText('cHpP', fmtPct(hp.perform));
   setText('cHpG', fmtPctSigned(hp.gap));
-  for (const [id, val] of [['cBkG', bk.gap], ['cLfG', lf.gap], ['cHpG', hp.gap]]) {
+  updateKpiGapClasses({ bk: bk.gap, lf: lf.gap, hp: hp.gap });
+}
+
+function updateKpiGapClasses(gaps) {
+  for (const [id, val] of [['cBkG', gaps.bk], ['cLfG', gaps.lf], ['cHpG', gaps.hp]]) {
     const el = document.getElementById(id);
     if (!el) continue;
     el.classList.remove('pos', 'neg');
     if (val === null || val === undefined || Number.isNaN(val)) continue;
     el.classList.add(val >= 0 ? 'pos' : 'neg');
   }
+}
+
+function detailCardFiltersActive() {
+  const f = STATE.filters;
+  return f.month !== 'ALL' || f.grade !== 'ALL' || f.profit !== 'ALL' ||
+    f.wos !== 'W3' || f.destCountries.length > 0 || f.destPorts.length > 0;
+}
+
+function setKpiCardLoadingTargets(summary) {
+  setText('cOrigin', '...');
+  setText('cSales', '...');
+  setText('cCust', '...');
+  setText('cBkT', fmtPct(summary.booking.target));
+  setText('cLfT', fmtPct(summary.lifting.target));
+  setText('cHpT', fmtPct(summary.highProfit.target));
+  ['cBkP','cBkG','cLfP','cLfG','cHpP','cHpG'].forEach(id => setText(id, '...'));
+  updateKpiGapClasses({ bk: null, lf: null, hp: null });
+}
+
+function scopedChunkListForMonths(months) {
+  const scope = effectiveOrigins();
+  const salesSel = STATE.filters.sales;
+  const salesSet = salesSel.length ? new Set(salesSel) : null;
+  return (STATE.manifest.chunks || []).filter(c => {
+    if (!scope.has(c.origin)) return false;
+    if (salesSet && !salesSet.has(c.salesman)) return false;
+    return months.includes(c.yyyymm);
+  });
+}
+
+async function loadScopedCardBookings() {
+  const chunks = scopedChunkListForMonths(monthsForFilter());
+  const loaded = await Promise.all(chunks.map(c => loadChunk(c.origin, c.salesman, c.yyyymm)));
+  const bookings = [];
+  loaded.filter(Boolean).forEach(chunk => {
+    (chunk.bookings || []).forEach(b => bookings.push({ ...b, __origin: chunk.origin, __salesman: chunk.salesman, __yyyymm: chunk.yyyymm }));
+  });
+  return bookings;
+}
+
+function targetRowsForFilteredBookings(rows, bookings) {
+  const pairs = new Set(bookings.map(b => `${b.__origin}\u0001${b.__salesman}`));
+  const filtered = rows.filter(r => r.row_type === 'SALES' && pairs.has(`${r.tab}\u0001${r.name}`));
+  return filtered.length ? filtered : rows;
+}
+
+function metricWithTarget(target, perform) {
+  return { target, perform, gap: (target == null || perform == null) ? null : perform - target };
+}
+
+function detailedCardValues(allBookings, summaryRows, q) {
+  const countBookings = applyBookingFilters(allBookings);
+  const kpiBookings = applyBookingFiltersForKpiCards(allBookings);
+  const targetRows = targetRowsForFilteredBookings(summaryRows, kpiBookings);
+  const targetBk = aggregateKpi(targetRows, q, 'booking').target;
+  const targetLf = aggregateKpi(targetRows, q, 'lifting').target;
+  const targetHp = aggregateKpi(targetRows, q, 'high_profit').target;
+
+  const origins = new Set(countBookings.map(b => b.__origin).filter(Boolean));
+  const sales = new Set(countBookings.map(b => b.__salesman).filter(Boolean));
+  const shippers = new Set(countBookings.map(b => b.shipper_no || b.shipper_name).filter(Boolean));
+  const totalFst = kpiBookings.reduce((s, b) => s + (b.fst_teu || 0), 0);
+  const w3Fst = kpiBookings.reduce((s, b) => s + (b.is_w3 ? (b.fst_teu || 0) : 0), 0);
+  const w3Lst = kpiBookings.reduce((s, b) => s + (b.is_w3 ? (b.lst_teu || 0) : 0), 0);
+  const w3HiFst = kpiBookings.reduce((s, b) => s + (b.is_w3 && b.is_hi ? (b.fst_teu || 0) : 0), 0);
+
+  return {
+    originCount: origins.size,
+    salesCount: sales.size,
+    custCount: shippers.size,
+    booking: metricWithTarget(targetBk, safeRatio(w3Fst, totalFst)),
+    lifting: metricWithTarget(targetLf, safeRatio(w3Lst, w3Fst)),
+    highProfit: metricWithTarget(targetHp, safeRatio(w3HiFst, w3Fst)),
+  };
+}
+
+function renderKpiCards() {
+  const requestId = ++STATE.kpiCardRequest;
+  const rows = filteredSummaryRows();
+  const q = STATE.filters.quarter;
+  const summary = summaryCardValues(rows, q);
+  if (!detailCardFiltersActive()) {
+    applyKpiCardValues(summary);
+    return;
+  }
+  setKpiCardLoadingTargets(summary);
+  loadScopedCardBookings()
+    .then(bookings => {
+      if (requestId !== STATE.kpiCardRequest) return;
+      applyKpiCardValues(detailedCardValues(bookings, rows, q));
+    })
+    .catch(() => {
+      if (requestId !== STATE.kpiCardRequest) return;
+      applyKpiCardValues(summary);
+    });
 }
 
 // ─── View renderers ──────────────────────────────────────────────
@@ -922,14 +1048,18 @@ async function loadChunk(origin, sales, yyyymm) {
   const chunks = STATE.manifest.chunks || [];
   const meta = chunks.find(c => c.origin === origin && c.salesman === sales && c.yyyymm === yyyymm);
   if (!meta) return null;
-  try {
-    const data = await loadJson(meta.file);
-    STATE.chunkCache.set(key, data);
-    return data;
-  } catch (err) {
-    console.error('chunk load failed', meta.file, err);
-    return null;
-  }
+  const pending = loadJson(meta.file)
+    .then(data => {
+      STATE.chunkCache.set(key, data);
+      return data;
+    })
+    .catch(err => {
+      console.error('chunk load failed', meta.file, err);
+      STATE.chunkCache.delete(key);
+      return null;
+    });
+  STATE.chunkCache.set(key, pending);
+  return pending;
 }
 
 async function loadDrillDataMulti(pairs, months, containerId) {
@@ -972,11 +1102,19 @@ function mergeChunks(chunks) {
 }
 
 function applyBookingFilters(bookings) {
+  return applyBookingFiltersCore(bookings, false);
+}
+
+function applyBookingFiltersForKpiCards(bookings) {
+  return applyBookingFiltersCore(bookings, true);
+}
+
+function applyBookingFiltersCore(bookings, ignoreWos) {
   const { grade, profit, wos, destCountries, destPorts } = STATE.filters;
   const destCountrySet = destCountries.length ? new Set(destCountries) : null;
   const destPortSet = destPorts.length ? new Set(destPorts) : null;
   return bookings.filter(b => {
-    if (wos === 'W3' && !b.is_w3) return false;
+    if (!ignoreWos && wos === 'W3' && !b.is_w3) return false;
     if (profit === 'HI' && !b.is_hi) return false;
     if (profit === 'NOTHI' && b.is_hi) return false;
     if (grade !== 'ALL') {
