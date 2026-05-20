@@ -120,7 +120,7 @@ const I18N = {
     pivotHeavy: (n) => `현재 필터 범위가 ${n}개 chunk 입니다. 응답이 느릴 수 있습니다. 선적지·영업사원·분기 필터로 범위를 좁히는 것을 권장합니다.`,
     pivotCellDetail: 'Pivot 셀 상세',
     columns: {
-      origin: '선적지', sales: '영업사원', share25: "'25 비중", w3_2025: "'25 3주전 BKG",
+      origin: '선적지', sales: '영업사원', share25: "'25 비중", w3_2025: "'25 3W/BSA",
       bk3w: '3W Booking (vs BSA)', lf3w: 'Actual Lifting Rate', hp3w: 'High-Profit Rate',
       ac: 'No. of A/C (Q1)', acTotal: 'Total', ac3w: '3W', acPct: '%',
       target: 'Target', perform: 'Perform', progress: 'Progress', gap: '+/-',
@@ -180,7 +180,7 @@ const I18N = {
     pivotHeavy: (n) => `Current scope is ${n} chunks; response may be slow. Narrow by Origin / Salesperson / Quarter.`,
     pivotCellDetail: 'Pivot cell detail',
     columns: {
-      origin: 'Origin', sales: 'Salesperson', share25: "'25 share", w3_2025: "'25 WOS-3 BKG",
+      origin: 'Origin', sales: 'Salesperson', share25: "'25 share", w3_2025: "'25 W3/BSA",
       bk3w: '3W Booking (vs BSA)', lf3w: 'Actual Lifting Rate', hp3w: 'High-Profit Rate',
       ac: 'No. of A/C (Q1)', acTotal: 'Total', ac3w: '3W', acPct: '%',
       target: 'Target', perform: 'Perform', progress: 'Progress', gap: '+/-',
@@ -832,7 +832,7 @@ function renderSummaryView() {
       <td class="txt">${escapeHtml(r.tab)}</td>
       <td class="txt">${escapeHtml(r.name)}</td>
       <td>${fmtPct(r.share_2025)}</td>
-      <td>${r.w3_2025_teu != null ? fmtNum(r.w3_2025_teu) : '-'}</td>
+      <td title="${r.w3_2025_teu ? `2025 WOS-3 BKG: ${fmtNum(r.w3_2025_teu)} TEU` : ''}">${fmtPct(r.booking_base_2025)}</td>
       <td>${fmtPct(bk.target)}</td><td>${fmtPct(bk[performKey])}</td><td class="pct ${gapClass(bk.gap)}">${fmtPctSigned(bk.gap)}</td>
       <td>${fmtPct(lf.target)}</td><td>${fmtPct(lf[performKey])}</td><td class="pct ${gapClass(lf.gap)}">${fmtPctSigned(lf.gap)}</td>
       <td>${fmtPct(hp.target)}</td><td>${fmtPct(hp[performKey])}</td><td class="pct ${gapClass(hp.gap)}">${fmtPctSigned(hp.gap)}</td>
