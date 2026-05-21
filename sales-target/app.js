@@ -950,20 +950,35 @@ function renderKpiCards() {
   const rows = filteredSummaryRows();
   const q = STATE.filters.quarter;
   const summary = summaryCardValues(rows, q);
-  if (!detailCardFiltersActive()) {
-    applyKpiCardValues(summary);
-    return;
-  }
+  const detailActive = detailCardFiltersActive();
+  // Always load the scoped bookings: the static index.json counts sum
+  // accounts.total per salesperson, which double-counts shippers that work
+  // with multiple sales owners. Live booking dedup gives the true unique
+  // 선적지 / 영업사원 / 화주(A/C) inside the current filter scope.
   setKpiCardLoadingTargets(summary);
   loadScopedCardBookings()
     .then(bookings => {
       if (requestId !== STATE.kpiCardRequest) return;
-      applyKpiCardValues(detailedCardValues(bookings, rows, q));
+      if (detailActive) {
+        applyKpiCardValues(detailedCardValues(bookings, rows, q));
+      } else {
+        // Keep the TOTAL-row-based KPI averages (more accurate than recomputing
+        // from chunks when the scope is whole origins), but overlay deduped counts.
+        applyKpiCardValues({ ...summary, ...computeLiveCardCounts(bookings) });
+      }
     })
     .catch(() => {
       if (requestId !== STATE.kpiCardRequest) return;
       applyKpiCardValues(summary);
     });
+}
+
+function computeLiveCardCounts(allBookings) {
+  const filtered = applyBookingFilters(allBookings);
+  const origins = new Set(filtered.map(b => b.__origin).filter(Boolean));
+  const sales = new Set(filtered.map(b => b.__salesman).filter(Boolean));
+  const shippers = new Set(filtered.map(b => b.shipper_no || b.shipper_name).filter(Boolean));
+  return { originCount: origins.size, salesCount: sales.size, custCount: shippers.size };
 }
 
 // ─── View renderers ──────────────────────────────────────────────
