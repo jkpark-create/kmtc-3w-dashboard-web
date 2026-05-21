@@ -299,6 +299,19 @@ function safeRatio(num, den) {
   if (!den || Number.isNaN(num) || Number.isNaN(den)) return null;
   return num / den;
 }
+function normalLstTeu(b) {
+  if (Object.prototype.hasOwnProperty.call(b, 'norm_lst_teu')) return Number(b.norm_lst_teu) || 0;
+  const status = String(b.lst_status || '').trim();
+  return (status === 'Normal' || status === 'Loaded' || status === '실선적') ? (b.lst_teu || 0) : 0;
+}
+function normalCm1(b) {
+  if (Object.prototype.hasOwnProperty.call(b, 'norm_cm1')) return Number(b.norm_cm1) || 0;
+  return normalLstTeu(b) ? (b.cm1 || 0) : 0;
+}
+function routeHighFlag(b) {
+  if (Object.prototype.hasOwnProperty.call(b, 'is_route_hi')) return !!b.is_route_hi;
+  return !!b.is_hi;
+}
 function escapeHtml(text) {
   return String(text ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
@@ -917,7 +930,7 @@ function weightedTargetFromBookings(rows, bookings, quarter, kpiKey, weightFn) {
 }
 
 function metricWithTarget(target, perform) {
-  return { target, perform, gap: (target == null || perform == null) ? null : perform - target };
+  return { target, perform, progress: perform, gap: (target == null || perform == null) ? null : perform - target };
 }
 
 function detailedCardValues(allBookings, summaryRows, q) {
@@ -932,8 +945,8 @@ function detailedCardValues(allBookings, summaryRows, q) {
   const shippers = new Set(countBookings.map(b => b.shipper_no || b.shipper_name).filter(Boolean));
   const totalFst = kpiBookings.reduce((s, b) => s + (b.fst_teu || 0), 0);
   const w3Fst = kpiBookings.reduce((s, b) => s + (b.is_w3 ? (b.fst_teu || 0) : 0), 0);
-  const w3Lst = kpiBookings.reduce((s, b) => s + (b.is_w3 ? (b.lst_teu || 0) : 0), 0);
-  const w3HiFst = kpiBookings.reduce((s, b) => s + (b.is_w3 && b.is_hi ? (b.fst_teu || 0) : 0), 0);
+  const w3Lst = kpiBookings.reduce((s, b) => s + (b.is_w3 ? normalLstTeu(b) : 0), 0);
+  const w3HiFst = kpiBookings.reduce((s, b) => s + (b.is_w3 && routeHighFlag(b) ? (b.fst_teu || 0) : 0), 0);
 
   return {
     originCount: origins.size,
@@ -1041,8 +1054,8 @@ function detailedSummaryRows(displayRows, targetRows, allBookings, q) {
 
     const totalFst = rowKpiBookings.reduce((s, b) => s + (b.fst_teu || 0), 0);
     const w3Fst = rowKpiBookings.reduce((s, b) => s + (b.is_w3 ? (b.fst_teu || 0) : 0), 0);
-    const w3Lst = rowKpiBookings.reduce((s, b) => s + (b.is_w3 ? (b.lst_teu || 0) : 0), 0);
-    const w3HiFst = rowKpiBookings.reduce((s, b) => s + (b.is_w3 && b.is_hi ? (b.fst_teu || 0) : 0), 0);
+    const w3Lst = rowKpiBookings.reduce((s, b) => s + (b.is_w3 ? normalLstTeu(b) : 0), 0);
+    const w3HiFst = rowKpiBookings.reduce((s, b) => s + (b.is_w3 && routeHighFlag(b) ? (b.fst_teu || 0) : 0), 0);
     const acTotal = uniqueShipperCount(rowCountBookings, false);
     const acW3 = uniqueShipperCount(rowCountBookings, true);
     const bookingTarget = weightedTargetFromBookings(targetRows, rowKpiBookings, q, 'booking', b => b.fst_teu || 0);
@@ -1260,8 +1273,8 @@ function applyBookingFiltersCore(bookings, ignoreWos) {
   const destPortSet = destPorts.length ? new Set(destPorts) : null;
   return bookings.filter(b => {
     if (!ignoreWos && wos === 'W3' && !b.is_w3) return false;
-    if (profit === 'HI' && !b.is_hi) return false;
-    if (profit === 'NOTHI' && b.is_hi) return false;
+    if (profit === 'HI' && !routeHighFlag(b)) return false;
+    if (profit === 'NOTHI' && routeHighFlag(b)) return false;
     if (grade !== 'ALL') {
       const g = (b.grade || '').charAt(0).toUpperCase();
       if (grade === 'AB' && !(g === 'A' || g === 'B')) return false;
@@ -1298,12 +1311,12 @@ function aggregateShippers(bookings) {
     s.bkg_count++;
     s.bkg_nos.add(b.bkg_no);
     s.fst_teu += b.fst_teu || 0;
-    s.lst_teu += b.lst_teu || 0;
-    s.cm1 += b.cm1 || 0;
+    s.lst_teu += normalLstTeu(b);
+    s.cm1 += normalCm1(b);
     if (b.is_w3) {
       s.w3_fst += b.fst_teu || 0;
-      s.w3_lst += b.lst_teu || 0;
-      if (b.is_hi) s.hi_w3_fst += b.fst_teu || 0;
+      s.w3_lst += normalLstTeu(b);
+      if (routeHighFlag(b)) s.hi_w3_fst += b.fst_teu || 0;
     }
     if (b.is_cancel) s.cancel_teu += b.fst_teu || 0;
     if (!s.grade && b.grade) s.grade = b.grade;
@@ -1469,7 +1482,7 @@ function buildFlatBkgTable(bookings) {
       <td>${fmtNum(b.cm1)}</td>
       <td>${fmtNum(b.cm1_per_teu, 0)}</td>
       <td>${escapeHtml(b.lead_time_bkg_sche || '')}</td>
-      <td>${b.is_hi ? '<span class="hi-tag">HI</span>' : ''}</td>
+      <td>${routeHighFlag(b) ? '<span class="hi-tag">HI</span>' : ''}</td>
       <td class="${statusClass}">${escapeHtml(b.lst_status || '')}</td>
     </tr>`;
   });
@@ -1507,7 +1520,7 @@ function exportBkgListAsCsv(bookings, filename) {
     'BKG_NO','origin','salesman','yyyymm','shipper_no','shipper_name','grade',
     'pol','pod','dly_plc','vsl','voy','lst_vsl','lst_voy','lst_route',
     'booking_date','booking_schedule','cancel_date','week_start','lead_time_bkg_sche',
-    'fst_teu','lst_teu','cm1','cm1_per_teu','is_w3','is_hi','is_lifted','is_cancel','lst_status'
+    'fst_teu','lst_teu','norm_lst_teu','cm1','norm_cm1','cm1_per_teu','is_w3','is_hi','is_route_hi','is_lifted','is_cancel','lst_status'
   ];
   const lines = [headers.join(',')];
   bookings.forEach(b => {
@@ -1515,7 +1528,8 @@ function exportBkgListAsCsv(bookings, filename) {
       b.bkg_no, b.__origin, b.__salesman, b.__yyyymm, b.shipper_no, b.shipper_name, b.grade,
       b.pol, b.pod, b.dly_plc, b.vsl, b.voy, b.lst_vsl, b.lst_voy, b.lst_route,
       b.booking_date, b.booking_schedule, b.cancel_date, b.week_start_date, b.lead_time_bkg_sche,
-      b.fst_teu, b.lst_teu, b.cm1, b.cm1_per_teu, b.is_w3, b.is_hi, b.is_lifted, b.is_cancel, b.lst_status
+      b.fst_teu, b.lst_teu, normalLstTeu(b), b.cm1, normalCm1(b), b.cm1_per_teu,
+      b.is_w3, b.is_hi, routeHighFlag(b), b.is_lifted, b.is_cancel, b.lst_status
     ].map(v => csvEscape(v));
     lines.push(row.join(','));
   });
@@ -1561,7 +1575,7 @@ function renderBkgDetail(shipperKey, allBookings) {
       <td>${fmtNum(b.cm1_per_teu, 0)}</td>
       <td>${escapeHtml(b.lead_time_bkg_sche || '')}</td>
       <td>${gradeBadge(b.grade)}</td>
-      <td>${b.is_hi ? '<span class="hi-tag">HI</span>' : ''}</td>
+      <td>${routeHighFlag(b) ? '<span class="hi-tag">HI</span>' : ''}</td>
       <td class="${statusClass}">${escapeHtml(b.lst_status || '')}</td>
     </tr>`;
   });
@@ -1691,7 +1705,7 @@ function pivotKeyOf(b, dim) {
     case 'grade': return (b.grade || '-').charAt(0).toUpperCase() || '-';
     case 'pod_country': return b.pod_country || '-';
     case 'pod': return b.pod || '-';
-    case 'hi': return b.is_hi ? '고수익' : '일반';
+    case 'hi': return routeHighFlag(b) ? '고수익' : '일반';
     case 'wos': return b.lead_time_bkg_sche || '(미분류)';
     default: return '-';
   }
@@ -1701,17 +1715,17 @@ function pivotAggregate(rows, metric) {
   const init = { fst: 0, lst: 0, w3_fst: 0, w3_lst: 0, w3_hi_fst: 0, cancel: 0, bkg_count: 0, bkg_no_set: new Set(), shipper_set: new Set(), cm1: 0 };
   rows.forEach(b => {
     init.fst += b.fst_teu || 0;
-    init.lst += b.lst_teu || 0;
+    init.lst += normalLstTeu(b);
     if (b.is_w3) {
       init.w3_fst += b.fst_teu || 0;
-      init.w3_lst += b.lst_teu || 0;
-      if (b.is_hi) init.w3_hi_fst += b.fst_teu || 0;
+      init.w3_lst += normalLstTeu(b);
+      if (routeHighFlag(b)) init.w3_hi_fst += b.fst_teu || 0;
     }
     if (b.is_cancel) init.cancel += b.fst_teu || 0;
     init.bkg_count++;
     if (b.bkg_no) init.bkg_no_set.add(b.bkg_no);
     if (b.shipper_no || b.shipper_name) init.shipper_set.add(b.shipper_no || b.shipper_name);
-    init.cm1 += b.cm1 || 0;
+    init.cm1 += normalCm1(b);
   });
   switch (metric) {
     case 'fst': return init.fst;
