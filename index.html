@@ -1223,6 +1223,7 @@ function renderTab1() {
         <div style="display:flex;gap:4px">
           <button onclick="setOccMode('w3')" id="occBtnW3" style="padding:3px 8px;font-size:11px;border-radius:3px;cursor:pointer;border:1px solid #1a73e8;background:#1a73e8;color:#fff">${L('3주전BKG/BSA','WOS-3/BSA')}</button>
           <button onclick="setOccMode('normal')" id="occBtnN" style="padding:3px 8px;font-size:11px;border-radius:3px;cursor:pointer;border:1px solid #dadce0;background:#fff;color:#5f6368">Normal/BSA</button>
+          <button onclick="setOccMode('trend')" id="occBtnT" style="padding:3px 8px;font-size:11px;border-radius:3px;cursor:pointer;border:1px solid #dadce0;background:#fff;color:#5f6368">${L('추이','Trend')}</button>
         </div>
       </div>
       <div class="sub">${fmtMonth(month)}</div><div id="ch1occ" style="height:430px"></div>
@@ -1340,7 +1341,8 @@ function renderTab1() {
     return {name:k, ship:s, w3bkg:w3b, bsa:b, occ: ratio(s,b) ?? 0, w3ratio: ratio(w3b,b) ?? 0};
   }).filter(r=>r.ship>0||r.bsa>0);
   if (!window._occMode) window._occMode = 'w3';
-  drawOccChart();
+  // Re-apply mode so titles/buttons reflect the current state after a filter change.
+  setOccMode(window._occMode);
 
   // Summary table
   buildSummaryTable(ms.slice(-3));
@@ -1348,18 +1350,103 @@ function renderTab1() {
 
 function setOccMode(mode) {
   window._occMode = mode;
-  // Update button styles
-  const w3btn = document.getElementById('occBtnW3'), nbtn = document.getElementById('occBtnN');
-  if (mode === 'w3') {
-    w3btn.style.background='#1a73e8'; w3btn.style.color='#fff'; w3btn.style.borderColor='#1a73e8';
-    nbtn.style.background='#fff'; nbtn.style.color='#5f6368'; nbtn.style.borderColor='#dadce0';
-  } else {
-    nbtn.style.background='#1a73e8'; nbtn.style.color='#fff'; nbtn.style.borderColor='#1a73e8';
-    w3btn.style.background='#fff'; w3btn.style.color='#5f6368'; w3btn.style.borderColor='#dadce0';
-  }
+  const btns = {
+    w3: document.getElementById('occBtnW3'),
+    normal: document.getElementById('occBtnN'),
+    trend: document.getElementById('occBtnT'),
+  };
+  Object.entries(btns).forEach(([k, btn]) => {
+    if (!btn) return;
+    const active = (k === mode);
+    btn.style.background = active ? '#1a73e8' : '#fff';
+    btn.style.color = active ? '#fff' : '#5f6368';
+    btn.style.borderColor = active ? '#1a73e8' : '#dadce0';
+  });
   const title = document.getElementById('occTitle');
-  if (title) title.textContent = mode === 'w3' ? L('3주전BKG/BSA','WOS-3 BKG/BSA') : L('소석률(Normal/BSA)','Occ(Normal/BSA)');
-  drawOccChart();
+  if (title) {
+    const vl = viewLabel();
+    if (mode === 'trend') {
+      const tail = hasWeekSelection()
+        ? L('주차별 추이 (최근 13주)','Weekly Trend (Last 13 Weeks)')
+        : L('월별 추이','Monthly Trend');
+      title.textContent = `${vl} ${L('3주전BKG/BSA','WOS-3 BKG/BSA')} · ${tail}`;
+    } else if (mode === 'w3') {
+      title.textContent = `${vl} ${L('3주전BKG/BSA','WOS-3 BKG/BSA')}`;
+    } else {
+      title.textContent = `${vl} ${L('소석률(Normal/BSA)','Occ(Normal/BSA)')}`;
+    }
+  }
+  if (mode === 'trend') drawTrendChart();
+  else drawOccChart();
+}
+
+// Build w3 BKG / BSA series for trend view.
+// Week mode: latest selected week is the anchor; returns the trailing 13 weeks ending at the anchor.
+// Month mode (no week selected): one point per month in DATA.months.
+function buildOccTrendSeries() {
+  if (hasWeekSelection()) {
+    const allWeeks = [...new Set((DATA.weekly || []).map(r => r.week_start_date).filter(Boolean))].sort();
+    const selected = selectedWeeks().slice().sort();
+    const anchor = selected[selected.length - 1];
+    let endIdx = anchor ? allWeeks.indexOf(anchor) : allWeeks.length - 1;
+    if (endIdx < 0) endIdx = allWeeks.length - 1;
+    const startIdx = Math.max(0, endIdx - 12);
+    const weeks = allWeeks.slice(startIdx, endIdx + 1);
+    // Apply current global filters (origin/dest etc.) but ignore the week selection.
+    const wklyFiltered = applyGlobalFilter(DATA.weekly || [], true);
+    const wklyByWeek = {};
+    wklyFiltered.forEach(r => {
+      const k = r.week_start_date;
+      if (!k) return;
+      (wklyByWeek[k] = wklyByWeek[k] || []).push(r);
+    });
+    return weeks.map(w => {
+      const rows = wklyByWeek[w] || [];
+      const yyyymm = (rows[0] || {}).YYYYMM
+        || ((DATA.weekly || []).find(r => r.week_start_date === w) || {}).YYYYMM;
+      const bkg = profitSum(rows, 'w3_fst');
+      const bsaT = yyyymm ? sum(filterBSA(yyyymm, [w]), 'teu_bsa') : 0;
+      return { label: fmtWeekLabel(w), bkg, bsa: bsaT, ratio: ratio(bkg, bsaT) ?? 0 };
+    });
+  }
+  const months = DATA.months || [];
+  return months.map(m => {
+    const bkg = profitSum(filterMonthly(m), 'w3_fst');
+    const bsa = sum(filterBSA(m, null), 'teu_bsa');
+    return { label: fmtMonth(m), bkg, bsa, ratio: ratio(bkg, bsa) ?? 0 };
+  });
+}
+
+function drawTrendChart() {
+  const series = buildOccTrendSeries();
+  if (!series.length) return;
+  const x = series.map(s => s.label);
+  const bkg = series.map(s => s.bkg);
+  const bsa = series.map(s => s.bsa);
+  const rat = series.map(s => s.ratio);
+  const maxBar = Math.max(1, ...bkg, ...bsa);
+  const ratClean = rat.filter(v => Number.isFinite(v) && v > 0);
+  const maxRat = ratClean.length ? Math.max(...ratClean) : 100;
+  plot('ch1occ', [
+    { x, y: bsa, type: 'bar', name: 'BSA', marker: { color: '#dadce0', opacity: 0.6 },
+      text: bsa.map(fmt), textposition: 'outside', textfont: { size: 10 } },
+    { x, y: bkg, type: 'bar', name: L('3주전BKG','WOS-3 BKG'), marker: { color: '#6c5ce7', opacity: 0.8 },
+      text: bkg.map(fmt), textposition: 'outside', textfont: { size: 10 } },
+    { x, y: rat, type: 'scatter', mode: 'lines+markers+text', yaxis: 'y2',
+      name: L('3주전BKG/BSA','WOS-3 BKG/BSA'),
+      line: { color: '#ea4335', width: 2 }, marker: { size: 8 },
+      text: rat.map(v => Number.isFinite(v) && v > 0 ? v.toFixed(0) + '%' : ''),
+      textposition: 'top center', textfont: { size: 11, color: '#ea4335' } },
+  ], {
+    barmode: 'group',
+    margin: { l: 50, r: 50, t: 30, b: 40 },
+    xaxis: { type: 'category', tickfont: { size: 10 } },
+    yaxis: { title: 'TEU', gridcolor: '#f0f0f0', range: [0, maxBar * 1.25] },
+    yaxis2: { title: L('비율 %','Ratio %'), overlaying: 'y', side: 'right',
+      range: [0, Math.max(100, maxRat * 1.2)] },
+    legend: { orientation: 'h', y: 1.15 },
+    plot_bgcolor: '#fff', paper_bgcolor: '#fff',
+  }, { displayModeBar: false });
 }
 
 function drawOccChart() {
@@ -1377,7 +1464,7 @@ function drawOccChart() {
     marker:{color:vals.map(v => v>=65?'#34a853':v>=50?'#f9ab00':'#ea4335')},
     text:vals.map(v=>v.toFixed(0)+'%'), textposition:'outside', textfont:{size:11}, cliponaxis:false
   }], {margin:{l:200,r:60,t:10,b:30},
-    xaxis:{gridcolor:'#f0f0f0'},
+    xaxis:{gridcolor:'#f0f0f0',range:[0,200]},
     yaxis:{tickfont:{family:'Consolas,monospace',size:11}},
     plot_bgcolor:'#fff',paper_bgcolor:'#fff',showlegend:false,
     shapes:[{type:'line',x0:50,x1:50,y0:-0.5,y1:sorted.length-0.5,line:{dash:'dot',color:'#5f6368',width:1}}]
