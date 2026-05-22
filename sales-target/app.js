@@ -55,6 +55,8 @@ const STATE = {
   },
   kpiCardRequest: 0,
   summaryRequest: 0,
+  filterOptionRequest: 0,
+  filterOptionTimer: null,
   initialUrlParams: null,
   lang: 'ko',
   multiSelect: {}, // id -> { values: Set, options: [...], onChange, refresh, render }
@@ -234,8 +236,11 @@ function applyLang() {
   Object.values(STATE.multiSelect).forEach(ms => { try { ms.render(); } catch {} });
   // Refresh dynamic salesperson + month options once manifest is loaded
   if (STATE.manifest) {
+    refreshPortOptions();
+    refreshDestPortOptions();
     refreshSalesOptions();
     refreshMonthOptions();
+    scheduleFilterOptionRefresh(0);
   }
   const monthSel = document.getElementById('fMonth');
   if (monthSel && monthSel.options[0]) monthSel.options[0].textContent = dict.monthAll;
@@ -462,13 +467,12 @@ function buildMultiSelect(id, opts) {
     const selCount = state.selected.size;
     let label;
     if (selCount === 0) label = dict.msPickedAll(total);
-    else if (selCount === total && total > 0) label = dict.msPickedAll(total);
     else if (selCount === 1) {
       const v = [...state.selected][0];
       const opt = state.options.find(o => o.value === v);
       label = opt ? opt.label : v;
     } else label = dict.msSelected(selCount);
-    root.classList.toggle('dirty', selCount > 0 && selCount < total);
+    root.classList.toggle('dirty', selCount > 0);
     root.innerHTML = '';
     const btn = document.createElement('button');
     btn.type = 'button';
@@ -553,6 +557,12 @@ function buildMultiSelect(id, opts) {
     state.selected = new Set([...state.selected].filter(v => valid.has(v)));
     render();
   };
+  state.replaceOptions = (newOptions, vals) => {
+    state.options = newOptions;
+    const valid = new Set(newOptions.map(o => o.value));
+    state.selected = new Set((vals || []).filter(v => valid.has(v)));
+    render();
+  };
   state.setSelected = (vals) => {
     state.selected = new Set(vals || []);
     render();
@@ -601,12 +611,14 @@ function setupFilters() {
       refreshPortOptions();
       refreshSalesOptions();
       render();
+      scheduleFilterOptionRefresh();
     },
   });
   refreshPortOptions();
   refreshSalesOptions();
   refreshMonthOptions();
   setupDestFilters();
+  scheduleFilterOptionRefresh(0);
 }
 
 function setupDestFilters() {
@@ -619,6 +631,7 @@ function setupDestFilters() {
       STATE.filters.destCountries = vals;
       refreshDestPortOptions();
       render();
+      scheduleFilterOptionRefresh();
     },
   });
   refreshDestPortOptions();
@@ -649,6 +662,7 @@ function refreshDestPortOptions() {
       onChange: vals => {
         STATE.filters.destPorts = vals;
         render();
+        scheduleFilterOptionRefresh();
       },
     });
   }
@@ -683,21 +697,14 @@ function refreshPortOptions() {
         STATE.filters.origins = vals;
         refreshSalesOptions();
         render();
+        scheduleFilterOptionRefresh();
       },
     });
   }
 }
 
 function refreshSalesOptions() {
-  // Collect salespeople for the current origin scope.
-  const scope = effectiveOrigins();
-  const map = STATE.manifest.salespeople_by_origin || {};
-  const set = new Set();
-  Object.entries(map).forEach(([origin, names]) => {
-    if (!scope.has(origin)) return;
-    names.forEach(n => set.add(n));
-  });
-  const opts = [...set].sort().map(n => ({ value: n, label: n }));
+  const opts = salesOptionsForCurrentFacet();
   const existing = STATE.multiSelect.msSales;
   if (existing) {
     // Preserve currently desired selection (STATE.filters.sales) across an options refresh.
@@ -711,7 +718,7 @@ function refreshSalesOptions() {
     buildMultiSelect('msSales', {
       options: opts,
       selected: STATE.filters.sales,
-      onChange: vals => { STATE.filters.sales = vals; render(); },
+      onChange: vals => { STATE.filters.sales = vals; render(); scheduleFilterOptionRefresh(); },
     });
   }
 }
@@ -723,18 +730,260 @@ function refreshMonthOptions() {
   fillSelect('fMonth', inQuarter, STATE.filters.month, I18N[STATE.lang].monthAll);
 }
 
+function scheduleFilterOptionRefresh(delay = 120) {
+  if (!STATE.manifest) return;
+  if (STATE.filterOptionTimer) clearTimeout(STATE.filterOptionTimer);
+  const requestId = ++STATE.filterOptionRequest;
+  STATE.filterOptionTimer = setTimeout(() => {
+    STATE.filterOptionTimer = null;
+    refreshFilterOptionsFromBookings(requestId);
+  }, delay);
+}
+
+async function refreshFilterOptionsFromBookings(requestId) {
+  if (!STATE.manifest) return;
+  const months = monthsForFilter();
+  const metas = filterFacetChunkMetas(months);
+  const beforeKey = filterSelectionKey();
+  try {
+    const loaded = await Promise.all(metas.map(meta =>
+      loadChunk(meta.origin, meta.salesman, meta.yyyymm)
+        .then(chunk => chunk ? { meta, chunk } : null)
+    ));
+    if (requestId !== STATE.filterOptionRequest) return;
+
+    const bookings = [];
+    loaded.filter(Boolean).forEach(({ meta, chunk }) => {
+      (chunk.bookings || []).forEach(b => {
+        bookings.push({
+          ...b,
+          __origin: meta.origin,
+          __salesman: meta.salesman,
+          __yyyymm: meta.yyyymm,
+        });
+      });
+    });
+
+    const changed = applyFacetOptions(buildFacetOptionSets(bookings));
+    if (requestId !== STATE.filterOptionRequest) return;
+    if (changed || beforeKey !== filterSelectionKey()) {
+      render();
+      scheduleFilterOptionRefresh(0);
+    }
+  } catch (err) {
+    console.warn('filter option refresh failed', err);
+  }
+}
+
+function filterFacetChunkMetas(months) {
+  const monthSet = new Set(months || []);
+  const originSet = effectiveOrigins();
+  return (STATE.manifest.chunks || []).filter(c =>
+    monthSet.has(c.yyyymm) && originSet.has(c.origin)
+  );
+}
+
+function filterSelectionKey() {
+  const f = STATE.filters;
+  return [
+    f.quarter,
+    f.month,
+    (f.countries || []).join('\u0001'),
+    (f.origins || []).join('\u0001'),
+    (f.sales || []).join('\u0001'),
+    (f.destCountries || []).join('\u0001'),
+    (f.destPorts || []).join('\u0001'),
+    f.grade,
+    f.profit,
+    f.wos,
+  ].join('\u0002');
+}
+
+function buildFacetOptionSets(bookings) {
+  const sets = {
+    countries: new Set(),
+    origins: new Set(),
+    sales: new Set(),
+    destCountries: new Set(),
+    destPorts: new Set(),
+  };
+
+  bookings.forEach(b => {
+    if (bookingMatchesFacetFilters(b, 'country')) {
+      const country = originCountryOfBooking(b);
+      if (country) sets.countries.add(country);
+    }
+    if (bookingMatchesFacetFilters(b, 'origin')) {
+      const origin = originOfBooking(b);
+      if (origin) sets.origins.add(origin);
+    }
+    if (bookingMatchesFacetFilters(b, 'sales')) {
+      if (b.__salesman) sets.sales.add(b.__salesman);
+    }
+    if (bookingMatchesFacetFilters(b, 'destCountry')) {
+      if (b.pod_country) sets.destCountries.add(b.pod_country);
+    }
+    if (bookingMatchesFacetFilters(b, 'destPort')) {
+      const port = destPortValue(b);
+      if (port) sets.destPorts.add(port);
+    }
+  });
+
+  return sets;
+}
+
+function bookingMatchesFacetFilters(b, facet) {
+  const f = STATE.filters;
+  const origin = originOfBooking(b);
+  const originCountry = originCountryOfBooking(b);
+  if (!origin || !originCountry) return false;
+
+  if (facet !== 'country' && (f.countries || []).length && !f.countries.includes(originCountry)) return false;
+  if (facet !== 'origin' && (f.origins || []).length && !f.origins.includes(origin)) return false;
+  if (facet !== 'sales' && (f.sales || []).length && !f.sales.includes(b.__salesman)) return false;
+
+  if (f.wos === 'W3' && !b.is_w3) return false;
+  if (f.profit === 'HI' && !routeHighFlag(b)) return false;
+  if (f.profit === 'NOTHI' && routeHighFlag(b)) return false;
+  if (f.grade !== 'ALL') {
+    const g = (b.grade || '').charAt(0).toUpperCase();
+    if (f.grade === 'AB' && !(g === 'A' || g === 'B')) return false;
+    if (f.grade === 'CD' && !(g === 'C' || g === 'D')) return false;
+  }
+
+  if (facet !== 'destCountry' && (f.destCountries || []).length && !f.destCountries.includes(b.pod_country)) return false;
+  if (facet !== 'destPort' && (f.destPorts || []).length && !f.destPorts.includes(destPortValue(b))) return false;
+  return true;
+}
+
+function originOfBooking(b) {
+  const origin = String(b.__origin || '').trim();
+  return ALL_WHITELIST_PORTS.includes(origin) ? origin : '';
+}
+
+function originCountryOfBooking(b) {
+  const origin = originOfBooking(b);
+  return origin ? COUNTRY_OF_PORT.get(origin) : '';
+}
+
+function destPortValue(b) {
+  const country = String(b.pod_country || '').trim();
+  const port = String(b.pod || '').trim();
+  return country && port ? `${country}/${port}` : '';
+}
+
+function applyFacetOptions(sets) {
+  let changed = false;
+  changed = setFacetOptions('msCountry', 'countries', countryOptionsFromSet(sets.countries)) || changed;
+  changed = setFacetOptions('msPort', 'origins', originOptionsFromSet(sets.origins)) || changed;
+  changed = setFacetOptions('msSales', 'sales', salesOptionsForCurrentFacet(sets.sales)) || changed;
+  changed = setFacetOptions('msDestCountry', 'destCountries', destCountryOptionsFromSet(sets.destCountries)) || changed;
+  changed = setFacetOptions('msDestPort', 'destPorts', destPortOptionsFromSet(sets.destPorts)) || changed;
+  return changed;
+}
+
+function setFacetOptions(id, filterKey, options) {
+  const ms = STATE.multiSelect[id];
+  if (!ms) return false;
+  const prev = (STATE.filters[filterKey] || []).join('\u0001');
+  const valid = new Set(options.map(o => o.value));
+  const next = (STATE.filters[filterKey] || []).filter(v => valid.has(v));
+  if (ms.replaceOptions) ms.replaceOptions(options, next);
+  else {
+    ms.setOptions(options);
+    ms.setSelected(next);
+  }
+  STATE.filters[filterKey] = next;
+  return prev !== next.join('\u0001');
+}
+
+function countryOptionsFromSet(set) {
+  return WHITELIST_ORIGINS
+    .filter(c => set.has(c.country))
+    .map(c => ({ value: c.country, label: `${c.country} - ${c.label[STATE.lang] || c.label.ko}` }));
+}
+
+function originOptionsFromSet(set) {
+  const opts = [];
+  WHITELIST_ORIGINS.forEach(c => {
+    c.ports.forEach(p => {
+      if (set.has(p)) opts.push({ value: p, label: p, group: c.country, groupLabel: c.label[STATE.lang] || c.label.ko });
+    });
+  });
+  return opts;
+}
+
+function targetSalesSetForCurrentScope(ignoreSales = true) {
+  const scope = effectiveOrigins();
+  const salesSel = STATE.filters.sales || [];
+  const salesSet = (!ignoreSales && salesSel.length) ? new Set(salesSel) : null;
+  const set = new Set();
+  (STATE.index?.rows || []).forEach(r => {
+    if (r.row_type !== 'SALES') return;
+    if (!scope.has(r.tab)) return;
+    if (salesSet && !salesSet.has(r.name)) return;
+    set.add(r.name);
+  });
+  return set;
+}
+
+function salesOptionsForCurrentFacet(matchingSalesSet) {
+  const targetSet = targetSalesSetForCurrentScope(true);
+  let names = [...targetSet];
+  if (matchingSalesSet && detailCardFiltersActive()) {
+    names = names.filter(n => matchingSalesSet.has(n));
+  }
+  return names.sort().map(n => ({ value: n, label: n }));
+}
+
+function destCountryOptionsFromSet(set) {
+  const known = STATE.manifest.dest_countries || [];
+  const used = new Set();
+  const opts = known.filter(c => set.has(c)).map(c => {
+    used.add(c);
+    return { value: c, label: c };
+  });
+  [...set].sort().forEach(c => {
+    if (!used.has(c)) opts.push({ value: c, label: c });
+  });
+  return opts;
+}
+
+function destPortOptionsFromSet(set) {
+  const byCountry = STATE.manifest.dest_ports_by_country || {};
+  const countryOrder = STATE.manifest.dest_countries || Object.keys(byCountry).sort();
+  const used = new Set();
+  const opts = [];
+  countryOrder.forEach(c => {
+    (byCountry[c] || []).forEach(p => {
+      const value = `${c}/${p}`;
+      if (!set.has(value)) return;
+      used.add(value);
+      opts.push({ value, label: p, group: c, groupLabel: c });
+    });
+  });
+  [...set].sort().forEach(value => {
+    if (used.has(value)) return;
+    const [country, port] = value.split('/');
+    opts.push({ value, label: port || value, group: country, groupLabel: country });
+  });
+  return opts;
+}
+
 function setupListeners() {
   document.getElementById('fQuarter').addEventListener('change', e => {
     STATE.filters.quarter = e.target.value;
     STATE.filters.month = 'ALL';
     refreshMonthOptions();
     render();
+    scheduleFilterOptionRefresh();
   });
   ['fMonth', 'fGrade', 'fProfit', 'fWos'].forEach(id => {
     document.getElementById(id).addEventListener('change', e => {
       const key = { fMonth: 'month', fGrade: 'grade', fProfit: 'profit', fWos: 'wos' }[id];
       STATE.filters[key] = e.target.value;
       render();
+      scheduleFilterOptionRefresh();
     });
   });
   document.getElementById('btnReset').addEventListener('click', () => {
@@ -756,6 +1005,7 @@ function setupListeners() {
     if (STATE.multiSelect.msSales) STATE.multiSelect.msSales.setSelected([]);
     refreshMonthOptions();
     render();
+    scheduleFilterOptionRefresh(0);
   });
   $$('.view-tabs .vtab').forEach(el => el.addEventListener('click', () => {
     STATE.view = el.dataset.view;
@@ -940,8 +1190,11 @@ function detailedCardValues(allBookings, summaryRows, q) {
   const targetLf = weightedTargetFromBookings(summaryRows, kpiBookings, q, 'lifting', b => b.is_w3 ? (b.fst_teu || 0) : 0);
   const targetHp = weightedTargetFromBookings(summaryRows, kpiBookings, q, 'high_profit', b => b.is_w3 ? (b.fst_teu || 0) : 0);
 
-  const origins = new Set(countBookings.map(b => b.__origin).filter(Boolean));
-  const sales = new Set(countBookings.map(b => b.__salesman).filter(Boolean));
+  const bookingPairs = new Set(countBookings.map(b => `${b.__origin}\u0001${b.__salesman}`));
+  const matchedSalesRows = summaryRows.filter(r =>
+    r.row_type === 'SALES' && bookingPairs.has(`${r.tab}\u0001${r.name}`)
+  );
+  const origins = new Set(matchedSalesRows.map(r => r.tab).filter(Boolean));
   const shippers = new Set(countBookings.map(b => b.shipper_no || b.shipper_name).filter(Boolean));
   const totalFst = kpiBookings.reduce((s, b) => s + (b.fst_teu || 0), 0);
   const w3Fst = kpiBookings.reduce((s, b) => s + (b.is_w3 ? (b.fst_teu || 0) : 0), 0);
@@ -950,7 +1203,7 @@ function detailedCardValues(allBookings, summaryRows, q) {
 
   return {
     originCount: origins.size,
-    salesCount: sales.size,
+    salesCount: matchedSalesRows.length,
     custCount: shippers.size,
     booking: metricWithTarget(targetBk, safeRatio(w3Fst, totalFst)),
     lifting: metricWithTarget(targetLf, safeRatio(w3Lst, w3Fst)),
@@ -976,8 +1229,8 @@ function renderKpiCards() {
         applyKpiCardValues(detailedCardValues(bookings, rows, q));
       } else {
         // Keep the TOTAL-row-based KPI averages (more accurate than recomputing
-        // from chunks when the scope is whole origins), but overlay deduped counts.
-        applyKpiCardValues({ ...summary, ...computeLiveCardCounts(bookings) });
+        // from chunks when the scope is whole origins), but overlay deduped shipper count.
+        applyKpiCardValues({ ...summary, custCount: computeLiveCardCounts(bookings).custCount });
       }
     })
     .catch(() => {
@@ -1996,6 +2249,7 @@ function attachRowHandlers() {
       STATE.view = 'drill';
       $$('.view-tabs .vtab').forEach(el => el.classList.toggle('active', el.dataset.view === 'drill'));
       render();
+      scheduleFilterOptionRefresh();
     });
   });
 }
