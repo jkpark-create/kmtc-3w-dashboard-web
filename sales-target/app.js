@@ -1227,11 +1227,65 @@ function finiteTargetOfRow(row, quarter, kpiKey) {
   return Number.isFinite(target) ? target : null;
 }
 
-function totalTargetFromRows(rows, quarter, kpiKey) {
-  const totals = (rows || []).filter(r => r.row_type === 'TOTAL');
-  if (!totals.length) return null;
-  const target = aggregateKpi(totals, quarter, kpiKey).target;
-  return Number.isFinite(Number(target)) ? target : null;
+function routeBookingFiltersActive() {
+  const f = STATE.filters;
+  return f.destCountries.length > 0 || f.destPorts.length > 0;
+}
+
+function bookingTargetDeltaOfRow(row, quarter) {
+  const target = Number(row?.kpi?.booking?.[quarter]?.target);
+  const base = Number(row?.booking_base_2025);
+  if (!Number.isFinite(target) || !Number.isFinite(base)) return null;
+  return target - base;
+}
+
+function bsaBookingReferenceGroups(rows, allocations, quarter) {
+  const maps = targetRowMaps(rows);
+  const groups = new Map();
+  (allocations || []).forEach(a => {
+    const weight = Math.max(0, Number(a.allocated_bsa) || 0);
+    if (!weight) return;
+    const row = targetRowForBsaAllocation(maps, a);
+    const target = Number(row?.kpi?.booking?.[quarter]?.target);
+    if (!Number.isFinite(target)) return;
+    const origin = a.__origin || row?.tab;
+    if (!origin) return;
+    const group = groups.get(origin) || { tw: 0, w: 0 };
+    group.tw += target * weight;
+    group.w += weight;
+    groups.set(origin, group);
+  });
+  return { maps, groups };
+}
+
+function bookingReferenceFromBsaAllocations(rows, allocations, quarter) {
+  const { groups } = bsaBookingReferenceGroups(rows, allocations, quarter);
+  let tw = 0;
+  let w = 0;
+  groups.forEach(group => {
+    if (!group.w) return;
+    tw += group.tw;
+    w += group.w;
+  });
+  return w > 0 ? tw / w : null;
+}
+
+function routeAdjustedBookingTargetFromBsaAllocations(rows, allocations, quarter) {
+  if (!routeBookingFiltersActive()) {
+    return weightedTargetFromBsaAllocations(rows, allocations, quarter, 'booking');
+  }
+  const { maps, groups } = bsaBookingReferenceGroups(rows, allocations, quarter);
+  let tw = 0;
+  let w = 0;
+  groups.forEach((group, origin) => {
+    if (!group.w) return;
+    const delta = bookingTargetDeltaOfRow(maps.totals.get(origin), quarter);
+    if (!Number.isFinite(delta)) return;
+    tw += ((group.tw / group.w) + delta) * group.w;
+    w += group.w;
+  });
+  if (w > 0) return tw / w;
+  return weightedTargetFromBsaAllocations(rows, allocations, quarter, 'booking');
 }
 
 function metricWithTarget(target, perform) {
@@ -1243,12 +1297,9 @@ function detailedCardValues(allBookings, allBsaAllocations, summaryRows, q) {
   const kpiBookings = applyBookingFiltersForKpiCards(allBookings);
   const bsaAllocations = applyBsaAllocationFilters(allBsaAllocations);
   const allocatedBsa = sumAllocatedBsa(bsaAllocations);
-  const targetBk = totalTargetFromRows(summaryRows, q, 'booking') ??
-    weightedTargetFromBsaAllocations(summaryRows, bsaAllocations, q, 'booking');
-  const targetLf = totalTargetFromRows(summaryRows, q, 'lifting') ??
-    weightedTargetFromBookings(summaryRows, kpiBookings, q, 'lifting', b => b.is_w3 ? (b.fst_teu || 0) : 0);
-  const targetHp = totalTargetFromRows(summaryRows, q, 'high_profit') ??
-    weightedTargetFromBookings(summaryRows, kpiBookings, q, 'high_profit', b => b.is_w3 ? (b.fst_teu || 0) : 0);
+  const targetBk = routeAdjustedBookingTargetFromBsaAllocations(summaryRows, bsaAllocations, q);
+  const targetLf = weightedTargetFromBookings(summaryRows, kpiBookings, q, 'lifting', b => b.is_w3 ? (b.fst_teu || 0) : 0);
+  const targetHp = weightedTargetFromBookings(summaryRows, kpiBookings, q, 'high_profit', b => b.is_w3 ? (b.fst_teu || 0) : 0);
 
   const bookingPairs = new Set(countBookings.map(b => `${b.__origin}\u0001${b.__salesman}`));
   const matchedSalesRows = summaryRows.filter(r =>
@@ -1378,15 +1429,19 @@ function detailedSummaryRows(displayRows, targetRows, allBookings, allBsaAllocat
     const allocatedBsa = sumAllocatedBsa(rowBsaAllocations);
     const acTotal = uniqueShipperCount(rowCountBookings, false);
     const acW3 = uniqueShipperCount(rowCountBookings, true);
-    const bookingTarget = finiteTargetOfRow(row, q, 'booking') ??
-      weightedTargetFromBsaAllocations(targetRows, rowBsaAllocations, q, 'booking');
-    const liftingTarget = finiteTargetOfRow(row, q, 'lifting') ??
-      weightedTargetFromBookings(targetRows, rowKpiBookings, q, 'lifting', b => b.is_w3 ? (b.fst_teu || 0) : 0);
-    const hpTarget = finiteTargetOfRow(row, q, 'high_profit') ??
-      weightedTargetFromBookings(targetRows, rowKpiBookings, q, 'high_profit', b => b.is_w3 ? (b.fst_teu || 0) : 0);
+    const routeBookingReference = row.row_type === 'TOTAL' && routeBookingFiltersActive()
+      ? bookingReferenceFromBsaAllocations(targetRows, rowBsaAllocations, q)
+      : null;
+    const bookingTarget = row.row_type === 'TOTAL' && routeBookingFiltersActive()
+      ? routeAdjustedBookingTargetFromBsaAllocations(targetRows, rowBsaAllocations, q)
+      : (finiteTargetOfRow(row, q, 'booking') ??
+        weightedTargetFromBsaAllocations(targetRows, rowBsaAllocations, q, 'booking'));
+    const liftingTarget = weightedTargetFromBookings(targetRows, rowKpiBookings, q, 'lifting', b => b.is_w3 ? (b.fst_teu || 0) : 0);
+    const hpTarget = weightedTargetFromBookings(targetRows, rowKpiBookings, q, 'high_profit', b => b.is_w3 ? (b.fst_teu || 0) : 0);
 
     return {
       ...row,
+      booking_base_2025: Number.isFinite(routeBookingReference) ? routeBookingReference : row.booking_base_2025,
       kpi: {
         booking: { [q]: metricWithTarget(bookingTarget, safeRatio(w3Fst, allocatedBsa)) },
         lifting: { [q]: metricWithTarget(liftingTarget, safeRatio(w3Lst, w3Fst)) },
