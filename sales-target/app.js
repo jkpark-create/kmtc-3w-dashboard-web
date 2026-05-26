@@ -1132,14 +1132,21 @@ function scopedChunkListForMonths(months) {
   });
 }
 
-async function loadScopedCardBookings() {
+async function loadScopedDetailData() {
   const chunks = scopedChunkListForMonths(monthsForFilter());
   const loaded = await Promise.all(chunks.map(c => loadChunk(c.origin, c.salesman, c.yyyymm)));
   const bookings = [];
+  const bsaAllocations = [];
   loaded.filter(Boolean).forEach(chunk => {
     (chunk.bookings || []).forEach(b => bookings.push({ ...b, __origin: chunk.origin, __salesman: chunk.salesman, __yyyymm: chunk.yyyymm }));
+    (chunk.bsa_allocations || []).forEach(a => bsaAllocations.push({ ...a, __origin: chunk.origin, __salesman: chunk.salesman, __yyyymm: chunk.yyyymm }));
   });
-  return bookings;
+  return { bookings, bsaAllocations };
+}
+
+async function loadScopedCardBookings() {
+  const detail = await loadScopedDetailData();
+  return detail.bookings;
 }
 
 function targetRowsForFilteredBookings(rows, bookings) {
@@ -1162,6 +1169,10 @@ function targetRowForBooking(maps, b) {
   return maps.sales.get(`${b.__origin}\u0001${b.__salesman}`) || maps.totals.get(b.__origin) || null;
 }
 
+function targetRowForBsaAllocation(maps, a) {
+  return maps.sales.get(`${a.__origin}\u0001${a.__salesman}`) || maps.totals.get(a.__origin) || null;
+}
+
 function weightedTargetFromBookings(rows, bookings, quarter, kpiKey, weightFn) {
   const maps = targetRowMaps(rows);
   let tw = 0;
@@ -1179,14 +1190,48 @@ function weightedTargetFromBookings(rows, bookings, quarter, kpiKey, weightFn) {
   return aggregateKpi(targetRowsForFilteredBookings(rows, bookings), quarter, kpiKey).target;
 }
 
+function applyBsaAllocationFilters(allocations) {
+  const { destCountries, destPorts } = STATE.filters;
+  const destCountrySet = destCountries.length ? new Set(destCountries) : null;
+  const destPortSet = destPorts.length ? new Set(destPorts) : null;
+  return (allocations || []).filter(a => {
+    if (destCountrySet && !destCountrySet.has(a.pod_country)) return false;
+    if (destPortSet && !destPortSet.has(`${a.pod_country}/${a.pod}`)) return false;
+    return true;
+  });
+}
+
+function sumAllocatedBsa(allocations) {
+  return (allocations || []).reduce((s, a) => s + (Number(a.allocated_bsa) || 0), 0);
+}
+
+function weightedTargetFromBsaAllocations(rows, allocations, quarter, kpiKey) {
+  const maps = targetRowMaps(rows);
+  let tw = 0;
+  let w = 0;
+  (allocations || []).forEach(a => {
+    const weight = Math.max(0, Number(a.allocated_bsa) || 0);
+    if (!weight) return;
+    const row = targetRowForBsaAllocation(maps, a);
+    const target = Number(row?.kpi?.[kpiKey]?.[quarter]?.target);
+    if (!Number.isFinite(target)) return;
+    tw += target * weight;
+    w += weight;
+  });
+  if (w > 0) return tw / w;
+  return aggregateKpi(rows, quarter, kpiKey).target;
+}
+
 function metricWithTarget(target, perform) {
   return { target, perform, progress: perform, gap: (target == null || perform == null) ? null : perform - target };
 }
 
-function detailedCardValues(allBookings, summaryRows, q) {
+function detailedCardValues(allBookings, allBsaAllocations, summaryRows, q) {
   const countBookings = applyBookingFilters(allBookings);
   const kpiBookings = applyBookingFiltersForKpiCards(allBookings);
-  const targetBk = weightedTargetFromBookings(summaryRows, kpiBookings, q, 'booking', b => b.fst_teu || 0);
+  const bsaAllocations = applyBsaAllocationFilters(allBsaAllocations);
+  const allocatedBsa = sumAllocatedBsa(bsaAllocations);
+  const targetBk = weightedTargetFromBsaAllocations(summaryRows, bsaAllocations, q, 'booking');
   const targetLf = weightedTargetFromBookings(summaryRows, kpiBookings, q, 'lifting', b => b.is_w3 ? (b.fst_teu || 0) : 0);
   const targetHp = weightedTargetFromBookings(summaryRows, kpiBookings, q, 'high_profit', b => b.is_w3 ? (b.fst_teu || 0) : 0);
 
@@ -1205,7 +1250,7 @@ function detailedCardValues(allBookings, summaryRows, q) {
     originCount: origins.size,
     salesCount: matchedSalesRows.length,
     custCount: shippers.size,
-    booking: metricWithTarget(targetBk, safeRatio(w3Fst, totalFst)),
+    booking: metricWithTarget(targetBk, safeRatio(w3Fst, allocatedBsa)),
     lifting: metricWithTarget(targetLf, safeRatio(w3Lst, w3Fst)),
     highProfit: metricWithTarget(targetHp, safeRatio(w3HiFst, w3Fst)),
   };
@@ -1222,11 +1267,11 @@ function renderKpiCards() {
   // with multiple sales owners. Live booking dedup gives the true unique
   // 선적지 / 영업사원 / 화주(A/C) inside the current filter scope.
   setKpiCardLoadingTargets(summary);
-  loadScopedCardBookings()
-    .then(bookings => {
+  loadScopedDetailData()
+    .then(({ bookings, bsaAllocations }) => {
       if (requestId !== STATE.kpiCardRequest) return;
       if (detailActive) {
-        applyKpiCardValues(detailedCardValues(bookings, rows, q));
+        applyKpiCardValues(detailedCardValues(bookings, bsaAllocations, rows, q));
       } else {
         // Keep the TOTAL-row-based KPI averages (more accurate than recomputing
         // from chunks when the scope is whole origins), but overlay deduped shipper count.
@@ -1287,6 +1332,11 @@ function summaryRowMatchesBooking(row, b) {
   return b.__origin === row.tab && b.__salesman === row.name;
 }
 
+function summaryRowMatchesBsaAllocation(row, a) {
+  if (row.row_type === 'TOTAL') return a.__origin === row.tab;
+  return a.__origin === row.tab && a.__salesman === row.name;
+}
+
 function uniqueShipperCount(bookings, w3Only = false) {
   const set = new Set();
   bookings.forEach(b => {
@@ -1297,28 +1347,30 @@ function uniqueShipperCount(bookings, w3Only = false) {
   return set.size;
 }
 
-function detailedSummaryRows(displayRows, targetRows, allBookings, q) {
+function detailedSummaryRows(displayRows, targetRows, allBookings, allBsaAllocations, q) {
   const countBookings = applyBookingFilters(allBookings);
   const kpiBookings = applyBookingFiltersForKpiCards(allBookings);
+  const bsaAllocations = applyBsaAllocationFilters(allBsaAllocations);
   return displayRows.map(row => {
     const rowCountBookings = countBookings.filter(b => summaryRowMatchesBooking(row, b));
     const rowKpiBookings = kpiBookings.filter(b => summaryRowMatchesBooking(row, b));
-    if (!rowCountBookings.length && !rowKpiBookings.length) return null;
+    const rowBsaAllocations = bsaAllocations.filter(a => summaryRowMatchesBsaAllocation(row, a));
+    if (!rowCountBookings.length && !rowKpiBookings.length && !rowBsaAllocations.length) return null;
 
-    const totalFst = rowKpiBookings.reduce((s, b) => s + (b.fst_teu || 0), 0);
     const w3Fst = rowKpiBookings.reduce((s, b) => s + (b.is_w3 ? (b.fst_teu || 0) : 0), 0);
     const w3Lst = rowKpiBookings.reduce((s, b) => s + (b.is_w3 ? normalLstTeu(b) : 0), 0);
     const w3HiFst = rowKpiBookings.reduce((s, b) => s + (b.is_w3 && routeHighFlag(b) ? (b.fst_teu || 0) : 0), 0);
+    const allocatedBsa = sumAllocatedBsa(rowBsaAllocations);
     const acTotal = uniqueShipperCount(rowCountBookings, false);
     const acW3 = uniqueShipperCount(rowCountBookings, true);
-    const bookingTarget = weightedTargetFromBookings(targetRows, rowKpiBookings, q, 'booking', b => b.fst_teu || 0);
+    const bookingTarget = weightedTargetFromBsaAllocations(targetRows, rowBsaAllocations, q, 'booking');
     const liftingTarget = weightedTargetFromBookings(targetRows, rowKpiBookings, q, 'lifting', b => b.is_w3 ? (b.fst_teu || 0) : 0);
     const hpTarget = weightedTargetFromBookings(targetRows, rowKpiBookings, q, 'high_profit', b => b.is_w3 ? (b.fst_teu || 0) : 0);
 
     return {
       ...row,
       kpi: {
-        booking: { [q]: metricWithTarget(bookingTarget, safeRatio(w3Fst, totalFst)) },
+        booking: { [q]: metricWithTarget(bookingTarget, safeRatio(w3Fst, allocatedBsa)) },
         lifting: { [q]: metricWithTarget(liftingTarget, safeRatio(w3Lst, w3Fst)) },
         high_profit: { [q]: metricWithTarget(hpTarget, safeRatio(w3HiFst, w3Fst)) },
       },
@@ -1330,11 +1382,11 @@ function detailedSummaryRows(displayRows, targetRows, allBookings, q) {
 function renderDetailedSummaryView(rows, q) {
   const requestId = ++STATE.summaryRequest;
   const targetRows = scopedSummaryTargetRows();
-  loadScopedCardBookings()
-    .then(bookings => {
+  loadScopedDetailData()
+    .then(({ bookings, bsaAllocations }) => {
       if (requestId !== STATE.summaryRequest || STATE.view !== 'summary') return;
       const panel = document.getElementById('viewPanel');
-      const detailedRows = detailedSummaryRows(rows, targetRows, bookings, q);
+      const detailedRows = detailedSummaryRows(rows, targetRows, bookings, bsaAllocations, q);
       panel.innerHTML = detailedRows.length ? renderSummaryTable(detailedRows, q) : `<div class="empty">${tr('noMatches')}</div>`;
       attachRowHandlers();
     })
