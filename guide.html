@@ -787,6 +787,15 @@ document.addEventListener('DOMContentLoaded', function() {
     <tr><td style="color:#ea4335">구간별 저수익</td><td>부킹 CM1/TEU < 루트 평균</td></tr>
   </table>
   <div class="tip"><strong>구간별 고수익</strong>은 루트(선적지+도착지) 기준 부킹 단위 분류입니다. 선적지 기준 화주 단위 태그는 가이드에서 제외했습니다.</div>
+  <h3>자주 묻는 질문</h3>
+  <table>
+    <tr><th>질문</th><th>답변</th></tr>
+    <tr><td>왜 같은 고객도 구간별 고/저수익이 달라질 수 있나요?</td><td>비교 기준이 고객 전체가 아니라 POR+DLY 루트입니다. 같은 고객이라도 도착지, 운임, 비용 구조가 다르면 루트 평균 대비 위치가 달라질 수 있습니다.</td></tr>
+    <tr><td>구간별 고수익%는 어떻게 읽나요?</td><td>선택 범위의 WOS-3 BKG 중 구간별 고수익으로 분류된 부킹의 FST_TEU 비중입니다. 비중이 높을수록 조기 확보 물량 안에 수익성 좋은 구간 물량이 많다는 뜻입니다.</td></tr>
+    <tr><td>CM1/TEU가 0이거나 공란이면 어떻게 되나요?</td><td>수익성 판단 근거가 부족한 건은 구간별 고수익으로 집계하지 않거나 공란으로 표시될 수 있습니다. 수익성 화면에서는 CM1/TEU와 함께 확인하는 것이 좋습니다.</td></tr>
+    <tr><td>구간수익 필터를 걸면 BKG/실선적도 바뀌나요?</td><td>지역/소석률 화면은 구간 기준으로 BKG와 실선적이 좁혀집니다. 화주별 화면은 선택된 고객의 전체 WOS-3 BKG/실선적을 유지하고, 구간별 고수익과 CM1/TEU 지표만 구간 기준으로 계산합니다.</td></tr>
+    <tr><td>구간별 고수익이면 무조건 좋은 부킹인가요?</td><td>루트 평균보다 좋은 수익성이라는 뜻이지만, 물량 규모, 실선적률, 캔슬, BSA 상황을 함께 봐야 합니다. 고수익 비중이 높아도 실선적률이 낮으면 실제 성과로 이어지지 않을 수 있습니다.</td></tr>
+  </table>
 </div>
 <div class="card en" style="display:none">
   <p>The guide and dashboard profitability views currently use only <strong>Route High / Route Low</strong>.</p>
@@ -797,6 +806,15 @@ document.addEventListener('DOMContentLoaded', function() {
     <tr><td style="color:#ea4335">Route Low</td><td>Booking CM1/TEU < Route average</td></tr>
   </table>
   <div class="tip"><strong>Route High</strong> is a POR+DLY route-level booking classification used by the current profitability views.</div>
+  <h3>FAQ</h3>
+  <table>
+    <tr><th>Question</th><th>Answer</th></tr>
+    <tr><td>Why can the same customer show both Route High and Route Low?</td><td>The comparison is by POR+DLY route, not by the customer's overall result. Destination, rate, and cost structure can change the booking's position versus each route average.</td></tr>
+    <tr><td>How should I read Route High %?</td><td>It is the FST_TEU share of WOS-3 bookings classified as Route High within the selected scope. A higher share means more early-booked volume is coming from stronger-profit routes.</td></tr>
+    <tr><td>What happens when CM1/TEU is zero or blank?</td><td>Bookings without enough profitability basis may be blank or may not be counted as Route High. Review CM1/TEU together with the classification in profitability views.</td></tr>
+    <tr><td>Does the route profit filter change BKG and LFT?</td><td>In regional/occupancy views, BKG and LFT are narrowed by the route classification. In shipper views, total WOS-3 BKG/LFT stays at the selected customer level, while Route High and CM1/TEU use route-based metrics.</td></tr>
+    <tr><td>Does Route High always mean a good booking?</td><td>It means the booking is above the route average, but volume size, LFT rate, cancel behavior, and BSA situation still matter. High route profit with weak LFT may not become actual performance.</td></tr>
+  </table>
 </div>
 
 <!-- DATA -->
