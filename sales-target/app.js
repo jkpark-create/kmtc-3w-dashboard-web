@@ -1222,6 +1222,18 @@ function weightedTargetFromBsaAllocations(rows, allocations, quarter, kpiKey) {
   return aggregateKpi(rows, quarter, kpiKey).target;
 }
 
+function finiteTargetOfRow(row, quarter, kpiKey) {
+  const target = Number(row?.kpi?.[kpiKey]?.[quarter]?.target);
+  return Number.isFinite(target) ? target : null;
+}
+
+function totalTargetFromRows(rows, quarter, kpiKey) {
+  const totals = (rows || []).filter(r => r.row_type === 'TOTAL');
+  if (!totals.length) return null;
+  const target = aggregateKpi(totals, quarter, kpiKey).target;
+  return Number.isFinite(Number(target)) ? target : null;
+}
+
 function metricWithTarget(target, perform) {
   return { target, perform, progress: perform, gap: (target == null || perform == null) ? null : perform - target };
 }
@@ -1231,9 +1243,12 @@ function detailedCardValues(allBookings, allBsaAllocations, summaryRows, q) {
   const kpiBookings = applyBookingFiltersForKpiCards(allBookings);
   const bsaAllocations = applyBsaAllocationFilters(allBsaAllocations);
   const allocatedBsa = sumAllocatedBsa(bsaAllocations);
-  const targetBk = weightedTargetFromBsaAllocations(summaryRows, bsaAllocations, q, 'booking');
-  const targetLf = weightedTargetFromBookings(summaryRows, kpiBookings, q, 'lifting', b => b.is_w3 ? (b.fst_teu || 0) : 0);
-  const targetHp = weightedTargetFromBookings(summaryRows, kpiBookings, q, 'high_profit', b => b.is_w3 ? (b.fst_teu || 0) : 0);
+  const targetBk = totalTargetFromRows(summaryRows, q, 'booking') ??
+    weightedTargetFromBsaAllocations(summaryRows, bsaAllocations, q, 'booking');
+  const targetLf = totalTargetFromRows(summaryRows, q, 'lifting') ??
+    weightedTargetFromBookings(summaryRows, kpiBookings, q, 'lifting', b => b.is_w3 ? (b.fst_teu || 0) : 0);
+  const targetHp = totalTargetFromRows(summaryRows, q, 'high_profit') ??
+    weightedTargetFromBookings(summaryRows, kpiBookings, q, 'high_profit', b => b.is_w3 ? (b.fst_teu || 0) : 0);
 
   const bookingPairs = new Set(countBookings.map(b => `${b.__origin}\u0001${b.__salesman}`));
   const matchedSalesRows = summaryRows.filter(r =>
@@ -1363,9 +1378,12 @@ function detailedSummaryRows(displayRows, targetRows, allBookings, allBsaAllocat
     const allocatedBsa = sumAllocatedBsa(rowBsaAllocations);
     const acTotal = uniqueShipperCount(rowCountBookings, false);
     const acW3 = uniqueShipperCount(rowCountBookings, true);
-    const bookingTarget = weightedTargetFromBsaAllocations(targetRows, rowBsaAllocations, q, 'booking');
-    const liftingTarget = weightedTargetFromBookings(targetRows, rowKpiBookings, q, 'lifting', b => b.is_w3 ? (b.fst_teu || 0) : 0);
-    const hpTarget = weightedTargetFromBookings(targetRows, rowKpiBookings, q, 'high_profit', b => b.is_w3 ? (b.fst_teu || 0) : 0);
+    const bookingTarget = finiteTargetOfRow(row, q, 'booking') ??
+      weightedTargetFromBsaAllocations(targetRows, rowBsaAllocations, q, 'booking');
+    const liftingTarget = finiteTargetOfRow(row, q, 'lifting') ??
+      weightedTargetFromBookings(targetRows, rowKpiBookings, q, 'lifting', b => b.is_w3 ? (b.fst_teu || 0) : 0);
+    const hpTarget = finiteTargetOfRow(row, q, 'high_profit') ??
+      weightedTargetFromBookings(targetRows, rowKpiBookings, q, 'high_profit', b => b.is_w3 ? (b.fst_teu || 0) : 0);
 
     return {
       ...row,
