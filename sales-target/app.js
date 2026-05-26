@@ -307,7 +307,7 @@ function safeRatio(num, den) {
 function normalLstTeu(b) {
   if (Object.prototype.hasOwnProperty.call(b, 'norm_lst_teu')) return Number(b.norm_lst_teu) || 0;
   const status = String(b.lst_status || '').trim();
-  return (status === 'Normal' || status === 'Loaded' || status === '실선적') ? (b.lst_teu || 0) : 0;
+  return status === 'Normal' ? (b.lst_teu || 0) : 0;
 }
 function normalCm1(b) {
   if (Object.prototype.hasOwnProperty.call(b, 'norm_cm1')) return Number(b.norm_cm1) || 0;
