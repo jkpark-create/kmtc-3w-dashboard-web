@@ -1504,9 +1504,9 @@ function renderSummaryTable(rows, q) {
     <th colspan="4">${cols.hp3w}</th>
     <th colspan="3">${cols.ac}</th>
   </tr><tr>
-    <th>${cols.target}</th><th>${performLabel}</th><th>${cols.gap}</th><th>${cols.achievement}</th>
-    <th>${cols.target}</th><th>${performLabel}</th><th>${cols.gap}</th><th>${cols.achievement}</th>
-    <th>${cols.target}</th><th>${performLabel}</th><th>${cols.gap}</th><th>${cols.achievement}</th>
+    <th>${cols.target}</th><th>${performLabel}</th><th>${cols.achievement}</th><th>${cols.gap}</th>
+    <th>${cols.target}</th><th>${performLabel}</th><th>${cols.achievement}</th><th>${cols.gap}</th>
+    <th>${cols.target}</th><th>${performLabel}</th><th>${cols.achievement}</th><th>${cols.gap}</th>
     <th>${cols.acTotal}</th><th>${cols.ac3w}</th><th>${cols.acPct}</th>
   </tr></thead><tbody>`;
 
@@ -1524,9 +1524,9 @@ function renderSummaryTable(rows, q) {
       <td class="txt">${escapeHtml(r.name)}</td>
       <td class="narrow-col">${fmtPct(r.share_2025)}</td>
       <td class="narrow-col" title="${r.w3_2025_teu ? `2025 WOS-3 BKG: ${fmtNum(r.w3_2025_teu)} TEU` : ''}">${fmtPct(r.booking_base_2025)}</td>
-      <td>${fmtPct(bk.target)}</td><td>${fmtPct(bk[performKey])}</td><td class="pct ${gapClass(bk.gap)}">${fmtPctSigned(bk.gap)}</td><td class="pct">${fmtPct(achievementRate(bk, performKey))}</td>
-      <td>${fmtPct(lf.target)}</td><td>${fmtPct(lf[performKey])}</td><td class="pct ${gapClass(lf.gap)}">${fmtPctSigned(lf.gap)}</td><td class="pct">${fmtPct(achievementRate(lf, performKey))}</td>
-      <td>${fmtPct(hp.target)}</td><td>${fmtPct(hp[performKey])}</td><td class="pct ${gapClass(hp.gap)}">${fmtPctSigned(hp.gap)}</td><td class="pct">${fmtPct(achievementRate(hp, performKey))}</td>
+      <td>${fmtPct(bk.target)}</td><td>${fmtPct(bk[performKey])}</td><td class="pct">${fmtPct(achievementRate(bk, performKey))}</td><td class="pct ${gapClass(bk.gap)}">${fmtPctSigned(bk.gap)}</td>
+      <td>${fmtPct(lf.target)}</td><td>${fmtPct(lf[performKey])}</td><td class="pct">${fmtPct(achievementRate(lf, performKey))}</td><td class="pct ${gapClass(lf.gap)}">${fmtPctSigned(lf.gap)}</td>
+      <td>${fmtPct(hp.target)}</td><td>${fmtPct(hp[performKey])}</td><td class="pct">${fmtPct(achievementRate(hp, performKey))}</td><td class="pct ${gapClass(hp.gap)}">${fmtPctSigned(hp.gap)}</td>
       <td>${fmtNum(r.accounts?.total)}</td>
       <td>${fmtNum(r.accounts?.w3)}</td>
       <td>${fmtPct(r.accounts?.pct)}</td>

@@ -169,7 +169,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <h3>3가지 view 모드</h3>
 <table>
 <tr><th width="22%">View</th><th>용도</th></tr>
-<tr><td><b>① Target 요약</b></td><td>선적지 × 영업사원 매트릭스로 3개 KPI의 Target / Perform / GAP / 달성률을 본다</td></tr>
+<tr><td><b>① Target 요약</b></td><td>선적지 × 영업사원 매트릭스로 3개 KPI의 Target / Perform / 달성률 / GAP을 본다</td></tr>
 <tr><td><b>② Drill</b></td><td>선택한 영업사원의 화주별 실적과 그 안의 BKG_NO 리스트까지 확인</td></tr>
 <tr><td><b>③ 조합 Pivot</b></td><td>행 × 열 × 측정값 자유 조합. 셀 클릭 시 매칭 BKG_NO 리스트 표시</td></tr>
 </table>
@@ -183,7 +183,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <h3>Three views</h3>
 <table>
 <tr><th width="22%">View</th><th>Purpose</th></tr>
-<tr><td><b>① Target Summary</b></td><td>Origin × Salesperson matrix; Target / Perform / GAP / achievement rate for 3 KPIs</td></tr>
+<tr><td><b>① Target Summary</b></td><td>Origin × Salesperson matrix; Target / Perform / achievement rate / GAP for 3 KPIs</td></tr>
 <tr><td><b>② Drill</b></td><td>Shipper rollup and BKG_NO list for one or more selected salespeople</td></tr>
 <tr><td><b>③ Pivot</b></td><td>Free row × col × metric pivot; click a cell for the matching BKG list</td></tr>
 </table>
@@ -372,7 +372,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <!-- 8. VIEW 1 -->
 <h2 id="view1" class="ko">8. ① Target 요약</h2><h2 id="view1" class="en" style="display:none">8. ① Target Summary</h2>
 <div class="card ko">
-<p>한 행 = 한 영업사원 (또는 선적지 Team Total). 3개 KPI별로 Target / Perform / +- / 달성률이 표시됩니다.</p>
+<p>한 행 = 한 영업사원 (또는 선적지 Team Total). 3개 KPI별로 Target / Perform / 달성률 / +- 가 표시됩니다.</p>
 <div class="shot"><img src="guide-img/01_landing.png" alt="summary"><div class="cap"><b>화면 3.</b> Target 요약 화면.</div></div>
 <table>
 <tr><th>컬럼</th><th>의미</th></tr>
@@ -381,14 +381,14 @@ document.addEventListener('DOMContentLoaded', () => {
 <tr><td>3W Booking (vs BSA)</td><td>WOS-3 시점 BKG TEU ÷ BSA TEU</td></tr>
 <tr><td>Actual Lifting Rate</td><td>WOS-3 BKG 중 실제 선적된 비율</td></tr>
 <tr><td>High-Profit Rate</td><td>WOS-3 BKG 중 고수익 화주 BKG 비중</td></tr>
-<tr><td>Target / Perform / +- / 달성률</td><td>2025_base + Input %p / 실적 / 차이 / 실적 ÷ Target</td></tr>
+<tr><td>Target / Perform / 달성률 / +-</td><td>2025_base + Input %p / 실적 / 실적 ÷ Target / 차이</td></tr>
 </table>
 <div class="tip"><strong>상세 필터 적용 시:</strong> 월·도착지·등급·고수익·WOS 필터가 선택되면 ① 요약도 필터에 맞는 BKG 기준으로 다시 그려집니다. 행 수, Target, Perform, +/-, 달성률, A/C 수가 모두 현재 필터 조건에 맞춰 변동됩니다.</div>
-<div class="warn"><strong>주의:</strong> '25 비중과 '25 3W/BSA는 Target 워크북의 기준값입니다. 상세 필터가 켜져도 기준 참고값으로 표시되며, 실제 필터 반영은 Target/Perform/+/-/달성률 및 A/C 컬럼에서 확인합니다.</div>
+<div class="warn"><strong>주의:</strong> '25 비중과 '25 3W/BSA는 Target 워크북의 기준값입니다. 상세 필터가 켜져도 기준 참고값으로 표시되며, 실제 필터 반영은 Target/Perform/달성률/+/- 및 A/C 컬럼에서 확인합니다.</div>
 <div class="tip">행 클릭 → 해당 영업사원으로 자동 드릴.</div>
 </div>
 <div class="card en" style="display:none">
-<p>One row per salesperson (or per-origin Team Total). Each of the 3 KPIs shows Target / Perform / +- / achievement rate.</p>
+<p>One row per salesperson (or per-origin Team Total). Each of the 3 KPIs shows Target / Perform / achievement rate / +-.</p>
 <div class="shot"><img src="guide-img/01_landing.png" alt="summary"><div class="cap"><b>Fig. 3.</b> Target summary.</div></div>
 <table>
 <tr><th>Column</th><th>Meaning</th></tr>
@@ -397,10 +397,10 @@ document.addEventListener('DOMContentLoaded', () => {
 <tr><td>3W Booking (vs BSA)</td><td>WOS-3 BKG TEU ÷ BSA TEU</td></tr>
 <tr><td>Actual Lifting Rate</td><td>Loaded / WOS-3 BKG</td></tr>
 <tr><td>High-Profit Rate</td><td>Hi-profit BKG / WOS-3 BKG</td></tr>
-<tr><td>Target / Perform / +- / achievement</td><td>2025 base + Input %p / Actual / Diff / Actual ÷ Target</td></tr>
+<tr><td>Target / Perform / achievement / +-</td><td>2025 base + Input %p / Actual / Actual ÷ Target / Diff</td></tr>
 </table>
 <div class="tip"><strong>With detail filters:</strong> When month, destination, grade, hi-profit, or WOS filters are selected, ① Summary is rebuilt from the matching BKG rows. Row count, Target, Perform, +/-, achievement rate, and A/C counts all follow the current filter.</div>
-<div class="warn"><strong>Note:</strong> '25 share and '25 W3/BSA are baseline reference fields from the Target workbook. They stay as reference values; use Target/Perform/+/-/achievement and A/C columns for the filtered result.</div>
+<div class="warn"><strong>Note:</strong> '25 share and '25 W3/BSA are baseline reference fields from the Target workbook. They stay as reference values; use Target/Perform/achievement/+/- and A/C columns for the filtered result.</div>
 <div class="tip">Click a row → auto-drill to that salesperson.</div>
 </div>
 
