@@ -105,6 +105,10 @@ table.summary td.tgt-mini .tg-row.tg-gap.warn .tg-v{color:#b06000}
 table.summary td.tgt-mini .tg-row.tg-gap.neg .tg-v{color:#a50e0e}
 table.summary th.tgt-head{background:#fef7e0;font-size:10px;line-height:1.2}
 table.summary th.hi-head{white-space:normal !important;line-height:1.25;font-size:11px;word-break:keep-all;min-width:68px;padding:4px 6px}
+table.summary.shipper-table th.basis-col, table.summary.shipper-table td.basis-col{background:#f7f9fc;border-left:2px solid #c8d7f0;border-right:2px solid #c8d7f0;color:#174ea6}
+table.summary.shipper-table th.basis-col{background:#eef4ff;font-weight:700}
+table.summary.shipper-table tr.total td.basis-col{background:#e9f1ff}
+table.summary.shipper-table tr:hover td.basis-col{background:#f2f6ff}
 .tgt-link{display:inline-block;padding:2px 6px;background:#1a73e8;color:#fff!important;text-decoration:none;border-radius:3px;font-size:10px;font-weight:600}
 .tgt-link:hover{background:#1557b0}
 </style>
@@ -1991,14 +1995,14 @@ function renderShipperTable(month) {
   const hasTargets = SALES_TARGET.loaded;
   const targetHeaderColumns = hasTargets ? targetHeaderColumnsHtml() : '';
   let h = `<div class="chart-card"><h3>${L('화주별 3주전 BKG','WOS-3 BKG by Shipper')} (${fmtMonth(month)})</h3>
-  <table class="summary shipper-table"><tr><th class="shipper-col">${L('화주','Shipper')}</th><th>${L('등급','Grade')}</th><th class="sales-col"><span>${L('영업사원','Salesperson')}</span></th><th>BKG</th><th>${L('실선적','LFT')}</th><th>${L('실선적률','Rate')}</th><th class="hi-head">${L('구간별고수익<br>부킹','Route Hi<br>BKG')}</th><th>${L('구간별고수익%','Route Hi%')}</th><th class="hi-head">${L('구간별고수익<br>실선적','Route Hi<br>LFT')}</th><th class="hi-head">${L('구간별고수익<br>실선적률','Route Hi<br>LFT%')}</th><th>CM1</th><th>CM1/TEU</th><th>${L('판단기준<br>CM1/TEU','Basis<br>CM1/TEU')}</th>${targetHeaderColumns}</tr>`;
+  <table class="summary shipper-table"><tr><th class="shipper-col">${L('화주','Shipper')}</th><th>${L('등급','Grade')}</th><th class="sales-col"><span>${L('영업사원','Salesperson')}</span></th><th>BKG</th><th>${L('실선적','LFT')}</th><th>${L('실선적률','Rate')}</th><th class="hi-head">${L('구간별고수익<br>부킹','Route Hi<br>BKG')}</th><th>${L('구간별고수익%','Route Hi%')}</th><th class="hi-head">${L('구간별고수익<br>실선적','Route Hi<br>LFT')}</th><th class="hi-head">${L('구간별고수익<br>실선적률','Route Hi<br>LFT%')}</th><th>CM1</th><th>CM1/TEU</th><th class="basis-col" title="${L('구간별 고/저수익 판단에 사용한 전체기간 화주+구간 CM1/TEU','Full-period shipper-route CM1/TEU used for Route High/Low classification')}">${L('판단기준<br>CM1/TEU','Basis<br>CM1/TEU')}</th>${targetHeaderColumns}</tr>`;
 
   const tb=rows.reduce((s,r)=>s+r.bkg,0), ts=rows.reduce((s,r)=>s+r.ship,0);
   const th2=rows.reduce((s,r)=>s+r.hi,0), thShip=rows.reduce((s,r)=>s+r.hiShip,0), tc=rows.reduce((s,r)=>s+r.cm1,0);
   const tl=rows.reduce((s,r)=>s+r.cm1l,0), tct=tl>0?tc/tl:0;
   const tbc=rows.reduce((s,r)=>s+r.basisCm1,0), tbl=rows.reduce((s,r)=>s+r.basisLst,0), tbct=tbl>0?tbc/tbl:0;
   h += `<tr class="total"><td class="lbl shipper-col">${L('합계','Total')}</td><td></td><td></td><td>${fmt(tb)}</td><td>${fmt(ts)}</td><td>${pct(ts,tb)}</td>`;
-  h += `<td>${fmt(th2)}</td><td>${pct(th2,tb)}</td><td>${fmt(thShip)}</td><td>${pct(thShip,th2)}</td><td>${fmt(Math.round(tc))}</td><td>${fmt(Math.round(tct))}</td><td>${fmt(Math.round(tbct))}</td>`;
+  h += `<td>${fmt(th2)}</td><td>${pct(th2,tb)}</td><td>${fmt(thShip)}</td><td>${pct(thShip,th2)}</td><td>${fmt(Math.round(tc))}</td><td>${fmt(Math.round(tct))}</td><td class="basis-col">${fmt(Math.round(tbct))}</td>`;
   if (hasTargets) h += `<td colspan="4" style="text-align:center"><a class="tgt-link" href="sales-target/?quarter=${quarter}" target="_blank" rel="noopener">${L('전체 목표 화면','Open Target Screen')} ↗</a></td>`;
   h += '</tr>';
 
@@ -2007,7 +2011,7 @@ function renderShipperTable(month) {
     const basisCt = r.basisLst>0 ? r.basisCm1/r.basisLst : 0;
     const gradeStyle = r.grade==='A+B' ? 'color:#1a73e8;font-weight:600' : 'color:#f9ab00';
     h += `<tr><td class="lbl shipper-col">${r.name}</td><td style="${gradeStyle}">${r.grade}</td><td class="sales-col"><span>${r.sales}</span></td><td>${fmt(r.bkg)}</td><td>${fmt(r.ship)}</td><td>${pct(r.ship,r.bkg)}</td>`;
-    h += `<td>${fmt(r.hi)}</td><td>${pct(r.hi,r.bkg)}</td><td>${fmt(r.hiShip)}</td><td>${pct(r.hiShip,r.hi)}</td><td>${fmt(Math.round(r.cm1))}</td><td>${fmt(Math.round(ct))}</td><td>${fmt(Math.round(basisCt))}</td>`;
+    h += `<td>${fmt(r.hi)}</td><td>${pct(r.hi,r.bkg)}</td><td>${fmt(r.hiShip)}</td><td>${pct(r.hiShip,r.hi)}</td><td>${fmt(Math.round(r.cm1))}</td><td>${fmt(Math.round(ct))}</td><td class="basis-col">${fmt(Math.round(basisCt))}</td>`;
     if (hasTargets) h += targetCellsForSalespeople(r.salesArray, quarter, performKey);
     h += '</tr>';
   });
