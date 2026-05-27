@@ -1097,6 +1097,41 @@ function bsaViewKey() { return gv('fView') === 'origin' ? 'origin' : 'dest'; }
 function tagLabel(t) { return (t||'').split(', ').map(v => v==='고수익화주'?L('고수익화주','High'):v==='저수익화주'?L('저수익화주','Low'):v).join(', '); }
 function shipperKey(r) { return r.BKG_SHPR_CST_NO || r.BKG_SHPR_CST_ENM || ''; }
 
+function selectedSingleRoutePorts() {
+  const oriPorts = gvList('fOriP');
+  const dstPorts = gvList('fDstP');
+  if (oriPorts.length !== 1 || dstPorts.length !== 1) return null;
+  return {oriPort: oriPorts[0], dstPort: dstPorts[0]};
+}
+
+function selectedRouteBasis() {
+  const route = selectedSingleRoutePorts();
+  if (!route || !DATA.shipper) return null;
+  const out = {cm1:0, lst:0, byShipper:{}};
+  const seen = new Set();
+  DATA.shipper.forEach(r => {
+    if (String(r.ori_port || '').trim() !== route.oriPort) return;
+    if (String(r.dst_port || '').trim() !== route.dstPort) return;
+    const code = r.BKG_SHPR_CST_NO || r.BKG_SHPR_CST_ENM || '';
+    const key = `${code}|${r.ori_port || ''}|${r.dst_port || ''}`;
+    if (!code || seen.has(key) || !(r.basis_lst > 0)) return;
+    seen.add(key);
+    const cm1 = r.basis_cm1 || 0;
+    const lst = r.basis_lst || 0;
+    out.cm1 += cm1;
+    out.lst += lst;
+    const name = r.BKG_SHPR_CST_ENM || r.BKG_SHPR_CST_NO || '';
+    if (!out.byShipper[name]) out.byShipper[name] = {cm1:0, lst:0};
+    out.byShipper[name].cm1 += cm1;
+    out.byShipper[name].lst += lst;
+  });
+  return out;
+}
+
+function fmtBasisCm1Teu(cm1, lst) {
+  return lst > 0 ? fmt(Math.round(cm1 / lst)) : '-';
+}
+
 const ROUTE_PROFIT_MAP = {
   'fst': ['route_hi_fst', 'hi_fst'],
   'norm_lst': ['route_hi_norm_lst', 'hi_norm_lst'],
@@ -1952,6 +1987,7 @@ function renderABCDTab(month) {
 function renderShipperTable(month) {
   const sd = filterShipper(month);
   const wk = DATA.wpm[month]||4;
+  const basis = selectedRouteBasis();
 
   // Aggregate by shipper + salesman
   const byShpr = {};
@@ -1964,19 +2000,13 @@ function renderShipperTable(month) {
   };
   sd.forEach(r => {
     const k = r.BKG_SHPR_CST_ENM || r.BKG_SHPR_CST_NO;
-    if (!byShpr[k]) byShpr[k] = {bkg:0,ship:0,hi:0,hiShip:0,cm1:0,cm1l:0,basisCm1:0,basisLst:0,_basisKeys:new Set(),_sales:new Set(),_tags:new Set(),_grades:new Set()};
+    if (!byShpr[k]) byShpr[k] = {bkg:0,ship:0,hi:0,hiShip:0,cm1:0,cm1l:0,_sales:new Set(),_tags:new Set(),_grades:new Set()};
     const s = byShpr[k];
     s.bkg += r.w3_fst||0; s.ship += r.w3_norm_lst||0;
     s.hi += routeHiDisplayVal(r,'w3_route_hi_fst','w3_hi_fst');
     s.hiShip += hiShipOf(r);
     s.cm1 += routeMetricVal(r,'w3_cm1_norm','w3_route_hi_cm1_norm','rhc','w3_hi_cm1_norm', false);
     s.cm1l += routeMetricVal(r,'w3_norm_lst','w3_route_hi_norm_lst','rhn','w3_hi_norm_lst');
-    const basisKey = `${r.BKG_SHPR_CST_NO || r.BKG_SHPR_CST_ENM || ''}|${r.ori_port || ''}|${r.dst_port || ''}`;
-    if (!s._basisKeys.has(basisKey)) {
-      s.basisCm1 += r.basis_cm1 || 0;
-      s.basisLst += r.basis_lst || 0;
-      s._basisKeys.add(basisKey);
-    }
     if (r.Salesman_POR) s._sales.add(r.Salesman_POR);
     if (shipperTag(r)) s._tags.add(shipperTag(r));
     if (r.grade) s._grades.add(r.grade);
@@ -1987,7 +2017,8 @@ function renderShipperTable(month) {
     const sales = salesArray.length > 2 ? salesArray.slice(0, 2).join(', ') + '...' : salesArray.join(', ');
     const tag = [...s._tags].join(', ');
     const grade = [...s._grades].join(', ');
-    return {name:k, grade, tag, sales, salesArray, bkg:s.bkg, ship:s.ship, hi:s.hi, hiShip:s.hiShip, cm1:s.cm1, cm1l:s.cm1l, basisCm1:s.basisCm1, basisLst:s.basisLst};
+    const basisRow = basis ? (basis.byShipper[k] || {cm1:0, lst:0}) : {cm1:0, lst:0};
+    return {name:k, grade, tag, sales, salesArray, bkg:s.bkg, ship:s.ship, hi:s.hi, hiShip:s.hiShip, cm1:s.cm1, cm1l:s.cm1l, basisCm1:basisRow.cm1, basisLst:basisRow.lst};
   }).sort((a,b)=>b.bkg-a.bkg);
 
   const quarter = targetQuarterForMonth(month);
@@ -1995,23 +2026,21 @@ function renderShipperTable(month) {
   const hasTargets = SALES_TARGET.loaded;
   const targetHeaderColumns = hasTargets ? targetHeaderColumnsHtml() : '';
   let h = `<div class="chart-card"><h3>${L('화주별 3주전 BKG','WOS-3 BKG by Shipper')} (${fmtMonth(month)})</h3>
-  <table class="summary shipper-table"><tr><th class="shipper-col">${L('화주','Shipper')}</th><th>${L('등급','Grade')}</th><th class="sales-col"><span>${L('영업사원','Salesperson')}</span></th><th>BKG</th><th>${L('실선적','LFT')}</th><th>${L('실선적률','Rate')}</th><th class="hi-head">${L('구간별고수익<br>부킹','Route Hi<br>BKG')}</th><th>${L('구간별고수익%','Route Hi%')}</th><th class="hi-head">${L('구간별고수익<br>실선적','Route Hi<br>LFT')}</th><th class="hi-head">${L('구간별고수익<br>실선적률','Route Hi<br>LFT%')}</th><th>CM1</th><th>CM1/TEU</th><th class="basis-col" title="${L('구간별 고/저수익 판단에 사용한 전체기간 화주+구간 CM1/TEU','Full-period shipper-route CM1/TEU used for Route High/Low classification')}">${L('판단기준<br>CM1/TEU','Basis<br>CM1/TEU')}</th>${targetHeaderColumns}</tr>`;
+  <table class="summary shipper-table"><tr><th class="shipper-col">${L('화주','Shipper')}</th><th>${L('등급','Grade')}</th><th class="sales-col"><span>${L('영업사원','Salesperson')}</span></th><th>BKG</th><th>${L('실선적','LFT')}</th><th>${L('실선적률','Rate')}</th><th class="hi-head">${L('구간별고수익<br>부킹','Route Hi<br>BKG')}</th><th>${L('구간별고수익%','Route Hi%')}</th><th class="hi-head">${L('구간별고수익<br>실선적','Route Hi<br>LFT')}</th><th class="hi-head">${L('구간별고수익<br>실선적률','Route Hi<br>LFT%')}</th><th>CM1</th><th>CM1/TEU</th><th class="basis-col" title="${L('선적포트와 도착포트를 각각 1개 선택하면, 주차 필터와 무관한 전체기간 기준값을 표시합니다. 합계는 선택 루트 평균입니다.','Shown only when one origin port and one destination port are selected. Week filter does not affect it; total is the selected route average.')}">${L('판단기준<br>CM1/TEU','Basis<br>CM1/TEU')}</th>${targetHeaderColumns}</tr>`;
 
   const tb=rows.reduce((s,r)=>s+r.bkg,0), ts=rows.reduce((s,r)=>s+r.ship,0);
   const th2=rows.reduce((s,r)=>s+r.hi,0), thShip=rows.reduce((s,r)=>s+r.hiShip,0), tc=rows.reduce((s,r)=>s+r.cm1,0);
   const tl=rows.reduce((s,r)=>s+r.cm1l,0), tct=tl>0?tc/tl:0;
-  const tbc=rows.reduce((s,r)=>s+r.basisCm1,0), tbl=rows.reduce((s,r)=>s+r.basisLst,0), tbct=tbl>0?tbc/tbl:0;
   h += `<tr class="total"><td class="lbl shipper-col">${L('합계','Total')}</td><td></td><td></td><td>${fmt(tb)}</td><td>${fmt(ts)}</td><td>${pct(ts,tb)}</td>`;
-  h += `<td>${fmt(th2)}</td><td>${pct(th2,tb)}</td><td>${fmt(thShip)}</td><td>${pct(thShip,th2)}</td><td>${fmt(Math.round(tc))}</td><td>${fmt(Math.round(tct))}</td><td class="basis-col">${fmt(Math.round(tbct))}</td>`;
+  h += `<td>${fmt(th2)}</td><td>${pct(th2,tb)}</td><td>${fmt(thShip)}</td><td>${pct(thShip,th2)}</td><td>${fmt(Math.round(tc))}</td><td>${fmt(Math.round(tct))}</td><td class="basis-col">${basis ? fmtBasisCm1Teu(basis.cm1, basis.lst) : '-'}</td>`;
   if (hasTargets) h += `<td colspan="4" style="text-align:center"><a class="tgt-link" href="sales-target/?quarter=${quarter}" target="_blank" rel="noopener">${L('전체 목표 화면','Open Target Screen')} ↗</a></td>`;
   h += '</tr>';
 
   rows.forEach(r => {
     const ct = r.cm1l>0 ? r.cm1/r.cm1l : 0;
-    const basisCt = r.basisLst>0 ? r.basisCm1/r.basisLst : 0;
     const gradeStyle = r.grade==='A+B' ? 'color:#1a73e8;font-weight:600' : 'color:#f9ab00';
     h += `<tr><td class="lbl shipper-col">${r.name}</td><td style="${gradeStyle}">${r.grade}</td><td class="sales-col"><span>${r.sales}</span></td><td>${fmt(r.bkg)}</td><td>${fmt(r.ship)}</td><td>${pct(r.ship,r.bkg)}</td>`;
-    h += `<td>${fmt(r.hi)}</td><td>${pct(r.hi,r.bkg)}</td><td>${fmt(r.hiShip)}</td><td>${pct(r.hiShip,r.hi)}</td><td>${fmt(Math.round(r.cm1))}</td><td>${fmt(Math.round(ct))}</td><td class="basis-col">${fmt(Math.round(basisCt))}</td>`;
+    h += `<td>${fmt(r.hi)}</td><td>${pct(r.hi,r.bkg)}</td><td>${fmt(r.hiShip)}</td><td>${pct(r.hiShip,r.hi)}</td><td>${fmt(Math.round(r.cm1))}</td><td>${fmt(Math.round(ct))}</td><td class="basis-col">${basis ? fmtBasisCm1Teu(r.basisCm1, r.basisLst) : '-'}</td>`;
     if (hasTargets) h += targetCellsForSalespeople(r.salesArray, quarter, performKey);
     h += '</tr>';
   });

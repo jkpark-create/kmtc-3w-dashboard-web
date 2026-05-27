@@ -283,8 +283,8 @@ document.addEventListener('DOMContentLoaded', function() {
     <li><strong>보기</strong>는 지역을 묶는 축을 바꿉니다. 도착지별은 시장/수요 관점, 선적지별은 영업/공급 출발지 관점으로 읽으면 됩니다.</li>
     <li><strong>주차</strong>를 선택하면 선택 월은 해당 주 실적, 과거 월 비교는 주평균으로 표시됩니다. 특정 주의 상황을 과거 월 평균과 비교할 때 사용합니다.</li>
     <li><strong>구간수익/등급/영업사원</strong>은 주로 화주 기반 데이터에 강하게 적용됩니다. 구간수익은 루트별 고/저 분류 기준이며, 영업사원 필터는 `shipper` 데이터 기반 화면에서 가장 정확합니다.</li>
-    <li>화주별 화면에서 구간수익 필터는 해당 구간수익을 가진 화주를 선별합니다. BKG/실선적은 선별된 화주의 전체 WOS-3 값이고, 구간별고수익 및 CM1/TEU는 구간 기준 값으로 계산합니다.</li>
-    <li><strong>판단기준 CM1/TEU</strong>는 '부킹 단위(화주별)'로 계산된 CM1/TEU를 기준으로 합니다. 비교 대상은 (1) 동일 루트(선적지 POR + 도착지 DLY)의 루트 평균 또는 (2) 선택한 월의 "동월 전체 부킹(동월 전체 화주 기준)" 평균입니다. 즉, 판정은 '화주(부킹 단위) 대 루트/동월 전체 평균'으로 이루어집니다. 문서나 대시보드에는 "동월 전체 부킹", "루트(POR+DLY) 평균"처럼 명확한 표현을 사용해 주세요.</li>
+    <li>화주별 화면에서 구간수익 필터는 고/저수익 분류가 붙은 화주를 선별합니다. BKG/실선적은 선택 범위의 WOS-3 값이고, 구간별고수익은 각 부킹이 속한 화주+POR+DLY 조합의 전체기간 분류값을 따라 집계됩니다.</li>
+    <li><strong>판단기준 CM1/TEU</strong>는 선적포트와 도착포트를 각각 1개 선택했을 때만 표시됩니다. 주차 필터와 관계없이 전체기간 기준을 보여주며, 화주 행은 해당 화주+POR+DLY 기준값, 합계 행은 해당 POR+DLY 루트 전체 평균입니다.</li>
   </ul>
   <div class="tip"><strong>추천:</strong> 처음에는 팀+월만 선택해서 전체 구조를 보고, 이상치가 보이면 도착국가/도착포트/영업사원 순서로 좁히는 방식이 가장 빠릅니다.</div>
 </div>
@@ -311,8 +311,8 @@ document.addEventListener('DOMContentLoaded', function() {
     <li><strong>View</strong> changes the regional grouping axis. Destination view is useful for market demand; origin view is useful for sales/supply origin management.</li>
     <li><strong>Week</strong> changes the selected month to actual weekly data while past months are shown as weekly averages. Use it to compare one target week against historical monthly averages.</li>
     <li><strong>Route profit/grade/salesperson</strong> are most precise in shipper-based views. Route profit uses the route high/low classification.</li>
-    <li>In shipper views, the route profit filter selects shippers that have matching route high/low volume. BKG/LFT stay as the selected shipper's total WOS-3 values, while Route Hi and CM1/TEU use route-basis metrics.</li>
-    <li><strong>Basis CM1/TEU</strong> is calculated per booking unit (by shipper). The comparisons are made against (1) the route average (origin POR + dest DLY) or (2) the selected month's overall bookings (month-wide shipper average). In other words, classification compares booking-level shipper CM1/TEU to route or month averages. Avoid wording like "full-period shipper+route"; prefer "selected-month overall bookings" and "route (POR+DLY) average" for clarity.</li>
+    <li>In shipper views, the route profit filter selects shippers with matching High/Low classification. BKG/LFT are WOS-3 values in the selected scope, while Route Hi is counted using each booking's precomputed shipper+POR+DLY full-period classification.</li>
+    <li><strong>Basis CM1/TEU</strong> is shown only when one origin port and one destination port are selected. It ignores the week filter: shipper rows show that shipper+POR+DLY full-period value, and the total row shows the full-period average of the selected POR+DLY route.</li>
   </ul>
   <div class="tip"><strong>Recommended:</strong> Start with team + month, then narrow by destination country, destination port, and salesperson only after you see an abnormal pattern.</div>
 </div>
@@ -479,11 +479,11 @@ document.addEventListener('DOMContentLoaded', function() {
   <h3>화주별 화면 활용</h3>
   <ul>
     <li><strong>등급</strong>은 A+B/C+D 기반의 화주 규모 구분입니다.</li>
-    <li><strong>구간별고수익</strong>은 부킹별로 집계되지만, 고/저수익 분류는 전체기간 화주+루트 기준으로 정해집니다. 같은 화주라도 부킹의 선적/도착 루트가 다르면 수익성 분류가 달라질 수 있습니다.</li>
+    <li><strong>구간별고수익</strong>은 부킹 물량을 집계하는 컬럼입니다. 다만 비교는 개별 부킹 1건의 CM1/TEU로 하지 않고, 전체기간 유효 데이터를 화주+POR+DLY 조합으로 묶어 계산한 기준값을 같은 POR+DLY 루트 평균과 비교합니다.</li>
     <li><strong>CM1/TEU</strong>는 선택 월/필터 범위에서 실선적된 Normal 물량 기준 수익성입니다. BKG가 큰데 CM1/TEU가 낮으면 영업/운임 조건 점검이 필요합니다.</li>
-    <li><strong>판단기준 CM1/TEU</strong>는 전체기간 동일 화주+선적포트+도착포트의 Normal CM1/LST_TEU입니다. 이 값 자체가 고수익 확정값은 아니며, 전체기간 동일 루트 평균보다 높거나 같은지를 비교해 구간별 고/저수익을 판단합니다.</li>
+    <li><strong>판단기준 CM1/TEU</strong>는 선적포트와 도착포트를 각각 1개 선택한 경우에만 표시됩니다. 주차 필터와 관계없이 전체기간 동일 화주+POR+DLY의 Normal CM1/LST_TEU를 보여줍니다.</li>
     <li>예: SHK→MAA 화면에서 <strong>WINCO GROUP LIMITED</strong>는 판단기준 CM1/TEU가 약 609로 보이지만, 전체기간 SHK→MAA 루트 평균이 약 613이면 저수익으로 분류됩니다. 따라서 6월 WOS-3 BKG가 60이어도 구간별고수익 부킹은 0으로 표시될 수 있습니다.</li>
-    <li>화주별 합계 행의 판단기준 CM1/TEU는 화면에 포함된 화주+구간 조합을 중복 제거한 뒤 전체기간 CM1과 LST_TEU를 합산해 계산합니다.</li>
+    <li>화주별 합계 행의 판단기준 CM1/TEU는 화면에 보이는 화주 평균이 아니라, 선택한 POR+DLY 루트의 전체기간 평균을 표시합니다. SHK→MAA 예시에서는 이 합계가 약 613으로 표시됩니다.</li>
   </ul>
   <h3>영업사원별 도착국가 분석</h3>
   <p><strong>영업사원별</strong> 서브탭은 영업사원 단위의 WOS-3 부킹 성과를 먼저 보여준 뒤, 같은 데이터를 <strong>도착국가 기준</strong>으로 다시 쪼개서 보여줍니다. 포트 단위가 아니라 국가/그룹(<code>dest</code>) 기준이므로, 영업사원별 지역 포트폴리오와 특정 국가 쏠림을 빠르게 확인하는 용도입니다.</p>
@@ -564,11 +564,11 @@ document.addEventListener('DOMContentLoaded', function() {
   <h3>By Shipper</h3>
   <ul>
     <li><strong>Grade</strong> is A+B/C+D shipper scale classification.</li>
-    <li><strong>Route High</strong> is counted by booking, but the High/Low classification is decided by the full-period shipper-route basis. The same shipper can show different profitability when the booking lane changes.</li>
+    <li><strong>Route High</strong> counts booking volume, but the comparison is not made booking by booking. The system first groups full-period valid data by shipper+POR+DLY, compares that value with the same POR+DLY route average, and then applies the resulting classification to matching bookings.</li>
     <li><strong>CM1/TEU</strong> is profitability based on loaded Normal TEU in the selected month/filter scope. High BKG with low CM1/TEU should be reviewed for pricing or shipper mix.</li>
-    <li><strong>Basis CM1/TEU</strong> is the full-period Normal CM1/LST_TEU for the same shipper + origin port + destination port. It is not a High classification by itself; Route High/Low is decided by comparing it with the full-period average of the same route.</li>
-    <li>Example: on the SHK→MAA screen, <strong>WINCO GROUP LIMITED</strong> can show a Basis CM1/TEU around 609. If the full-period SHK→MAA route average is around 613, the shipper-route is classified as Route Low, so WOS-3 BKG 60 can still show Route Hi BKG 0.</li>
-    <li>The total row's Basis CM1/TEU deduplicates shipper-route combinations in the visible table, then divides their full-period CM1 by full-period LST_TEU.</li>
+    <li><strong>Basis CM1/TEU</strong> is shown only when one origin port and one destination port are selected. It ignores the week filter and shows the full-period Normal CM1/LST_TEU for the same shipper+POR+DLY.</li>
+    <li>Example: on the SHK→MAA screen, <strong>WINCO GROUP LIMITED</strong> can show a Basis CM1/TEU around 609. If the full-period SHK→MAA route average is around 613, WINCO's SHK→MAA combination is classified as Route Low, so WOS-3 BKG 60 can still show Route Hi BKG 0.</li>
+    <li>The total row's Basis CM1/TEU shows the full-period average of the selected POR+DLY route, not the weighted average of the visible shipper rows. In the SHK→MAA example, the total is around 613.</li>
   </ul>
   <h3>Salesperson x Destination Country Analysis</h3>
   <p>The <strong>By Salesperson</strong> sub-tab first summarizes WOS-3 booking performance by salesperson, then breaks the same shipper-level data down by <strong>destination country</strong>. This view uses country/group (<code>dest</code>), not destination port, so it is meant for reading each salesperson's country portfolio and concentration risk.</p>
@@ -788,19 +788,19 @@ document.addEventListener('DOMContentLoaded', function() {
 <h2 class="ko">구간별 고수익 부킹분류</h2><h2 class="en" style="display:none">Route Profit Classification</h2>
 <div class="card ko">
   <p>현재 가이드와 대시보드의 수익성 구분은 <strong>구간별 고수익/저수익</strong> 기준만 사용합니다.</p>
-  <p>전체기간 기준으로 POR Port + DLY Port 루트 평균 CM1/TEU와 화주+루트 CM1/TEU를 비교해 분류합니다.</p>
+  <p>전체기간의 Normal + CM1 유효 데이터를 기준으로, 각 화주+POR Port+DLY Port 조합의 CM1/TEU를 같은 POR+DLY 루트 전체 평균과 비교해 분류합니다.</p>
   <table>
     <tr><th>분류</th><th>기준</th></tr>
-    <tr><td style="color:#34a853;font-weight:600">구간별 고수익</td><td>전체기간 화주+루트 CM1/TEU ≥ 전체기간 루트(POR+DLY) 평균</td></tr>
-    <tr><td style="color:#ea4335">구간별 저수익</td><td>전체기간 화주+루트 CM1/TEU < 전체기간 루트 평균</td></tr>
+    <tr><td style="color:#34a853;font-weight:600">구간별 고수익</td><td>해당 부킹의 화주+POR+DLY 전체기간 CM1/TEU ≥ 동일 POR+DLY 루트 전체기간 평균</td></tr>
+    <tr><td style="color:#ea4335">구간별 저수익</td><td>해당 부킹의 화주+POR+DLY 전체기간 CM1/TEU < 동일 POR+DLY 루트 전체기간 평균</td></tr>
   </table>
-  <div class="tip"><strong>구간별 고수익</strong>은 루트(선적지+도착지) 기준 분류입니다. 화주별 화면의 <strong>판단기준 CM1/TEU</strong>는 이 전체기간 화주+루트 CM1/TEU를 보여주기 위해 추가한 보조 컬럼입니다.</div>
+  <div class="tip"><strong>부킹분류</strong>라는 표현은 화면에서 부킹 TEU를 고/저수익으로 집계한다는 뜻입니다. 비교 자체는 개별 부킹 1건의 CM1/TEU가 아니라, 전체기간 화주+POR+DLY 기준값과 동일 POR+DLY 루트 평균 사이에서 이루어집니다.</div>
   <h3>자주 묻는 질문</h3>
   <table>
     <tr><th>질문</th><th>답변</th></tr>
-    <tr><td>왜 같은 고객도 구간별 고/저수익이 달라질 수 있나요?</td><td>비교 기준이 고객 전체가 아니라 전체기간 POR+DLY 루트입니다. 같은 고객이라도 도착지, 운임, 비용 구조가 다르면 루트 평균 대비 위치가 달라질 수 있습니다.</td></tr>
+    <tr><td>왜 같은 고객도 구간별 고/저수익이 달라질 수 있나요?</td><td>비교 기준이 고객 전체가 아니라 화주+POR+DLY 조합입니다. 같은 고객이라도 선적포트, 도착포트, 운임, 비용 구조가 다르면 동일 POR+DLY 루트 평균 대비 위치가 달라질 수 있습니다.</td></tr>
     <tr><td>구간별 고수익%는 어떻게 읽나요?</td><td>선택 범위의 WOS-3 BKG 중 구간별 고수익으로 분류된 부킹의 FST_TEU 비중입니다. 비중이 높을수록 조기 확보 물량 안에 수익성 좋은 구간 물량이 많다는 뜻입니다.</td></tr>
-    <tr><td>선택 월 CM1/TEU가 높은데 구간별고수익이 0일 수 있나요?</td><td>가능합니다. 화면의 CM1/TEU는 선택 월/필터 범위의 WOS-3 실선적 기준이고, 구간별 고/저수익 판단은 전체기간 화주+루트 기준입니다. 이 차이를 확인하기 위해 화주별 표에 판단기준 CM1/TEU를 함께 표시합니다.</td></tr>
+    <tr><td>선택 월 CM1/TEU가 높은데 구간별고수익이 0일 수 있나요?</td><td>가능합니다. 화면의 CM1/TEU는 선택 월/필터 범위의 WOS-3 실선적 기준이고, 구간별 고/저수익 판단은 전체기간 화주+POR+DLY 기준값과 동일 POR+DLY 루트 평균 비교 기준입니다. 이 차이를 확인하기 위해 화주별 표에 판단기준 CM1/TEU를 함께 표시합니다.</td></tr>
     <tr><td>WINCO GROUP LIMITED처럼 판단기준 CM1/TEU가 609인데 구간별고수익 부킹이 0인 이유는?</td><td>판단기준 609는 해당 화주+SHK→MAA의 전체기간 CM1/TEU입니다. 고수익 여부는 이 값을 전체기간 SHK→MAA 루트 평균과 비교해 정합니다. 예시 화면 기준 루트 평균이 약 613으로 더 높으면 저수익으로 분류되므로, 6월 WOS-3 BKG 60이 있어도 구간별고수익 부킹은 0입니다.</td></tr>
     <tr><td>CM1/TEU가 0이거나 공란이면 어떻게 되나요?</td><td>수익성 판단 근거가 부족한 건은 구간별 고수익으로 집계하지 않거나 공란으로 표시될 수 있습니다. 수익성 화면에서는 CM1/TEU와 함께 확인하는 것이 좋습니다.</td></tr>
     <tr><td>구간수익 필터를 걸면 BKG/실선적도 바뀌나요?</td><td>지역/소석률 화면은 구간 기준으로 BKG와 실선적이 좁혀집니다. 화주별 화면은 선택된 고객의 전체 WOS-3 BKG/실선적을 유지하고, 구간별 고수익과 CM1/TEU 지표만 구간 기준으로 계산합니다.</td></tr>
@@ -809,20 +809,20 @@ document.addEventListener('DOMContentLoaded', function() {
 </div>
 <div class="card en" style="display:none">
   <p>The guide and dashboard profitability views currently use only <strong>Route High / Route Low</strong>.</p>
-  <p>Classification compares the full-period shipper-route CM1/TEU against the full-period POR+DLY route average.</p>
+  <p>Classification uses full-period valid Normal + CM1 data. It compares each shipper+POR+DLY CM1/TEU with the full-period average of the same POR+DLY route.</p>
   <table>
     <tr><th>Class</th><th>Criteria</th></tr>
-    <tr><td style="color:#34a853;font-weight:600">Route High</td><td>Full-period shipper-route CM1/TEU >= full-period route average</td></tr>
-    <tr><td style="color:#ea4335">Route Low</td><td>Full-period shipper-route CM1/TEU < full-period route average</td></tr>
+    <tr><td style="color:#34a853;font-weight:600">Route High</td><td>The booking's shipper+POR+DLY full-period CM1/TEU >= the same POR+DLY route's full-period average</td></tr>
+    <tr><td style="color:#ea4335">Route Low</td><td>The booking's shipper+POR+DLY full-period CM1/TEU < the same POR+DLY route's full-period average</td></tr>
   </table>
-  <div class="tip"><strong>Route High</strong> is a POR+DLY route-level classification. The <strong>Basis CM1/TEU</strong> column in By Shipper shows the full-period shipper-route value behind that classification.</div>
+  <div class="tip"><strong>Booking classification</strong> means booking TEU is counted as High/Low on screen. The comparison itself is not a one-booking CM1/TEU comparison; it is based on full-period shipper+POR+DLY value versus the same POR+DLY route average.</div>
   <h3>FAQ</h3>
   <table>
     <tr><th>Question</th><th>Answer</th></tr>
-    <tr><td>Why can the same customer show both Route High and Route Low?</td><td>The comparison is by full-period POR+DLY route, not by the customer's overall result. Destination, rate, and cost structure can change the shipper-route position versus each route average.</td></tr>
+    <tr><td>Why can the same customer show both Route High and Route Low?</td><td>The comparison is by shipper+POR+DLY combination, not by the customer's overall result. Origin port, destination port, rate, and cost structure can change the position versus each route average.</td></tr>
     <tr><td>How should I read Route High %?</td><td>It is the FST_TEU share of WOS-3 bookings classified as Route High within the selected scope. A higher share means more early-booked volume is coming from stronger-profit routes.</td></tr>
-    <tr><td>Can Route High be 0 even when selected-month CM1/TEU is high?</td><td>Yes. The visible CM1/TEU is based on selected-month/filter WOS-3 loaded volume, while Route High/Low uses the full-period shipper-route basis. Check Basis CM1/TEU in the By Shipper table to see the classification basis.</td></tr>
-    <tr><td>Why can WINCO GROUP LIMITED show Basis CM1/TEU 609 but Route Hi BKG 0?</td><td>The 609 is the full-period CM1/TEU for that shipper + SHK→MAA. The High/Low result is decided by comparing it with the full-period SHK→MAA route average. In the sample screen, the route average is around 613, so the shipper-route is Route Low and WOS-3 BKG 60 still shows Route Hi BKG 0.</td></tr>
+    <tr><td>Can Route High be 0 even when selected-month CM1/TEU is high?</td><td>Yes. The visible CM1/TEU is based on selected-month/filter WOS-3 loaded volume, while Route High/Low uses the full-period shipper+POR+DLY basis. Check Basis CM1/TEU in the By Shipper table to see the classification basis.</td></tr>
+    <tr><td>Why can WINCO GROUP LIMITED show Basis CM1/TEU 609 but Route Hi BKG 0?</td><td>The 609 is the full-period CM1/TEU for WINCO + SHK→MAA. The High/Low result is decided by comparing it with the full-period SHK→MAA route average. In the sample screen, the route average is around 613, so WINCO's SHK→MAA combination is Route Low and WOS-3 BKG 60 still shows Route Hi BKG 0.</td></tr>
     <tr><td>What happens when CM1/TEU is zero or blank?</td><td>Bookings without enough profitability basis may be blank or may not be counted as Route High. Review CM1/TEU together with the classification in profitability views.</td></tr>
     <tr><td>Does the route profit filter change BKG and LFT?</td><td>In regional/occupancy views, BKG and LFT are narrowed by the route classification. In shipper views, total WOS-3 BKG/LFT stays at the selected customer level, while Route High and CM1/TEU use route-based metrics.</td></tr>
     <tr><td>Does Route High always mean a good booking?</td><td>It means the booking is above the route average, but volume size, LFT rate, cancel behavior, and BSA situation still matter. High route profit with weak LFT may not become actual performance.</td></tr>
@@ -848,7 +848,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <tr><td><strong>실선적 (Normal)</strong></td><td>LST_TEU</td><td>실제 선적 TEU (LST_Status='Normal')</td></tr>
     <tr><td><strong>WOS 단계별 실선적률용 실선적</strong></td><td>LST_TEU</td><td>실제 선적 TEU 기준. LST_TEU가 FST_TEU보다 커지면 실선적률은 100%를 넘을 수 있음</td></tr>
     <tr><td><strong>CM1/TEU</strong></td><td>CM1 / LST_TEU</td><td>Normal + CM1 있는 건만</td></tr>
-    <tr><td><strong>판단기준 CM1/TEU</strong></td><td>전체기간 화주+POR+DLY CM1 / LST_TEU</td><td>구간별 고/저수익 분류 기준 확인용</td></tr>
+    <tr><td><strong>판단기준 CM1/TEU</strong></td><td>전체기간 화주+POR+DLY CM1 / LST_TEU</td><td>화주별 표에서 POR/DLY 포트를 각각 1개 선택한 경우만 표시. 주차 필터와 무관합니다.</td></tr>
   </table>
   <h3>자주 헷갈리는 지표</h3>
   <table>
@@ -856,8 +856,8 @@ document.addEventListener('DOMContentLoaded', function() {
     <tr><td><strong>소석률</strong></td><td>실선적(Normal) / BSA</td><td>선복 사용률 관점입니다. WOS-3 부킹만 보는 지표가 아닙니다.</td></tr>
     <tr><td><strong>3주전BKG/BSA</strong></td><td>WOS-3 BKG / BSA</td><td>출항 3주 전 확보 물량을 BSA와 비교합니다. 부킹이 BSA보다 많으면 100%를 넘을 수 있습니다.</td></tr>
     <tr><td><strong>실선적률</strong></td><td>WOS-3 실선적 / WOS-3 BKG</td><td>부킹이 실제 선적으로 남는 비율입니다. 캔슬 관리와 부킹 품질 판단에 사용합니다.</td></tr>
-    <tr><td><strong>구간별고수익</strong></td><td>전체기간 화주+루트 CM1/TEU vs 전체기간 POR+DLY 루트 평균</td><td>현재 수익성 구분에 사용하는 구간 단위 분류입니다.</td></tr>
-    <tr><td><strong>판단기준 CM1/TEU</strong></td><td>전체기간 화주+루트 CM1/TEU</td><td>화주별 표에서 현재 CM1/TEU와 구간별고수익 분류 기준이 다를 때 원인을 확인하는 보조 지표입니다.</td></tr>
+    <tr><td><strong>구간별고수익</strong></td><td>해당 부킹의 화주+POR+DLY 기준값 vs 동일 POR+DLY 전체기간 루트 평균</td><td>부킹은 이 사전 분류값을 따라 고/저수익 TEU로 집계됩니다.</td></tr>
+    <tr><td><strong>판단기준 CM1/TEU</strong></td><td>행: 전체기간 화주+POR+DLY CM1/TEU / 합계: 동일 POR+DLY 루트 평균</td><td>현재 CM1/TEU와 구간별고수익 분류 기준이 다를 때 원인을 확인하는 보조 지표입니다.</td></tr>
     <tr><td><strong>A+B / C+D</strong></td><td>화주 등급</td><td>규모/등급 관점이며 수익성 태그가 아닙니다.</td></tr>
   </table>
   <div class="tip"><strong>핵심:</strong> 소석률은 선복 사용률, 실선적률은 부킹 전환 품질, CM1/TEU는 수익성, WOS는 부킹 접수 타이밍입니다. 네 지표를 함께 봐야 물량의 양과 질을 동시에 판단할 수 있습니다.</div>
@@ -883,7 +883,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <tr><td><strong>WOS-stage LFT for rate</strong></td><td>LST_TEU</td><td>Actual loaded TEU. LFT Rate can exceed 100% when LST_TEU is greater than FST_TEU</td></tr>
     <tr><td><strong>LFT (Normal)</strong></td><td>LST_TEU</td><td>Actual shipment TEU (LST_Status='Normal')</td></tr>
     <tr><td><strong>CM1/TEU</strong></td><td>CM1 / LST_TEU</td><td>Normal with CM1 only</td></tr>
-    <tr><td><strong>Basis CM1/TEU</strong></td><td>Full-period shipper + POR+DLY CM1 / LST_TEU</td><td>Reference value for Route High/Low classification</td></tr>
+    <tr><td><strong>Basis CM1/TEU</strong></td><td>Full-period shipper + POR+DLY CM1 / LST_TEU</td><td>Shown only when one POR and one DLY port are selected in By Shipper. It ignores the week filter.</td></tr>
   </table>
   <h3>Commonly Confused Metrics</h3>
   <table>
@@ -891,8 +891,8 @@ document.addEventListener('DOMContentLoaded', function() {
     <tr><td><strong>Occupancy</strong></td><td>LFT(Normal) / BSA</td><td>Capacity usage view. It is not limited to WOS-3 bookings.</td></tr>
     <tr><td><strong>WOS-3 BKG/BSA</strong></td><td>WOS-3 BKG / BSA</td><td>Compares early-booked volume against BSA. It can exceed 100% if bookings exceed BSA.</td></tr>
     <tr><td><strong>LFT Rate</strong></td><td>WOS-3 LFT / WOS-3 BKG</td><td>Booking-to-shipment conversion quality. Use it for cancel and booking-quality review.</td></tr>
-    <tr><td><strong>Route High</strong></td><td>Full-period shipper-route CM1/TEU vs full-period POR+DLY route average</td><td>The route-level classification used by current profitability views.</td></tr>
-    <tr><td><strong>Basis CM1/TEU</strong></td><td>Full-period shipper-route CM1/TEU</td><td>A helper metric in By Shipper that explains why current CM1/TEU and Route High may not move together.</td></tr>
+    <tr><td><strong>Route High</strong></td><td>The booking's shipper+POR+DLY basis vs the same POR+DLY full-period route average</td><td>Bookings are counted as High/Low using this precomputed classification.</td></tr>
+    <tr><td><strong>Basis CM1/TEU</strong></td><td>Row: full-period shipper+POR+DLY CM1/TEU / Total: same POR+DLY route average</td><td>A helper metric in By Shipper that explains why current CM1/TEU and Route High may not move together.</td></tr>
     <tr><td><strong>A+B / C+D</strong></td><td>Shipper grade</td><td>Scale/grade view, not a profitability tag.</td></tr>
   </table>
   <div class="tip"><strong>Key idea:</strong> Occupancy measures capacity usage, LFT rate measures conversion quality, CM1/TEU measures profitability, and WOS measures booking timing. Use all four together to judge both volume quantity and quality.</div>
