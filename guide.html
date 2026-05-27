@@ -284,7 +284,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <li><strong>주차</strong>를 선택하면 선택 월은 해당 주 실적, 과거 월 비교는 주평균으로 표시됩니다. 특정 주의 상황을 과거 월 평균과 비교할 때 사용합니다.</li>
     <li><strong>구간수익/등급/영업사원</strong>은 주로 화주 기반 데이터에 강하게 적용됩니다. 구간수익은 루트별 고/저 분류 기준이며, 영업사원 필터는 `shipper` 데이터 기반 화면에서 가장 정확합니다.</li>
     <li>화주별 화면에서 구간수익 필터는 해당 구간수익을 가진 화주를 선별합니다. BKG/실선적은 선별된 화주의 전체 WOS-3 값이고, 구간별고수익 및 CM1/TEU는 구간 기준 값으로 계산합니다.</li>
-    <li><strong>판단기준 CM1/TEU</strong>는 구간별 고/저수익 분류에 사용한 전체기간 화주+선적포트+도착포트 기준 CM1/TEU입니다. 선택 월의 CM1/TEU와 다를 수 있습니다.</li>
+    <li><strong>판단기준 CM1/TEU</strong>는 '부킹 단위(화주별)'로 계산된 CM1/TEU를 기준으로 합니다. 비교 대상은 (1) 동일 루트(선적지 POR + 도착지 DLY)의 루트 평균 또는 (2) 선택한 월의 "동월 전체 부킹(동월 전체 화주 기준)" 평균입니다. 즉, 판정은 '화주(부킹 단위) 대 루트/동월 전체 평균'으로 이루어집니다. 문서나 대시보드에는 "동월 전체 부킹", "루트(POR+DLY) 평균"처럼 명확한 표현을 사용해 주세요.</li>
   </ul>
   <div class="tip"><strong>추천:</strong> 처음에는 팀+월만 선택해서 전체 구조를 보고, 이상치가 보이면 도착국가/도착포트/영업사원 순서로 좁히는 방식이 가장 빠릅니다.</div>
 </div>
@@ -312,7 +312,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <li><strong>Week</strong> changes the selected month to actual weekly data while past months are shown as weekly averages. Use it to compare one target week against historical monthly averages.</li>
     <li><strong>Route profit/grade/salesperson</strong> are most precise in shipper-based views. Route profit uses the route high/low classification.</li>
     <li>In shipper views, the route profit filter selects shippers that have matching route high/low volume. BKG/LFT stay as the selected shipper's total WOS-3 values, while Route Hi and CM1/TEU use route-basis metrics.</li>
-    <li><strong>Basis CM1/TEU</strong> is the full-period shipper + origin port + destination port CM1/TEU used for Route High/Low classification. It can differ from the selected-month CM1/TEU.</li>
+    <li><strong>Basis CM1/TEU</strong> is calculated per booking unit (by shipper). The comparisons are made against (1) the route average (origin POR + dest DLY) or (2) the selected month's overall bookings (month-wide shipper average). In other words, classification compares booking-level shipper CM1/TEU to route or month averages. Avoid wording like "full-period shipper+route"; prefer "selected-month overall bookings" and "route (POR+DLY) average" for clarity.</li>
   </ul>
   <div class="tip"><strong>Recommended:</strong> Start with team + month, then narrow by destination country, destination port, and salesperson only after you see an abnormal pattern.</div>
 </div>
