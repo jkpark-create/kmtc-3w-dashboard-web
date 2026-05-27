@@ -405,6 +405,8 @@ function normalizeMetricKeys(data) {
   ['monthly', 'weekly', 'shipper'].forEach(section => {
     (data[section] || []).forEach(row => {
       if (row.week !== undefined && row.week_start_date === undefined) row.week_start_date = row.week;
+      if (row.rhn !== undefined && row.w3_route_hi_norm_lst === undefined) row.w3_route_hi_norm_lst = row.rhn;
+      if (row.rhc !== undefined && row.w3_route_hi_cm1_norm === undefined) row.w3_route_hi_cm1_norm = row.rhc;
       Object.entries(renameMap).forEach(([oldKey, newKey]) => {
         if (Object.prototype.hasOwnProperty.call(row, oldKey)) {
           if (!Object.prototype.hasOwnProperty.call(row, newKey)) row[newKey] = row[oldKey];
@@ -452,7 +454,7 @@ let _multiSelectCloseBound = false;
 let _cascadeTimer = null;
 let _renderTimer = null;
 let _filterMemoKey = '';
-let _filterMemo = {monthly:new Map(), weekly:new Map(), shipper:new Map(), bsa:new Map()};
+let _filterMemo = {monthly:new Map(), weekly:new Map(), shipper:new Map(), bsa:new Map(), occMonthly:new Map(), occWeekly:new Map(), occWeeklyAll:new Map()};
 let _monthWeeksCache = new Map();
 
 function initFilters() {
@@ -783,7 +785,7 @@ function filterStateKey() {
 
 function resetFilterMemo() {
   _filterMemoKey = filterStateKey();
-  _filterMemo = {monthly:new Map(), weekly:new Map(), shipper:new Map(), bsa:new Map()};
+  _filterMemo = {monthly:new Map(), weekly:new Map(), shipper:new Map(), bsa:new Map(), occMonthly:new Map(), occWeekly:new Map(), occWeeklyAll:new Map()};
 }
 
 function memoizedFilter(section, key, build) {
@@ -1030,6 +1032,48 @@ function filterWeekly(month) {
   });
 }
 
+function gradeFilterActive() {
+  const grade = gv('fGrade');
+  return grade === 'ab' || grade === 'cd';
+}
+
+function applyGradeFilterRows(d) {
+  const grade = gv('fGrade');
+  if (grade === 'ab') return d.filter(r => r.grade === 'A+B');
+  if (grade === 'cd') return d.filter(r => r.grade === 'C+D');
+  return d;
+}
+
+function filterOccupancyFromShipper(month, useSelectedWeeks) {
+  const weeks = useSelectedWeeks ? selectedWeeks() : [];
+  const key = `${month || 'ALL'}|${weeks.join(',') || 'ALL'}`;
+  return memoizedFilter(useSelectedWeeks ? 'occWeekly' : 'occMonthly', key, () => {
+    let d = applyGlobalFilter(DATA.shipper || [], true);
+    d = applyGradeFilterRows(d);
+    if (month) d = d.filter(r => r.YYYYMM === month);
+    if (weeks.length) {
+      const weekSet = new Set(weeks);
+      d = d.filter(r => weekSet.has(r.week_start_date));
+    }
+    return d;
+  });
+}
+
+function filterOccupancyMonthly(month) {
+  return gradeFilterActive() ? filterOccupancyFromShipper(month, false) : filterMonthly(month);
+}
+
+function filterOccupancyWeekly(month) {
+  return gradeFilterActive() ? filterOccupancyFromShipper(month, true) : filterWeekly(month);
+}
+
+function filterOccupancyAllWeekly() {
+  return memoizedFilter('occWeeklyAll', 'ALL', () => {
+    if (!gradeFilterActive()) return applyGlobalFilter(DATA.weekly || [], true);
+    return applyGradeFilterRows(applyGlobalFilter(DATA.shipper || [], true));
+  });
+}
+
 function filterShipper(month) {
   if (!DATA.shipper) return [];
   const weeks = selectedWeeks();
@@ -1227,7 +1271,7 @@ function renderTab1() {
   const wk = DATA.wpm[month] || 4;
   const vk = viewKey(), vl = viewLabel(), bk = bsaViewKey();
   const _weekSel = hasWeekSelection();
-  const fd = _weekSel ? filterWeekly(month) : filterMonthly(month);
+  const fd = _weekSel ? filterOccupancyWeekly(month) : filterOccupancyMonthly(month);
   // BSA: 주차 선택 시 해당 주 BSA (WW 필터)
   const bsaTotal = _weekSel ? sum(filterBSA(month), 'teu_bsa') : sum(filterBSA(month, null), 'teu_bsa');
 
@@ -1282,19 +1326,19 @@ function renderTab1() {
   function _getMonthData(m, key) {
     if (isWeekSelected && m === month) {
       // 해당월: weekly 데이터 (해당 주만)
-      return profitSum(filterWeekly(m), key);
+      return profitSum(filterOccupancyWeekly(m), key);
     } else if (isWeekSelected) {
       // 과거월: monthly / 주수 x 선택주수
-      return profitSum(filterMonthly(m), key) * weekScaleForMonth(m);
+      return profitSum(filterOccupancyMonthly(m), key) * weekScaleForMonth(m);
     } else {
-      return profitSum(filterMonthly(m), key);
+      return profitSum(filterOccupancyMonthly(m), key);
     }
   }
   function _getMonthMetric(m, key) {
     if (isWeekSelected && m === month) {
-      return profitSum(filterWeekly(m), key);
+      return profitSum(filterOccupancyWeekly(m), key);
     }
-    const v = profitSum(filterMonthly(m), key);
+    const v = profitSum(filterOccupancyMonthly(m), key);
     return isWeekSelected ? v * weekScaleForMonth(m) : v;
   }
   function _getBSA(m) {
@@ -1451,7 +1495,7 @@ function buildOccTrendByCountry(topN = 8) {
   const addBsa = (c, p, v) => { if (!c) return; const k = c + '|' + p; bsaByCP.set(k, (bsaByCP.get(k) || 0) + v); };
 
   if (isWeek) {
-    const wkly = applyGlobalFilter(DATA.weekly || [], true);
+    const wkly = filterOccupancyAllWeekly();
     const byWeek = {};
     wkly.forEach(r => { const w = r.week_start_date; if (!w) return; (byWeek[w] = byWeek[w] || []).push(r); });
     periods.forEach(p => {
@@ -1468,7 +1512,7 @@ function buildOccTrendByCountry(topN = 8) {
     });
   } else {
     periods.forEach(p => {
-      const fd = filterMonthly(p.key);
+      const fd = filterOccupancyMonthly(p.key);
       const bkgByC = {};
       fd.forEach(r => { const c = r[vk]; if (!c) return; (bkgByC[c] = bkgByC[c] || []).push(r); });
       Object.entries(bkgByC).forEach(([c, arr]) => addBkg(c, p.key, profitSum(arr, 'w3_fst')));
@@ -1565,7 +1609,7 @@ function groupByKey(arr, key) {
 
 function buildSummaryTable(months) {
   const vk = viewKey(), vl = viewLabel(), bk = bsaViewKey();
-  const allFd = filterMonthly(null);
+  const allFd = filterOccupancyMonthly(null);
   const allBsa = filterBSA(null, null);
   const bkgTotals = {}, bsaTotals = {};
   allFd.forEach(r => {
@@ -1624,10 +1668,10 @@ function buildSummaryTable(months) {
   function _tblData(m, key, byItem) {
     if (_ws && m === _curMonth) {
       // 선택된 주차: 해당 주 실적
-      const d = filterWeekly(m);
+      const d = filterOccupancyWeekly(m);
       return byItem ? profitSum(d.filter(r=>r[vk]===byItem), key) : profitSum(d, key);
     }
-    const d = filterMonthly(m);
+    const d = filterOccupancyMonthly(m);
     const v = byItem ? profitSum(d.filter(r=>r[vk]===byItem), key) : profitSum(d, key);
     return _ws ? v * weekScaleForMonth(m) : v;
   }
@@ -1651,7 +1695,7 @@ function buildSummaryTable(months) {
   }
   function _tblShipperCountMaps(m) {
     if (_shipperCountCache.has(m)) return _shipperCountCache.get(m);
-    let d = applyGlobalFilter(DATA.shipper || [], true).filter(r=>r.YYYYMM===m);
+    let d = applyGradeFilterRows(applyGlobalFilter(DATA.shipper || [], true)).filter(r=>r.YYYYMM===m);
     if (_ws && m === _curMonth) {
       const weekSet = new Set(selectedWeeks());
       d = d.filter(r=>weekSet.has(r.week_start_date));
@@ -1701,7 +1745,7 @@ function buildSummaryTable(months) {
     return _ws ? bTotal * weekScaleForMonth(m) : bTotal;
   }
   function _tblTotalData(m, key, mode) {
-    const v = profitSum(filterMonthly(m), key);
+    const v = profitSum(filterOccupancyMonthly(m), key);
     return mode === 'weekAvg' ? v / (DATA.wpm[m]||4) : v;
   }
   function _tblTotalBSA(m, mode) {

@@ -282,7 +282,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <li><strong>팀/선적지/선적포트/도착지/도착포트</strong>는 물리적인 운송 루트 범위를 좁히는 필터입니다. 지역별, 소석률, 수익성 화면에 모두 큰 영향을 줍니다.</li>
     <li><strong>보기</strong>는 지역을 묶는 축을 바꿉니다. 도착지별은 시장/수요 관점, 선적지별은 영업/공급 출발지 관점으로 읽으면 됩니다.</li>
     <li><strong>주차</strong>를 선택하면 선택 월은 해당 주 실적, 과거 월 비교는 주평균으로 표시됩니다. 특정 주의 상황을 과거 월 평균과 비교할 때 사용합니다.</li>
-    <li><strong>구간수익/등급/영업사원</strong>은 주로 화주 기반 데이터에 강하게 적용됩니다. 구간수익은 루트별 고/저 분류 기준이며, 영업사원 필터는 `shipper` 데이터 기반 화면에서 가장 정확합니다.</li>
+    <li><strong>구간수익/등급/영업사원</strong>은 주로 화주 기반 데이터에 강하게 적용됩니다. 등급 필터는 ① 소석률 현황의 BKG/실선적/CM1 및 화주수에도 적용되며, BSA는 등급별로 나뉘지 않는 전체 선복 기준으로 유지됩니다. 영업사원 필터는 `shipper` 데이터 기반 화면에서 가장 정확합니다.</li>
     <li>화주별 화면에서 구간수익 필터는 고/저수익 분류가 붙은 화주를 선별합니다. BKG/실선적은 선택 범위의 WOS-3 값이고, 구간별고수익은 각 부킹이 속한 화주+POR+DLY 조합의 전체기간 분류값을 따라 집계됩니다.</li>
     <li><strong>판단기준 CM1/TEU</strong>는 선적포트와 도착포트를 각각 1개 선택했을 때만 표시됩니다. 주차 필터와 관계없이 전체기간 기준을 보여주며, 화주 행은 해당 화주+POR+DLY 기준값, 합계 행은 해당 POR+DLY 루트 전체 평균입니다.</li>
   </ul>
@@ -310,7 +310,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <li><strong>Team/origin/origin port/destination/destination port</strong> narrow the physical route scope and affect occupancy, trend, and profitability views.</li>
     <li><strong>View</strong> changes the regional grouping axis. Destination view is useful for market demand; origin view is useful for sales/supply origin management.</li>
     <li><strong>Week</strong> changes the selected month to actual weekly data while past months are shown as weekly averages. Use it to compare one target week against historical monthly averages.</li>
-    <li><strong>Route profit/grade/salesperson</strong> are most precise in shipper-based views. Route profit uses the route high/low classification.</li>
+    <li><strong>Route profit/grade/salesperson</strong> are most precise in shipper-based views. The Grade filter also applies to BKG/LFT/CM1 and shipper counts in ① Occupancy, while BSA remains total capacity because BSA is not split by shipper grade.</li>
     <li>In shipper views, the route profit filter selects shippers with matching High/Low classification. BKG/LFT are WOS-3 values in the selected scope, while Route Hi is counted using each booking's precomputed shipper+POR+DLY full-period classification.</li>
     <li><strong>Basis CM1/TEU</strong> is shown only when one origin port and one destination port are selected. It ignores the week filter: shipper rows show that shipper+POR+DLY full-period value, and the total row shows the full-period average of the selected POR+DLY route.</li>
   </ul>
@@ -387,6 +387,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <div class="card ko">
   <h3>KPI 카드</h3>
   <p>전체BKG | 실선적(Normal) | 3주전BKG | <strong>3주전 BKG (not cancel)</strong> | 3주전실선적(Normal) | BSA | 소석률 | 실선적률 | CM1/TEU</p>
+  <div class="tip"><strong>등급 필터:</strong> A+B 또는 C+D를 선택하면 BKG, 실선적, 실선적률, CM1/TEU, 구간별고수익, 화주수는 해당 등급 화주 기준으로 좁혀집니다. BSA는 등급별 선복이 없으므로 전체 BSA를 그대로 사용합니다.</div>
   <table>
     <tr><th>지표</th><th>의미</th><th>높거나 낮을 때 해석</th></tr>
     <tr><td><strong>전체BKG</strong></td><td>조회 범위 전체 부킹 TEU</td><td>시장 전체 물량 규모를 봅니다. BSA와 함께 봐야 과부족 판단이 가능합니다.</td></tr>
@@ -415,6 +416,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <div class="card en" style="display:none">
   <h3>KPI Cards</h3>
   <p>Total BKG | LFT(Normal) | WOS-3 BKG | <strong>WOS-3 BKG (not cancel)</strong> | WOS-3 LFT | BSA | Occupancy | LFT Rate | CM1/TEU</p>
+  <div class="tip"><strong>Grade filter:</strong> Selecting A+B or C+D narrows BKG, LFT, LFT rate, CM1/TEU, Route High, and shipper counts to that grade. BSA remains total capacity because BSA is not allocated by shipper grade.</div>
   <table>
     <tr><th>Metric</th><th>Meaning</th><th>How to Interpret</th></tr>
     <tr><td><strong>Total BKG</strong></td><td>Total booking TEU in the selected scope</td><td>Read with BSA to judge shortage or excess.</td></tr>
