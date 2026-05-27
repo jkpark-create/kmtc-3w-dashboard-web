@@ -8,7 +8,7 @@
 // Whitelist of countries / ports allowed in filters. Anything outside this list
 // is excluded from the Country/Port dropdowns (and from the resulting query scope).
 const WHITELIST_ORIGINS = [
-  { country: 'CN', label: { ko: '중국 / China', en: 'China' }, ports: ['CN_SHA','CN_NBO','CN_TAO','CN_XGG','CN_DLC','CN_LYG','CN_SHK_DCB','CN_XMN','CN_NNS'] },
+  { country: 'CN', label: { ko: '중국 / China', en: 'China' }, ports: ['CN_SHA','CN_NKG','CN_NBO','CN_TAO','CN_XGG','CN_DLC','CN_LYG','CN_SHK_DCB','CN_XMN','CN_NNS'] },
   { country: 'HK', label: { ko: '홍콩 / Hong Kong', en: 'Hong Kong' }, ports: ['HK'] },
   { country: 'TW', label: { ko: '대만 / Taiwan', en: 'Taiwan' }, ports: ['TW'] },
   { country: 'TH', label: { ko: '태국 / Thailand', en: 'Thailand' }, ports: ['TH'] },
@@ -130,7 +130,7 @@ const I18N = {
       origin: '선적지', sales: '영업사원', share25: "'25 비중", w3_2025: "'25 3W<br>/BSA",
       bk3w: '3W Booking (vs BSA)', lf3w: 'Actual Lifting Rate', hp3w: 'High-Profit Rate',
       ac: 'No. of A/C (Q1)', acTotal: 'Total', ac3w: '3W', acPct: '%',
-      target: 'Target', perform: 'Perform', progress: 'Progress', gap: '+/-',
+      target: 'Target', perform: 'Perform', progress: 'Progress', gap: '+/-', achievement: '달성률',
       shipper: '화주', grade: '등급', bkgUnique: '고유 BKG_NO', bkgCnt: 'BKG 건',
       fstTeu: 'FST TEU', lstTeu: 'LST TEU', w3fst: 'WOS-3 FST', w3lst: 'WOS-3 LST',
       lstRate: '실선적률(W3)', hiShare: '고수익 비중(W3)', cm1: 'CM1',
@@ -193,7 +193,7 @@ const I18N = {
       origin: 'Origin', sales: 'Salesperson', share25: "'25 share", w3_2025: "'25 W3<br>/BSA",
       bk3w: '3W Booking (vs BSA)', lf3w: 'Actual Lifting Rate', hp3w: 'High-Profit Rate',
       ac: 'No. of A/C (Q1)', acTotal: 'Total', ac3w: '3W', acPct: '%',
-      target: 'Target', perform: 'Perform', progress: 'Progress', gap: '+/-',
+      target: 'Target', perform: 'Perform', progress: 'Progress', gap: '+/-', achievement: 'Achv.%',
       shipper: 'Shipper', grade: 'Grade', bkgUnique: 'Unique BKG_NO', bkgCnt: 'BKG count',
       fstTeu: 'FST TEU', lstTeu: 'LST TEU', w3fst: 'WOS-3 FST', w3lst: 'WOS-3 LST',
       lstRate: 'LFT% (W3)', hiShare: 'Hi-Profit% (W3)', cm1: 'CM1',
@@ -303,6 +303,15 @@ function gapClass(gap) {
 function safeRatio(num, den) {
   if (!den || Number.isNaN(num) || Number.isNaN(den)) return null;
   return num / den;
+}
+function achievementRate(kpi, performKey) {
+  const rawTarget = kpi?.target;
+  const rawPerform = kpi?.[performKey];
+  if (rawTarget === null || rawTarget === undefined || rawPerform === null || rawPerform === undefined) return null;
+  const target = Number(rawTarget);
+  const perform = Number(rawPerform);
+  if (!Number.isFinite(target) || target === 0 || !Number.isFinite(perform)) return null;
+  return perform / target;
 }
 function normalLstTeu(b) {
   if (Object.prototype.hasOwnProperty.call(b, 'norm_lst_teu')) return Number(b.norm_lst_teu) || 0;
@@ -1490,14 +1499,14 @@ function renderSummaryTable(rows, q) {
     <th rowspan="2">${cols.sales}</th>
     <th rowspan="2" class="narrow-col">${cols.share25}</th>
     <th rowspan="2" class="narrow-col">${cols.w3_2025}</th>
-    <th colspan="3">${cols.bk3w}</th>
-    <th colspan="3">${cols.lf3w}</th>
-    <th colspan="3">${cols.hp3w}</th>
+    <th colspan="4">${cols.bk3w}</th>
+    <th colspan="4">${cols.lf3w}</th>
+    <th colspan="4">${cols.hp3w}</th>
     <th colspan="3">${cols.ac}</th>
   </tr><tr>
-    <th>${cols.target}</th><th>${performLabel}</th><th>${cols.gap}</th>
-    <th>${cols.target}</th><th>${performLabel}</th><th>${cols.gap}</th>
-    <th>${cols.target}</th><th>${performLabel}</th><th>${cols.gap}</th>
+    <th>${cols.target}</th><th>${performLabel}</th><th>${cols.gap}</th><th>${cols.achievement}</th>
+    <th>${cols.target}</th><th>${performLabel}</th><th>${cols.gap}</th><th>${cols.achievement}</th>
+    <th>${cols.target}</th><th>${performLabel}</th><th>${cols.gap}</th><th>${cols.achievement}</th>
     <th>${cols.acTotal}</th><th>${cols.ac3w}</th><th>${cols.acPct}</th>
   </tr></thead><tbody>`;
 
@@ -1515,9 +1524,9 @@ function renderSummaryTable(rows, q) {
       <td class="txt">${escapeHtml(r.name)}</td>
       <td class="narrow-col">${fmtPct(r.share_2025)}</td>
       <td class="narrow-col" title="${r.w3_2025_teu ? `2025 WOS-3 BKG: ${fmtNum(r.w3_2025_teu)} TEU` : ''}">${fmtPct(r.booking_base_2025)}</td>
-      <td>${fmtPct(bk.target)}</td><td>${fmtPct(bk[performKey])}</td><td class="pct ${gapClass(bk.gap)}">${fmtPctSigned(bk.gap)}</td>
-      <td>${fmtPct(lf.target)}</td><td>${fmtPct(lf[performKey])}</td><td class="pct ${gapClass(lf.gap)}">${fmtPctSigned(lf.gap)}</td>
-      <td>${fmtPct(hp.target)}</td><td>${fmtPct(hp[performKey])}</td><td class="pct ${gapClass(hp.gap)}">${fmtPctSigned(hp.gap)}</td>
+      <td>${fmtPct(bk.target)}</td><td>${fmtPct(bk[performKey])}</td><td class="pct ${gapClass(bk.gap)}">${fmtPctSigned(bk.gap)}</td><td class="pct">${fmtPct(achievementRate(bk, performKey))}</td>
+      <td>${fmtPct(lf.target)}</td><td>${fmtPct(lf[performKey])}</td><td class="pct ${gapClass(lf.gap)}">${fmtPctSigned(lf.gap)}</td><td class="pct">${fmtPct(achievementRate(lf, performKey))}</td>
+      <td>${fmtPct(hp.target)}</td><td>${fmtPct(hp[performKey])}</td><td class="pct ${gapClass(hp.gap)}">${fmtPctSigned(hp.gap)}</td><td class="pct">${fmtPct(achievementRate(hp, performKey))}</td>
       <td>${fmtNum(r.accounts?.total)}</td>
       <td>${fmtNum(r.accounts?.w3)}</td>
       <td>${fmtPct(r.accounts?.pct)}</td>
