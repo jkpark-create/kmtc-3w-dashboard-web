@@ -3930,7 +3930,7 @@ function renderRoutes(analysis) {
         </div>
       </td>
       <td class="num">${fmt(row.currentTeu)}<br><span class="subline">${fmt(row.currentShipperCount)}${t("labels.shippers")} ${signed(row.shipperDelta)}</span></td>
-      <td class="num">${row.bsaTeu ? fmt(row.bsaTeu) : "-"}<br><span class="subline">${row.bsaTeu ? `소석 ${rpct(row.bsaUtil)} · 예상Gap ${fmt(row.projectedGap)}` : ""}</span></td>
+      <td class="num">${row.bsaTeu ? fmt(row.bsaTeu) : "-"}<br><span class="subline">${row.bsaTeu ? (state.lang === "en" ? `Util ${rpct(row.bsaUtil)} · Gap ${fmt(row.projectedGap)}` : `소석 ${rpct(row.bsaUtil)} · 예상Gap ${fmt(row.projectedGap)}`) : ""}</span></td>
       <td>${paceCell(row)}</td>
       <td>
         <div class="metric-pair">
@@ -4034,7 +4034,7 @@ function renderShippers(analysis) {
       <td class="num ${row.delta < 0 ? "neg" : "pos"}">${signed(row.delta)}<br><span class="subline">${pct(row.deltaPct)}</span></td>
       <td class="num">${fmt(row.currentW3Teu)}<br><span class="${row.w3Delta < 0 ? "neg" : "pos"}">${signed(row.w3Delta)}</span></td>
       <td class="action-cell">${actionText(row.focusAction)}</td>
-      <td class="judgment-cell">${issueChip(row.focusReason)}<div class="subline judgment-text">${riskMeaning(row.focusReason)} · ${actionText(row.reason)}</div></td>
+      <td class="judgment-cell">${issueChip(row.focusReason)}<div class="subline judgment-text">${riskMeaning(row.focusReason)} · ${reasonText(row.reason)}</div></td>
     </tr>
   `).join("");
 }
@@ -5115,9 +5115,44 @@ function actionText(text) {
     "회복/선행부킹 가능성 확인": "Check recovery and advance-booking feasibility.",
     "Gap 기여 회복 가능 TEU 확인": "Check recoverable TEU that contributes to the gap.",
     "회복 가능 TEU 확인": "Check recoverable TEU.",
-    "추세 관찰": "Monitor trend."
+    "추세 관찰": "Monitor trend.",
+    "영업 확인 및 경쟁사/운임/선복 이슈 확인": "Check sales status and competitor, rate, and space issues.",
+    "감소 사유 확인 후 회복 가능 물량 협의": "Confirm the decline cause and discuss recoverable volume.",
+    "담당 화주 선적 계획 재확인": "Recheck the customer's shipment plan.",
+    "차주 이후 선적 계획과 경쟁사 전환 여부 확인": "Check upcoming shipment plans and competitor switching.",
+    "3주전 확보 물량 감소 원인과 보완 부킹 가능성 확인": "Check the cause of the 3W volume drop and possible make-up bookings.",
+    "고수익 화주 선적 계획과 운임 조건 우선 점검": "Prioritize high-profit customers' shipment plans and rate conditions.",
+    "담당 화주 3주전 부킹 회복 가능성 확인": "Check recovery potential of the customer's 3W bookings.",
+    "부킹 품질과 취소 사유 확인": "Check booking quality and cancellation reasons.",
+    "조기 부킹 유도와 선복 예측 리스크 확인": "Encourage early booking and review space-forecast risk.",
+    "거래 조건과 반복 가능성 확인": "Check deal terms and whether the volume will recur.",
+    "선복과 장비 대응 가능 여부 확인": "Check whether space and equipment can support it.",
+    "반복 물량 여부와 선복 대응 가능성 확인": "Check whether the volume recurs and whether space can support it."
   };
   return map[text] || text || "";
+}
+
+function reasonText(text) {
+  if (state.lang !== "en") return text || "";
+  const src = String(text || "");
+  const patterns = [
+    [/^기준 (.+?) TEU에서 현재 선적 없음$/, "No current shipment (baseline $1 TEU)"],
+    [/^3주전 부킹 기준 (.+?) TEU에서 현재 0 TEU$/, "0 TEU now (3W baseline $1 TEU)"],
+    [/^3주전 부킹 TEU (.+?) 감소$/, "3W booking TEU down $1"],
+    [/^3주전 부킹 기준 대비 (.+?) TEU 감소$/, "Down $1 TEU vs 3W baseline"],
+    [/^TEU (.+?) 감소$/, "TEU down $1"],
+    [/^기준 대비 (.+?) TEU 감소$/, "Down $1 TEU vs baseline"],
+    [/^기준 대비 (.+?) TEU 증가$/, "Up $1 TEU vs baseline"],
+    [/^고수익 3W 부킹 (.+?) TEU 감소$/, "High-profit 3W booking down $1 TEU"],
+    [/^3W 취소율 (.+)$/, "3W cancellation rate $1"],
+    [/^3W 부킹비중 (.+?), 3W 실선적률 (.+?), Late 의존 (.+)$/, "3W booking share $1, 3W LFT rate $2, Late dependence $3"],
+    [/^3주전 신규 (.+?) TEU 유입$/, "New 3W inflow $1 TEU"],
+    [/^신규 (.+?) TEU 유입$/, "New inflow $1 TEU"]
+  ];
+  for (const [re, out] of patterns) {
+    if (re.test(src)) return src.replace(re, out);
+  }
+  return src;
 }
 
 function actionDetailText(text) {
@@ -5253,7 +5288,7 @@ function paceCell(row) {
   })() : "";
   return `
     <div class="metric-pair">
-      ${trendBlock || disabledTrendBlock || `<span class="${tone}">${labels[row.paceStatus] || "확인"}</span>`}
+      ${trendBlock || disabledTrendBlock || `<span class="${tone}">${labels[row.paceStatus] || (state.lang === "en" ? "Check" : "확인")}</span>`}
       ${paceBlock}
       ${weekdayBlock ? `<span class="${weekday.tone}">${weekday.label}</span>${weekdayBlock}` : ""}
       ${bsaPaceBlock}
