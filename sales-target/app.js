@@ -16,7 +16,7 @@ const WHITELIST_ORIGINS = [
   { country: 'PH', label: { ko: '필리핀 / Philippines', en: 'Philippines' }, ports: ['PH'] },
   { country: 'MY', label: { ko: '말레이시아 / Malaysia', en: 'Malaysia' }, ports: ['PKG+PKW','PEN','PGU'] },
   { country: 'SG', label: { ko: '싱가포르 / Singapore', en: 'Singapore' }, ports: ['SG'] },
-  { country: 'ID', label: { ko: '인도네시아 / Indonesia', en: 'Indonesia' }, ports: ['JKT','SUB'] },
+  { country: 'ID', label: { ko: '인도네시아 / Indonesia', en: 'Indonesia' }, ports: ['JKT','SUB','ID-IDO'] },
   { country: 'IN', label: { ko: '인도 / India', en: 'India' }, ports: ['IN'] },
   { country: 'AE', label: { ko: 'UAE', en: 'UAE' }, ports: ['AE'] },
 ];
