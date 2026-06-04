@@ -260,6 +260,11 @@ const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 const gv = (id) => document.getElementById(id)?.value;
 const setText = (id, t) => { const el = document.getElementById(id); if (el) el.textContent = t; };
 
+function displayOrigin(origin) {
+  const value = String(origin || '');
+  return value === 'ID-IDO' ? 'IDO' : value;
+}
+
 function fmtPct(frac, digits = 1) {
   if (frac === null || frac === undefined || Number.isNaN(frac)) return '-';
   return (frac * 100).toFixed(digits) + '%';
@@ -687,7 +692,7 @@ function refreshPortOptions() {
     if (!countries.has(c.country)) return;
     c.ports.forEach(p => {
       if (!manifestOrigins.has(p)) return;
-      portOpts.push({ value: p, label: p, group: c.country, groupLabel: c.label[STATE.lang] || c.label.ko });
+      portOpts.push({ value: p, label: displayOrigin(p), group: c.country, groupLabel: c.label[STATE.lang] || c.label.ko });
     });
   });
   const existing = STATE.multiSelect.msPort;
@@ -916,7 +921,7 @@ function originOptionsFromSet(set) {
   const opts = [];
   WHITELIST_ORIGINS.forEach(c => {
     c.ports.forEach(p => {
-      if (set.has(p)) opts.push({ value: p, label: p, group: c.country, groupLabel: c.label[STATE.lang] || c.label.ko });
+      if (set.has(p)) opts.push({ value: p, label: displayOrigin(p), group: c.country, groupLabel: c.label[STATE.lang] || c.label.ko });
     });
   });
   return opts;
@@ -1520,7 +1525,7 @@ function renderSummaryTable(rows, q) {
       ? ` data-action="drill" data-origin="${escapeHtml(r.tab)}" data-sales="${escapeHtml(r.name)}" class="row-clickable${totalCls}"`
       : ` class="${totalCls}"`;
     h += `<tr${clickAttr}>
-      <td class="txt">${escapeHtml(r.tab)}</td>
+      <td class="txt">${escapeHtml(displayOrigin(r.tab))}</td>
       <td class="txt">${escapeHtml(r.name)}</td>
       <td class="narrow-col">${fmtPct(r.share_2025)}</td>
       <td class="narrow-col" title="${r.w3_2025_teu ? `2025 WOS-3 BKG: ${fmtNum(r.w3_2025_teu)} TEU` : ''}">${fmtPct(r.booking_base_2025)}</td>
@@ -1560,7 +1565,7 @@ function renderDrillView() {
   }
   const containerId = `drill-${safeToken(pairs.map(p => p.join('|')).join(','))}-${safeToken(STATE.filters.quarter)}`;
   queueMicrotask(() => loadDrillDataMulti(pairs, months, containerId));
-  const originLabels = [...new Set(pairs.map(p => p[0]))].join(', ');
+  const originLabels = [...new Set(pairs.map(p => displayOrigin(p[0])))].join(', ');
   const salesLabels = [...new Set(pairs.map(p => p[1]))].join(', ');
   return `<div class="crumbs">
       <span class="crumb active">${escapeHtml(originLabels)}</span>
@@ -1824,7 +1829,7 @@ function describeActiveFilters() {
   parts.push(`${tr('fQuarter')} ${f.quarter.toUpperCase()}`);
   if (f.month !== 'ALL') parts.push(`${tr('fMonth')} ${formatMonth(f.month)}`);
   if (f.countries.length) parts.push(`${tr('fCountry')} ${f.countries.join(',')}`);
-  if (f.origins.length) parts.push(`${tr('fOrigin')} ${f.origins.join(',')}`);
+  if (f.origins.length) parts.push(`${tr('fOrigin')} ${f.origins.map(displayOrigin).join(',')}`);
   if (f.destCountries.length) parts.push(`${tr('fDestCountry')} ${f.destCountries.join(',')}`);
   if (f.destPorts.length) parts.push(`${tr('fDestPort')} ${f.destPorts.join(',')}`);
   if (f.sales.length) parts.push(`${tr('fSales')} ${f.sales.join(',')}`);
@@ -1856,7 +1861,7 @@ function buildFlatBkgTable(bookings) {
     const statusClass = (b.is_cancel ? 'lst-status-캔슬' : (b.is_lifted ? 'lst-status-실선적' : ''));
     h += `<tr>
       <td><span class="bkg-no">${escapeHtml(b.bkg_no)}</span></td>
-      <td class="txt">${escapeHtml(b.__origin || '')}</td>
+      <td class="txt">${escapeHtml(displayOrigin(b.__origin))}</td>
       <td class="txt">${escapeHtml(b.__salesman || '')}</td>
       <td>${escapeHtml(b.__yyyymm ? formatMonth(b.__yyyymm) : '')}</td>
       <td class="txt">${escapeHtml(b.shipper_name || b.shipper_no || '-')} <span style="color:#80868b;font-size:10px">${escapeHtml(b.shipper_no || '')}</span></td>
@@ -2085,7 +2090,7 @@ async function rebuildPivot(containerId) {
 
 function pivotKeyOf(b, dim) {
   switch (dim) {
-    case 'origin': return b.__origin;
+    case 'origin': return displayOrigin(b.__origin);
     case 'salesman': return b.__salesman;
     case 'yyyymm': return b.__yyyymm;
     case 'shipper': return b.shipper_name || b.shipper_no || '-';
