@@ -46,6 +46,7 @@ const STATE = {
     profit: 'ALL',
     wos: 'W3',
   },
+  summaryReturnFilters: null,
   pivot: {
     row: 'origin', row2: '-', col: '-', metric: 'fst',
     normalize: 'value',   // 'value' | 'row' | 'col' | 'grand'
@@ -400,6 +401,48 @@ function showError(msg) {
   const area = document.getElementById('errorArea');
   if (area) area.innerHTML = `<div class="error-banner">${escapeHtml(msg)}</div>`;
   setText('initLoading', '');
+}
+
+function cloneFilters(filters = STATE.filters) {
+  return {
+    quarter: filters.quarter || 'q1',
+    countries: [...(filters.countries || [])],
+    origins: [...(filters.origins || [])],
+    destCountries: [...(filters.destCountries || [])],
+    destPorts: [...(filters.destPorts || [])],
+    sales: [...(filters.sales || [])],
+    month: filters.month || 'ALL',
+    grade: filters.grade || 'ALL',
+    profit: filters.profit || 'ALL',
+    wos: filters.wos || 'W3',
+  };
+}
+
+function syncFilterControlsFromState() {
+  document.getElementById('fQuarter').value = STATE.filters.quarter;
+  refreshMonthOptions();
+  document.getElementById('fMonth').value = STATE.filters.month;
+  document.getElementById('fGrade').value = STATE.filters.grade;
+  document.getElementById('fProfit').value = STATE.filters.profit;
+  document.getElementById('fWos').value = STATE.filters.wos;
+  if (STATE.multiSelect.msCountry) STATE.multiSelect.msCountry.setSelected(STATE.filters.countries);
+  refreshPortOptions();
+  if (STATE.multiSelect.msPort) STATE.multiSelect.msPort.setSelected(STATE.filters.origins);
+  if (STATE.multiSelect.msDestCountry) STATE.multiSelect.msDestCountry.setSelected(STATE.filters.destCountries);
+  refreshDestPortOptions();
+  if (STATE.multiSelect.msDestPort) STATE.multiSelect.msDestPort.setSelected(STATE.filters.destPorts);
+  refreshSalesOptions();
+  if (STATE.multiSelect.msSales) STATE.multiSelect.msSales.setSelected(STATE.filters.sales);
+}
+
+function restoreSummaryReturnFilters() {
+  if (!STATE.summaryReturnFilters) return false;
+  STATE.filters = cloneFilters(STATE.summaryReturnFilters);
+  STATE.summaryReturnFilters = null;
+  STATE.expandedKey = null;
+  STATE.expandedShipperKey = null;
+  syncFilterControlsFromState();
+  return true;
 }
 
 function readUrlParams() {
@@ -1022,9 +1065,12 @@ function setupListeners() {
     scheduleFilterOptionRefresh(0);
   });
   $$('.view-tabs .vtab').forEach(el => el.addEventListener('click', () => {
-    STATE.view = el.dataset.view;
+    const nextView = el.dataset.view;
+    const restored = nextView === 'summary' && restoreSummaryReturnFilters();
+    STATE.view = nextView;
     $$('.view-tabs .vtab').forEach(x => x.classList.toggle('active', x === el));
     render();
+    if (restored) scheduleFilterOptionRefresh(0);
   }));
 }
 
@@ -2376,6 +2422,7 @@ function attachRowHandlers() {
       const origin = row.dataset.origin;
       const sales = row.dataset.sales;
       const country = COUNTRY_OF_PORT.get(origin);
+      STATE.summaryReturnFilters = cloneFilters();
       STATE.filters.countries = country ? [country] : [];
       STATE.filters.origins = [origin];
       if (STATE.multiSelect.msCountry) STATE.multiSelect.msCountry.setSelected(STATE.filters.countries);
