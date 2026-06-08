@@ -1,0 +1,2 @@
+# 줄바꿈을 LF로 고정 (에디터/OneDrive가 CRLF로 저장해도 git이 변경으로 잡지 않음)
+* text=auto eol=lf
