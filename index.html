@@ -1897,8 +1897,8 @@ function renderTab2() {
 
     // 고수익 vs 저수익 리드타임 비교 + 고수익 비중 추이
     html += `<div class="chart-row">
-      <div class="chart-card" style="flex:1"><h3>${L('고수익화주 vs 저수익화주 리드타임','Hi vs Lo Shipper Lead Time')}</h3><div id="ch2lt" style="height:320px"></div></div>
-      <div class="chart-card" style="flex:1"><h3>${L('고수익화주 비중 추이','High-Profit Shipper Ratio Trend')}</h3><div id="ch2hi" style="height:320px"></div></div>
+      <div class="chart-card" style="flex:1"><h3>${L('구간 고수익 vs 저수익 리드타임','Route Hi vs Lo Lead Time')}</h3><div id="ch2lt" style="height:320px"></div></div>
+      <div class="chart-card" style="flex:1"><h3>${L('구간 고수익 비중 추이','Route High-Profit Ratio Trend')}</h3><div id="ch2hi" style="height:320px"></div></div>
     </div>`;
 
     document.getElementById('tabContent').innerHTML = html;
@@ -1915,32 +1915,33 @@ function renderTab2() {
       yaxis:{title:'TEU',gridcolor:'#f0f0f0'},legend:{orientation:'h',y:1.12},
       plot_bgcolor:'#fff',paper_bgcolor:'#fff'}, {displayModeBar:false});
 
-    // 고수익 vs 저수익 리드타임 비교 (shipper 데이터 기반)
-    const sd = filterShipper(month);
-    const hiSD = sd.filter(r => shipperTag(r) === '고수익화주');
-    const loSD = sd.filter(r => shipperTag(r) === '저수익화주');
+    // 구간 고수익 vs 저수익 리드타임 비교 (루트 고/저 기준, 월별 route_hi)
+    const md2 = filterMonthly(month);
     const wosKeys = ['w3_fst','w2_fst','w1_fst','wos_fst'];
+    const routeHiKeys = ['w3_route_hi_fst','w2_route_hi_fst','w1_route_hi_fst','wos_route_hi_fst'];
     const wosLabels = ['WOS-3','WOS-2','WOS-1','WOS'];
-    const hiTotal = wosKeys.reduce((s,k) => s + sum(hiSD,k), 0);
-    const loTotal = wosKeys.reduce((s,k) => s + sum(loSD,k), 0);
-    const hiPcts = wosKeys.map(k => hiTotal > 0 ? sum(hiSD,k)/hiTotal*100 : 0);
-    const loPcts = wosKeys.map(k => loTotal > 0 ? sum(loSD,k)/loTotal*100 : 0);
+    const hiByWos = routeHiKeys.map(k => sum(md2,k));
+    const loByWos = wosKeys.map((k,i) => Math.max(0, sum(md2,k) - hiByWos[i]));
+    const hiTotal = hiByWos.reduce((s,v) => s + v, 0);
+    const loTotal = loByWos.reduce((s,v) => s + v, 0);
+    const hiPcts = hiByWos.map(v => hiTotal > 0 ? v/hiTotal*100 : 0);
+    const loPcts = loByWos.map(v => loTotal > 0 ? v/loTotal*100 : 0);
 
     plot('ch2lt', [
-      {x: wosLabels, y: hiPcts, type:'bar', name: L('고수익화주','Hi-Shipper'), marker:{color:'#34a853'},
+      {x: wosLabels, y: hiPcts, type:'bar', name: L('구간 고수익','Route-Hi'), marker:{color:'#34a853'},
        text: hiPcts.map(v=>v.toFixed(0)+'%'), textposition:'auto', textfont:{size:12}},
-      {x: wosLabels, y: loPcts, type:'bar', name: L('저수익화주','Lo-Shipper'), marker:{color:'#ea4335'},
+      {x: wosLabels, y: loPcts, type:'bar', name: L('구간 저수익','Route-Lo'), marker:{color:'#ea4335'},
        text: loPcts.map(v=>v.toFixed(0)+'%'), textposition:'auto', textfont:{size:12}},
     ], {barmode:'group', margin:{l:40,r:20,t:20,b:30},
       yaxis:{title:'%',gridcolor:'#f0f0f0',range:[0,100]},
       legend:{orientation:'h',y:1.1}, plot_bgcolor:'#fff',paper_bgcolor:'#fff'}, {displayModeBar:false});
 
-    // 고수익화주 비중 월별 추이
+    // 구간 고수익 비중 월별 추이 (w3_route_hi_fst / w3_fst)
     const hiTrend = DATA.months.map(m => {
-      const msd = filterShipper(m);
+      const msd = filterMonthly(m);
       if (!msd.length) return null;
       const total = sum(msd, 'w3_fst');
-      const hi = sum(msd.filter(r => shipperTag(r) === '고수익화주'), 'w3_fst');
+      const hi = sum(msd, 'w3_route_hi_fst');
       return ratio(hi,total);
     });
     plot('ch2hi', [{
@@ -2601,8 +2602,8 @@ function renderTab5() {
 
   // 4. 고수익 vs 저수익 리드타임 + 비중 추이
   html += `<div class="chart-row">
-    <div class="chart-card" style="flex:1"><h3>${L('고수익화주 vs 저수익화주 리드타임','Hi vs Lo Shipper Lead Time')}</h3><div id="ch5lt" style="height:320px"></div></div>
-    <div class="chart-card" style="flex:1"><h3>${L('고수익화주 WOS-3 비중 추이','High-Profit WOS-3 Ratio Trend')}</h3><div id="ch5hi" style="height:320px"></div></div>
+    <div class="chart-card" style="flex:1"><h3>${L('구간 고수익 vs 저수익 리드타임','Route Hi vs Lo Lead Time')}</h3><div id="ch5lt" style="height:320px"></div></div>
+    <div class="chart-card" style="flex:1"><h3>${L('구간 고수익 WOS-3 비중 추이','Route High-Profit WOS-3 Ratio Trend')}</h3><div id="ch5hi" style="height:320px"></div></div>
   </div>`;
 
   document.getElementById('tabContent').innerHTML = html;
@@ -2620,28 +2621,29 @@ function renderTab5() {
     yaxis:{title:L('비중 %','Ratio %'),gridcolor:'#f0f0f0',range:[0,100]},
     legend:{orientation:'h',y:1.1},plot_bgcolor:'#fff',paper_bgcolor:'#fff'}, {displayModeBar:false});
 
-  // 고수익 vs 저수익 리드타임 비교
-  const hiSD5 = sd.filter(r => shipperTag(r) === '고수익화주');
-  const loSD5 = sd.filter(r => shipperTag(r) === '저수익화주');
-  const hiT5 = wosKeys.reduce((s,k) => s + sum(hiSD5,k), 0);
-  const loT5 = wosKeys.reduce((s,k) => s + sum(loSD5,k), 0);
+  // 구간 고수익 vs 저수익 리드타임 비교 (루트 고/저 기준, route_hi)
+  const routeHiKeys5 = ['w3_route_hi_fst','w2_route_hi_fst','w1_route_hi_fst','wos_route_hi_fst'];
+  const hiByWos5 = routeHiKeys5.map(k => sum(fd,k));
+  const loByWos5 = wosKeys.map((k,i) => Math.max(0, sum(fd,k) - hiByWos5[i]));
+  const hiT5 = hiByWos5.reduce((s,v) => s + v, 0);
+  const loT5 = loByWos5.reduce((s,v) => s + v, 0);
   plot('ch5lt', [
-    {x:wosLabels, y:wosKeys.map(k => hiT5>0 ? sum(hiSD5,k)/hiT5*100 : 0), type:'bar',
-     name:L('고수익화주','Hi-Shipper'), marker:{color:'#34a853'},
-     text:wosKeys.map(k => hiT5>0 ? (sum(hiSD5,k)/hiT5*100).toFixed(0)+'%' : ''), textposition:'auto', textfont:{size:12}},
-    {x:wosLabels, y:wosKeys.map(k => loT5>0 ? sum(loSD5,k)/loT5*100 : 0), type:'bar',
-     name:L('저수익화주','Lo-Shipper'), marker:{color:'#ea4335'},
-     text:wosKeys.map(k => loT5>0 ? (sum(loSD5,k)/loT5*100).toFixed(0)+'%' : ''), textposition:'auto', textfont:{size:12}},
+    {x:wosLabels, y:hiByWos5.map(v => hiT5>0 ? v/hiT5*100 : 0), type:'bar',
+     name:L('구간 고수익','Route-Hi'), marker:{color:'#34a853'},
+     text:hiByWos5.map(v => hiT5>0 ? (v/hiT5*100).toFixed(0)+'%' : ''), textposition:'auto', textfont:{size:12}},
+    {x:wosLabels, y:loByWos5.map(v => loT5>0 ? v/loT5*100 : 0), type:'bar',
+     name:L('구간 저수익','Route-Lo'), marker:{color:'#ea4335'},
+     text:loByWos5.map(v => loT5>0 ? (v/loT5*100).toFixed(0)+'%' : ''), textposition:'auto', textfont:{size:12}},
   ], {barmode:'group',margin:{l:40,r:20,t:20,b:30},
     yaxis:{title:'%',gridcolor:'#f0f0f0',range:[0,100]},
     legend:{orientation:'h',y:1.1},plot_bgcolor:'#fff',paper_bgcolor:'#fff'}, {displayModeBar:false});
 
-  // 고수익화주 WOS-3 비중 월별 추이
+  // 구간 고수익 WOS-3 비중 월별 추이 (w3_route_hi_fst / w3_fst)
   const hiTrend5 = DATA.months.map(m => {
-    const msd = filterShipper(m);
+    const msd = filterMonthly(m);
     if (!msd.length) return null;
     const total = sum(msd, 'w3_fst');
-    const hi = sum(msd.filter(r => shipperTag(r) === '고수익화주'), 'w3_fst');
+    const hi = sum(msd, 'w3_route_hi_fst');
     return ratio(hi,total);
   });
   plot('ch5hi', [{
