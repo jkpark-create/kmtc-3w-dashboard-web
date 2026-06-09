@@ -102,7 +102,7 @@ const I18N = {
     monthAll: '전체 (분기 합산)',
     profitHi: '고수익만', profitNotHi: '고수익 제외',
     q2Label: '2Q 2026 (Progress)',
-    cardScope: '대상 영업사원', originCount: '선적지', salesCount: '영업사원', custCount: '화주 (A/C)',
+    cardScope: '대상 영업사원', originCount: '선적지', routeCount: '구간수', salesCount: '영업사원', custCount: '화주 (A/C)',
     bkLabel: '3W Before Booking Rate (vs BSA)',
     lfLabel: '3W Before Actual Lifting Rate',
     hpLabel: '3W Before High-Profit Rate',
@@ -118,7 +118,7 @@ const I18N = {
     pickOriginSales: '상단 필터에서 <b>선적지</b>와 <b>영업사원</b>을 각각 하나씩 선택하거나, ① 탭의 행을 클릭하세요.',
     noChunks: '선택한 분기에 해당하는 월 데이터가 없습니다.',
     noMatches: '필터 조건에 맞는 데이터가 없습니다.',
-    noShipper: '필터 조건에 맞는 화주가 없습니다. (등급/고수익/WOS 필터를 확인하세요)',
+    noShipper: '필터 조건에 맞는 화주가 없습니다. (등급/고수익 필터를 확인하세요)',
     loadingDetail: '상세 데이터 로딩 중...',
     panelAllBkg: '조건에 맞는 전체 BKG_NO 보기',
     btnCsv: 'CSV 내보내기', btnClose: '닫기',
@@ -166,7 +166,7 @@ const I18N = {
     monthAll: 'All (quarter sum)',
     profitHi: 'High-profit only', profitNotHi: 'Exclude high-profit',
     q2Label: '2Q 2026 (Progress)',
-    cardScope: 'Scope', originCount: 'Origins', salesCount: 'Salespeople', custCount: 'Shippers (A/C)',
+    cardScope: 'Scope', originCount: 'Origins', routeCount: 'Routes', salesCount: 'Salespeople', custCount: 'Shippers (A/C)',
     bkLabel: '3W Before Booking Rate (vs BSA)',
     lfLabel: '3W Before Actual Lifting Rate',
     hpLabel: '3W Before High-Profit Rate',
@@ -182,7 +182,7 @@ const I18N = {
     pickOriginSales: 'Select an <b>Origin</b> and a <b>Salesperson</b> above, or click a row in view ①.',
     noChunks: 'No monthly data for the selected quarter.',
     noMatches: 'No data matches the filters.',
-    noShipper: 'No shippers match the filters. (Check Grade / High-profit / WOS.)',
+    noShipper: 'No shippers match the filters. (Check Grade / High-profit.)',
     loadingDetail: 'Loading detail...',
     panelAllBkg: 'All matching BKG_NO',
     btnCsv: 'Export CSV', btnClose: 'Close',
@@ -429,7 +429,6 @@ function syncFilterControlsFromState() {
   document.getElementById('fMonth').value = STATE.filters.month;
   document.getElementById('fGrade').value = STATE.filters.grade;
   document.getElementById('fProfit').value = STATE.filters.profit;
-  document.getElementById('fWos').value = STATE.filters.wos;
   if (STATE.multiSelect.msCountry) STATE.multiSelect.msCountry.setSelected(STATE.filters.countries);
   refreshPortOptions();
   if (STATE.multiSelect.msPort) STATE.multiSelect.msPort.setSelected(STATE.filters.origins);
@@ -454,7 +453,7 @@ function readUrlParams() {
   const p = new URLSearchParams(location.search);
   const out = {};
   // Include legacy single-value keys, multi-select keys, and the destination filters.
-  for (const k of ['origin', 'origins', 'country', 'countries', 'dest_country', 'dest_countries', 'dest_port', 'dest_ports', 'sales', 'quarter', 'month', 'grade', 'profit', 'wos', 'view']) {
+  for (const k of ['origin', 'origins', 'country', 'countries', 'dest_country', 'dest_countries', 'dest_port', 'dest_ports', 'sales', 'quarter', 'month', 'grade', 'profit', 'view']) {
     const v = p.get(k);
     if (v) out[k] = v;
   }
@@ -473,7 +472,7 @@ function applyInitialParams() {
     else if (['ALL','AB','CD'].includes(g)) STATE.filters.grade = g;
   }
   if (params.profit) STATE.filters.profit = params.profit;
-  if (params.wos) STATE.filters.wos = params.wos;
+  // WOS filter removed — this screen is fixed to WOS-3 (STATE.filters.wos stays 'W3').
   // Support both new (?origins=A,B&country=CN) and legacy (?origin=CN_SHA) param shapes.
   const originList = (params.origins || params.origin || '').split(',').map(s => s.trim()).filter(Boolean);
   if (originList.length) {
@@ -497,7 +496,6 @@ function applyInitialParams() {
   document.getElementById('fMonth').value = STATE.filters.month;
   document.getElementById('fGrade').value = STATE.filters.grade;
   document.getElementById('fProfit').value = STATE.filters.profit;
-  document.getElementById('fWos').value = STATE.filters.wos;
   // Sync multi-selects (they were already built but selections may have updated).
   if (STATE.multiSelect.msCountry) STATE.multiSelect.msCountry.setSelected(STATE.filters.countries);
   refreshPortOptions();
@@ -1040,9 +1038,9 @@ function setupListeners() {
     render();
     scheduleFilterOptionRefresh();
   });
-  ['fMonth', 'fGrade', 'fProfit', 'fWos'].forEach(id => {
+  ['fMonth', 'fGrade', 'fProfit'].forEach(id => {
     document.getElementById(id).addEventListener('change', e => {
-      const key = { fMonth: 'month', fGrade: 'grade', fProfit: 'profit', fWos: 'wos' }[id];
+      const key = { fMonth: 'month', fGrade: 'grade', fProfit: 'profit' }[id];
       STATE.filters[key] = e.target.value;
       render();
       scheduleFilterOptionRefresh();
@@ -1056,7 +1054,6 @@ function setupListeners() {
     document.getElementById('fMonth').value = 'ALL';
     document.getElementById('fGrade').value = 'ALL';
     document.getElementById('fProfit').value = 'ALL';
-    document.getElementById('fWos').value = 'W3';
     if (STATE.multiSelect.msCountry) STATE.multiSelect.msCountry.setSelected([]);
     refreshPortOptions();
     if (STATE.multiSelect.msPort) STATE.multiSelect.msPort.setSelected([]);
@@ -1139,8 +1136,25 @@ function summaryCardValues(rows, q) {
   };
 }
 
+// When a specific salesperson is selected, the scope card shows 구간수 (distinct
+// origin→DLY routes) instead of 선적지 (origin count), which is more informative
+// at the per-salesperson level.
+function scopeUsesRouteCount() {
+  return STATE.filters.sales.length > 0;
+}
+
+function updateScopeCardLabel(useRoute = scopeUsesRouteCount()) {
+  const el = document.getElementById('cOriginLabel');
+  if (!el) return;
+  const key = useRoute ? 'routeCount' : 'originCount';
+  el.setAttribute('data-i18n', key);
+  el.textContent = tr(key);
+}
+
 function applyKpiCardValues(values) {
-  setText('cOrigin', values.originCount);
+  const useRoute = scopeUsesRouteCount();
+  updateScopeCardLabel(useRoute);
+  setText('cOrigin', useRoute ? (values.routeCount ?? values.originCount) : values.originCount);
   setText('cSales', values.salesCount);
   setText('cCust', typeof values.custCount === 'number' ? values.custCount.toLocaleString() : values.custCount);
 
@@ -1172,10 +1186,11 @@ function updateKpiGapClasses(gaps) {
 function detailCardFiltersActive() {
   const f = STATE.filters;
   return f.month !== 'ALL' || f.grade !== 'ALL' || f.profit !== 'ALL' ||
-    f.wos !== 'W3' || f.destCountries.length > 0 || f.destPorts.length > 0;
+    f.destCountries.length > 0 || f.destPorts.length > 0;
 }
 
 function setKpiCardLoadingTargets(summary) {
+  updateScopeCardLabel();
   setText('cOrigin', '...');
   setText('cSales', '...');
   setText('cCust', '...');
@@ -1368,6 +1383,7 @@ function detailedCardValues(allBookings, allBsaAllocations, summaryRows, q) {
     r.row_type === 'SALES' && bookingPairs.has(`${r.tab}\u0001${r.name}`)
   );
   const origins = new Set(matchedSalesRows.map(r => r.tab).filter(Boolean));
+  const routes = new Set(countBookings.map(routeKeyOf));
   const shippers = new Set(countBookings.map(b => b.shipper_no || b.shipper_name).filter(Boolean));
   const totalFst = kpiBookings.reduce((s, b) => s + (b.fst_teu || 0), 0);
   const w3Fst = kpiBookings.reduce((s, b) => s + (b.is_w3 ? (b.fst_teu || 0) : 0), 0);
@@ -1420,6 +1436,7 @@ function detailedCardValues(allBookings, allBsaAllocations, summaryRows, q) {
 
   return {
     originCount: origins.size,
+    routeCount: routes.size,
     salesCount: matchedSalesRows.length,
     custCount: shippers.size,
     booking: metricWithTarget(targetBk, safeRatio(w3Fst, allocatedBsa)),
@@ -1447,7 +1464,8 @@ function renderKpiCards() {
       } else {
         // Keep the TOTAL-row-based KPI averages (more accurate than recomputing
         // from chunks when the scope is whole origins), but overlay deduped shipper count.
-        applyKpiCardValues({ ...summary, custCount: computeLiveCardCounts(bookings).custCount });
+        const live = computeLiveCardCounts(bookings);
+        applyKpiCardValues({ ...summary, custCount: live.custCount, routeCount: live.routeCount });
       }
     })
     .catch(() => {
@@ -1456,12 +1474,18 @@ function renderKpiCards() {
     });
 }
 
+// Distinct 구간 (route) = origin → DLY destination, matching the BSA 도착구간 basis.
+function routeKeyOf(b) {
+  return pairKey(b.__origin, pairKey(b.dly_country, b.dly_plc));
+}
+
 function computeLiveCardCounts(allBookings) {
   const filtered = applyBookingFilters(allBookings);
   const origins = new Set(filtered.map(b => b.__origin).filter(Boolean));
+  const routes = new Set(filtered.map(routeKeyOf));
   const sales = new Set(filtered.map(b => b.__salesman).filter(Boolean));
   const shippers = new Set(filtered.map(b => b.shipper_no || b.shipper_name).filter(Boolean));
-  return { originCount: origins.size, salesCount: sales.size, custCount: shippers.size };
+  return { originCount: origins.size, routeCount: routes.size, salesCount: sales.size, custCount: shippers.size };
 }
 
 // ─── View renderers ──────────────────────────────────────────────
@@ -2141,7 +2165,7 @@ function describeActiveFilters() {
   if (f.sales.length) parts.push(`${tr('fSales')} ${f.sales.join(',')}`);
   if (f.grade !== 'ALL') parts.push(`${tr('fGrade')} ${f.grade}`);
   if (f.profit !== 'ALL') parts.push(f.profit === 'HI' ? tr('profitHi') : tr('profitNotHi'));
-  parts.push(f.wos === 'W3' ? 'WOS-3' : (lang === 'en' ? 'WOS all' : 'WOS 전체'));
+  parts.push('WOS-3');
   return parts.join(' · ');
 }
 

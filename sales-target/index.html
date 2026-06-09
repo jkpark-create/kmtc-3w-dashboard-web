@@ -106,13 +106,6 @@
         <option value="NOTHI" data-i18n-attr="text:profitNotHi">고수익 제외</option>
       </select>
     </div>
-    <div class="group">
-      <label data-i18n="fWos">WOS</label>
-      <select id="fWos">
-        <option value="W3">WOS-3 only</option>
-        <option value="ALL" data-i18n-attr="text:all">전체</option>
-      </select>
-    </div>
     <button class="reset" id="btnReset" data-i18n="btnReset">필터 초기화</button>
   </div>
 </div>
@@ -124,7 +117,7 @@
     <div class="card summary-card">
       <div class="label" data-i18n="cardScope">대상 영업사원</div>
       <div class="kpi-grid">
-        <div class="kpi-cell"><span class="k-label" data-i18n="originCount">선적지</span><span class="k-val" id="cOrigin">-</span></div>
+        <div class="kpi-cell"><span class="k-label" id="cOriginLabel" data-i18n="originCount">선적지</span><span class="k-val" id="cOrigin">-</span></div>
         <div class="kpi-cell"><span class="k-label" data-i18n="salesCount">영업사원</span><span class="k-val" id="cSales">-</span></div>
         <div class="kpi-cell"><span class="k-label" data-i18n="custCount">화주 (A/C)</span><span class="k-val" id="cCust">-</span></div>
       </div>
