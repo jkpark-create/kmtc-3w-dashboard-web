@@ -133,7 +133,7 @@ const I18N = {
       bk3w: '3W Booking (vs BSA)', lf3w: 'Actual Lifting Rate', hp3w: 'High-Profit Rate',
       ac: 'No. of A/C (Q1)', acTotal: 'Total', ac3w: '3W', acPct: '%',
       target: 'Target', perform: 'Perform', progress: 'Progress', gap: '+/-', achievement: '달성률',
-      shipper: '화주', grade: '등급', bkgUnique: '고유 BKG_NO', bkgCnt: 'BKG 건',
+      shipper: '화주', grade: '등급', bkgUnique: '고유 BKG_NO', bkgCnt: 'BKG 건', bsa: 'BSA', fillRate: '소석률',
       fstTeu: 'FST TEU', lstTeu: 'LST TEU', w3fst: 'WOS-3 FST', w3lst: 'WOS-3 LST',
       lstRate: '실선적률(W3)', hiShare: '고수익 비중(W3)', cm1: 'CM1',
       bkgNo: 'BKG_NO', month: '월', polPod: 'POL→POD', vslVoy: 'VSL/VOY',
@@ -196,7 +196,7 @@ const I18N = {
       bk3w: '3W Booking (vs BSA)', lf3w: 'Actual Lifting Rate', hp3w: 'High-Profit Rate',
       ac: 'No. of A/C (Q1)', acTotal: 'Total', ac3w: '3W', acPct: '%',
       target: 'Target', perform: 'Perform', progress: 'Progress', gap: '+/-', achievement: 'Achv.%',
-      shipper: 'Shipper', grade: 'Grade', bkgUnique: 'Unique BKG_NO', bkgCnt: 'BKG count',
+      shipper: 'Shipper', grade: 'Grade', bkgUnique: 'Unique BKG_NO', bkgCnt: 'BKG count', bsa: 'BSA', fillRate: 'Fill%',
       fstTeu: 'FST TEU', lstTeu: 'LST TEU', w3fst: 'WOS-3 FST', w3lst: 'WOS-3 LST',
       lstRate: 'LFT% (W3)', hiShare: 'Hi-Profit% (W3)', cm1: 'CM1',
       bkgNo: 'BKG_NO', month: 'Month', polPod: 'POL→POD', vslVoy: 'VSL/VOY',
@@ -1866,10 +1866,18 @@ async function loadDrillDataMulti(pairs, months, containerId) {
       b.__salesman = chunk.salesman;
       b.__yyyymm = chunk.yyyymm;
     });
+    (chunk.bsa_allocations || []).forEach(a => {
+      a.__origin = chunk.origin;
+      a.__salesman = chunk.salesman;
+      a.__yyyymm = chunk.yyyymm;
+    });
   });
   const merged = mergeChunks(valid);
   const filtered = applyBookingFilters(merged.bookings);
-  const shippers = aggregateShippers(filtered);
+  const allBsa = [];
+  valid.forEach(c => (c.bsa_allocations || []).forEach(a => allBsa.push(a)));
+  const shipperBsa = allocateShipperBsa(filtered, applyBsaAllocationFilters(allBsa));
+  const shippers = aggregateShippers(filtered, shipperBsa);
   STATE.drillBookings = filtered;
   const scopeLabel = pairs.map(p => `${p[0]}/${p[1]}`).join(',');
   const scopeKey = safeToken(scopeLabel);
@@ -1914,7 +1922,43 @@ function applyBookingFiltersCore(bookings, ignoreWos) {
   });
 }
 
-function aggregateShippers(bookings) {
+// Sub-allocate each (salesman, 구간=DLY route) BSA to its shippers in proportion
+// to their Normal LST_TEU on that route — same basis as the target workbook's
+// allocate_bsa_by_booking (BSA배분기준TEU = is_normal ? lst). Returns shipperKey -> BSA.
+function allocateShipperBsa(bookings, bsaAllocations) {
+  const SEP = '';
+  const routeBsa = new Map();          // origin|salesman|dlyCtry|dlyPort -> allocated BSA (salesman's route portion)
+  (bsaAllocations || []).forEach(a => {
+    const rk = `${a.__origin}${SEP}${a.__salesman}${SEP}${a.pod_country}${SEP}${a.pod}`;
+    routeBsa.set(rk, (routeBsa.get(rk) || 0) + (Number(a.allocated_bsa) || 0));
+  });
+  const routeBasis = new Map();        // routeKey -> total Normal LST across shippers
+  const shipperRouteBasis = new Map(); // routeKey|shipperKey -> shipper Normal LST
+  bookings.forEach(b => {
+    const basis = normalLstTeu(b);
+    if (!basis) return;
+    const rk = `${b.__origin}${SEP}${b.__salesman}${SEP}${b.dly_country}${SEP}${b.dly_plc}`;
+    if (!routeBsa.has(rk)) return;     // route carries no BSA → nothing to distribute
+    routeBasis.set(rk, (routeBasis.get(rk) || 0) + basis);
+    const shipperKey = b.shipper_no || b.shipper_name || '(unknown)';
+    const srk = `${rk}${SEP}${shipperKey}`;
+    shipperRouteBasis.set(srk, (shipperRouteBasis.get(srk) || 0) + basis);
+  });
+  const shipperBsa = new Map();
+  shipperRouteBasis.forEach((basis, srk) => {
+    const cut = srk.lastIndexOf(SEP);
+    const rk = srk.slice(0, cut);
+    const shipperKey = srk.slice(cut + 1);
+    const total = routeBasis.get(rk) || 0;
+    const bsa = routeBsa.get(rk) || 0;
+    if (total > 0 && bsa > 0) {
+      shipperBsa.set(shipperKey, (shipperBsa.get(shipperKey) || 0) + bsa * basis / total);
+    }
+  });
+  return shipperBsa;
+}
+
+function aggregateShippers(bookings, shipperBsa) {
   const map = new Map();
   bookings.forEach(b => {
     const key = b.shipper_no || b.shipper_name || '(unknown)';
@@ -1949,13 +1993,19 @@ function aggregateShippers(bookings) {
     if (!s.grade && b.grade) s.grade = b.grade;
   });
   return Array.from(map.values())
-    .map(s => ({
-      ...s,
-      bkg_count_unique: s.bkg_nos.size,
-      lst_rate_w3: safeRatio(s.w3_lst, s.w3_fst),
-      hi_share_w3: safeRatio(s.hi_w3_fst, s.w3_fst),
-      cm1_per_teu: safeRatio(s.cm1, s.lst_teu),
-    }))
+    .map(s => {
+      const key = s.shipper_no || s.shipper_name || '(unknown)';
+      const bsa = (shipperBsa && shipperBsa.get(key)) || 0;
+      return {
+        ...s,
+        bkg_count_unique: s.bkg_nos.size,
+        bsa,
+        fill_rate: safeRatio(s.lst_teu, bsa),
+        lst_rate_w3: safeRatio(s.w3_lst, s.w3_fst),
+        hi_share_w3: safeRatio(s.hi_w3_fst, s.w3_fst),
+        cm1_per_teu: safeRatio(s.cm1, s.lst_teu),
+      };
+    })
     .sort((a, b) => b.fst_teu - a.fst_teu);
 }
 
@@ -1965,8 +2015,8 @@ function renderShipperTable(origin, sales, shippers, bookings) {
     return `<div class="empty">${tr('noShipper')}</div>`;
   }
   const totals = {
-    bkg: shippers.reduce((s, r) => s + r.bkg_count, 0),
     bkgU: shippers.reduce((s, r) => s + r.bkg_count_unique, 0),
+    bsa: shippers.reduce((s, r) => s + (r.bsa || 0), 0),
     fst: shippers.reduce((s, r) => s + r.fst_teu, 0),
     lst: shippers.reduce((s, r) => s + r.lst_teu, 0),
     w3fst: shippers.reduce((s, r) => s + r.w3_fst, 0),
@@ -1976,24 +2026,26 @@ function renderShipperTable(origin, sales, shippers, bookings) {
   };
   const lstRate = safeRatio(totals.w3lst, totals.w3fst);
   const hiShare = safeRatio(totals.w3hi, totals.w3fst);
+  const fillRate = safeRatio(totals.lst, totals.bsa);
 
   // The breadcrumbs above already display origin + salesperson scope, so the
   // panel title only needs the month range to avoid the long comma-separated repeat.
   let h = `<div class="panel-header">
     <div class="panel-title">${cols.shipper} (${escapeHtml(monthLabel(monthsForFilter()))})</div>
-    <div class="panel-actions">${cols.shipper} ${shippers.length} · BKG ${fmtNum(totals.bkg)} · ${cols.bkgUnique} ${fmtNum(totals.bkgU)}</div>
+    <div class="panel-actions">${cols.shipper} ${shippers.length} · ${cols.bkgCnt} ${fmtNum(totals.bkgU)}</div>
   </div>
   <table class="dt"><thead><tr>
-    <th>${cols.shipper}</th><th>${cols.grade}</th><th>${cols.bkgUnique}</th><th>${cols.bkgCnt}</th><th>${cols.fstTeu}</th><th>${cols.lstTeu}</th><th>${cols.w3fst}</th><th>${cols.w3lst}</th><th>${cols.lstRate}</th><th>${cols.hiShare}</th><th>${cols.cm1}</th>
+    <th>${cols.shipper}</th><th>${cols.grade}</th><th>${cols.bsa}</th><th>${cols.bkgCnt}</th><th>${cols.fstTeu}</th><th>${cols.lstTeu}</th><th>${cols.fillRate}</th><th>${cols.w3fst}</th><th>${cols.w3lst}</th><th>${cols.lstRate}</th><th>${cols.hiShare}</th><th>${cols.cm1}</th>
   </tr></thead><tbody>`;
   shippers.forEach((s, i) => {
     h += `<tr class="row-clickable" data-action="shipper-toggle" data-shipper-key="${escapeHtml(s.shipper_no || s.shipper_name)}" data-idx="${i}">
       <td class="txt">${escapeHtml(s.shipper_name || s.shipper_no || '-')} <span style="color:#80868b;font-size:10px">${escapeHtml(s.shipper_no || '')}</span></td>
       <td>${gradeBadge(s.grade)}</td>
+      <td>${fmtNum(s.bsa)}</td>
       <td>${fmtNum(s.bkg_count_unique)}</td>
-      <td>${fmtNum(s.bkg_count)}</td>
       <td>${fmtNum(s.fst_teu)}</td>
       <td>${fmtNum(s.lst_teu)}</td>
+      <td class="pct">${fmtPct(s.fill_rate)}</td>
       <td>${fmtNum(s.w3_fst)}</td>
       <td>${fmtNum(s.w3_lst)}</td>
       <td class="pct">${fmtPct(s.lst_rate_w3)}</td>
@@ -2003,10 +2055,11 @@ function renderShipperTable(origin, sales, shippers, bookings) {
   });
   h += `<tr class="row-total">
       <td class="txt">${I18N[STATE.lang].columns.totalLabel}</td><td></td>
+      <td>${fmtNum(totals.bsa)}</td>
       <td>${fmtNum(totals.bkgU)}</td>
-      <td>${fmtNum(totals.bkg)}</td>
       <td>${fmtNum(totals.fst)}</td>
       <td>${fmtNum(totals.lst)}</td>
+      <td class="pct">${fmtPct(fillRate)}</td>
       <td>${fmtNum(totals.w3fst)}</td>
       <td>${fmtNum(totals.w3lst)}</td>
       <td class="pct">${fmtPct(lstRate)}</td>
@@ -2030,7 +2083,7 @@ function attachShipperHandlers(origin, sales, bookings) {
       detail.className = 'detail-row';
       detail.dataset.key = key;
       const cell = document.createElement('td');
-      cell.colSpan = 11;
+      cell.colSpan = 12;
       cell.innerHTML = renderBkgDetail(key, bookings);
       detail.appendChild(cell);
       row.parentNode.insertBefore(detail, row.nextSibling);
