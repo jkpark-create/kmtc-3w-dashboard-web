@@ -70,6 +70,7 @@ table.dt td.pct.neg{background:#fce8e6;color:#a50e0e}
 table.dt td.pct.warn{background:#fef7e0;color:#b06000}
 table.dt tr.row-total{background:#f0f4ff;font-weight:700}
 table.dt tr.row-total td{background:#f0f4ff}
+table.dt th.grp-sep, table.dt td.grp-sep{border-left:2px solid #9aa0a6}
 table.dt tr.row-clickable{cursor:pointer}
 table.dt tr.row-clickable:hover td{background:#fff4ce}
 table.dt tr.row-clickable:hover td.txt{background:#fff4ce}

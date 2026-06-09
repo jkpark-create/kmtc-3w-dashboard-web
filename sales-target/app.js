@@ -2073,18 +2073,18 @@ function renderShipperTable(origin, sales, shippers, bookings) {
     <div class="panel-actions">${cols.shipper} ${shippers.length} · ${cols.bkgCnt} ${fmtNum(totals.bkgU)}</div>
   </div>
   <table class="dt"><thead><tr>
-    <th>${cols.shipper}</th><th>${cols.grade}</th><th>${cols.bsa}</th><th>${cols.bkgCnt}</th><th>${cols.fstTeu}</th><th>${cols.lstTeu}</th><th>${cols.fillRate}</th><th>${cols.w3bkgCnt}</th><th>${cols.w3fst}</th><th>${cols.w3share}</th><th>${cols.w3lst}</th><th>${cols.lstRate}</th><th>${cols.hiShare}</th><th>${cols.cm1}</th>
+    <th>${cols.shipper}</th><th>${cols.grade}</th><th class="grp-sep">${cols.bsa}</th><th>${cols.bkgCnt}</th><th>${cols.fstTeu}</th><th>${cols.lstTeu}</th><th>${cols.fillRate}</th><th class="grp-sep">${cols.w3bkgCnt}</th><th>${cols.w3fst}</th><th>${cols.w3share}</th><th>${cols.w3lst}</th><th>${cols.lstRate}</th><th>${cols.hiShare}</th><th>${cols.cm1}</th>
   </tr></thead><tbody>`;
   shippers.forEach((s, i) => {
     h += `<tr class="row-clickable" data-action="shipper-toggle" data-shipper-key="${escapeHtml(s.shipper_no || s.shipper_name)}" data-idx="${i}">
       <td class="txt">${escapeHtml(s.shipper_name || s.shipper_no || '-')} <span style="color:#80868b;font-size:10px">${escapeHtml(s.shipper_no || '')}</span></td>
       <td>${gradeBadge(s.grade)}</td>
-      <td>${fmtNum(s.bsa)}</td>
+      <td class="grp-sep">${fmtNum(s.bsa)}</td>
       <td>${fmtNum(s.bkg_count_unique)}</td>
       <td>${fmtNum(s.fst_teu)}</td>
       <td>${fmtNum(s.lst_teu)}</td>
       <td class="pct">${fmtPct(s.fill_rate)}</td>
-      <td>${fmtNum(s.w3_bkg_count_unique)}</td>
+      <td class="grp-sep">${fmtNum(s.w3_bkg_count_unique)}</td>
       <td>${fmtNum(s.w3_fst)}</td>
       <td class="pct">${fmtPct(s.w3_share)}</td>
       <td>${fmtNum(s.w3_lst)}</td>
@@ -2095,12 +2095,12 @@ function renderShipperTable(origin, sales, shippers, bookings) {
   });
   h += `<tr class="row-total">
       <td class="txt">${I18N[STATE.lang].columns.totalLabel}</td><td></td>
-      <td>${fmtNum(totals.bsa)}</td>
+      <td class="grp-sep">${fmtNum(totals.bsa)}</td>
       <td>${fmtNum(totals.bkgU)}</td>
       <td>${fmtNum(totals.fst)}</td>
       <td>${fmtNum(totals.lst)}</td>
       <td class="pct">${fmtPct(fillRate)}</td>
-      <td>${fmtNum(totals.w3bkgU)}</td>
+      <td class="grp-sep">${fmtNum(totals.w3bkgU)}</td>
       <td>${fmtNum(totals.w3fst)}</td>
       <td class="pct">${fmtPct(w3Share)}</td>
       <td>${fmtNum(totals.w3lst)}</td>
