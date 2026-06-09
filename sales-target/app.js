@@ -30,6 +30,7 @@ const ALL_WHITELIST_PORTS = WHITELIST_ORIGINS.flatMap(c => c.ports);
 const STATE = {
   index: null,
   manifest: null,
+  base2025: null,     // {tab: {salesman: {num:[...], bsa:[...]}}} for filter-linked '25/Target columns
   chunkCache: new Map(),
   view: 'summary',
   expandedKey: null,  // "<origin>||<salesman>" for drill view
@@ -358,12 +359,14 @@ async function init() {
   try {
     try { STATE.lang = localStorage.getItem('sales_target_lang') || 'ko'; } catch {}
     applyLang();
-    const [index, manifest] = await Promise.all([
+    const [index, manifest, base2025] = await Promise.all([
       loadJson('index.json'),
       loadJson('manifest.json'),
+      loadJson('base2025.json').catch(() => null),  // optional: filter-linked '25/Target columns
     ]);
     STATE.index = index;
     STATE.manifest = manifest;
+    STATE.base2025 = base2025 && base2025.base ? base2025.base : null;
     STATE.initialUrlParams = readUrlParams();
     setupFilters();
     setupListeners();
@@ -1357,9 +1360,6 @@ function detailedCardValues(allBookings, allBsaAllocations, summaryRows, q) {
   const kpiBookings = applyBookingFiltersForKpiCards(allBookings);
   const bsaAllocations = applyBsaAllocationFilters(allBsaAllocations);
   const allocatedBsa = sumAllocatedBsa(bsaAllocations);
-  const targetBk = routeAdjustedBookingTargetFromBsaAllocations(summaryRows, bsaAllocations, q);
-  const targetLf = weightedTargetFromBookings(summaryRows, kpiBookings, q, 'lifting', b => b.is_w3 ? (b.fst_teu || 0) : 0);
-  const targetHp = weightedTargetFromBookings(summaryRows, kpiBookings, q, 'high_profit', b => b.is_w3 ? (b.fst_teu || 0) : 0);
 
   const bookingPairs = new Set(countBookings.map(b => `${b.__origin}\u0001${b.__salesman}`));
   const matchedSalesRows = summaryRows.filter(r =>
@@ -1371,6 +1371,50 @@ function detailedCardValues(allBookings, allBsaAllocations, summaryRows, q) {
   const w3Fst = kpiBookings.reduce((s, b) => s + (b.is_w3 ? (b.fst_teu || 0) : 0), 0);
   const w3Lst = kpiBookings.reduce((s, b) => s + (b.is_w3 ? normalLstTeu(b) : 0), 0);
   const w3HiFst = kpiBookings.reduce((s, b) => s + (b.is_w3 && routeHighFlag(b) ? (b.fst_teu || 0) : 0), 0);
+
+  // Card targets = volume-weighted blend of each matched salesperson's target.
+  // When base2025.json is loaded, use the same per-row recomputed (base + Δ)
+  // targets as the table so the cards stay consistent under dimensional filters.
+  let targetBk;
+  let targetLf;
+  let targetHp;
+  if (STATE.base2025) {
+    const preds = dimFilterPredicates();
+    const teamNlstByTab = new Map();
+    const w3ByPair = new Map();
+    kpiBookings.forEach(b => {
+      if (!b.is_w3) return;
+      const k = pairKey(b.__origin, b.__salesman);
+      w3ByPair.set(k, (w3ByPair.get(k) || 0) + (b.fst_teu || 0));
+    });
+    const bsaByPair = new Map();
+    bsaAllocations.forEach(a => {
+      const k = pairKey(a.__origin, a.__salesman);
+      bsaByPair.set(k, (bsaByPair.get(k) || 0) + (Number(a.allocated_bsa) || 0));
+    });
+    let bkTw = 0, bkW = 0, lfTw = 0, lfW = 0, hpTw = 0, hpW = 0;
+    matchedSalesRows.forEach(r => {
+      const rc = recompute2025ForRow(r, q, preds, teamNlstByTab);
+      const t = rc ? rc.targets : {
+        booking: finiteTargetOfRow(r, q, 'booking'),
+        lifting: finiteTargetOfRow(r, q, 'lifting'),
+        high_profit: finiteTargetOfRow(r, q, 'high_profit'),
+      };
+      const key = pairKey(r.tab, r.name);
+      const wBsa = bsaByPair.get(key) || 0;
+      const wW3 = w3ByPair.get(key) || 0;
+      if (Number.isFinite(t.booking) && wBsa > 0) { bkTw += t.booking * wBsa; bkW += wBsa; }
+      if (Number.isFinite(t.lifting) && wW3 > 0) { lfTw += t.lifting * wW3; lfW += wW3; }
+      if (Number.isFinite(t.high_profit) && wW3 > 0) { hpTw += t.high_profit * wW3; hpW += wW3; }
+    });
+    targetBk = bkW > 0 ? bkTw / bkW : routeAdjustedBookingTargetFromBsaAllocations(summaryRows, bsaAllocations, q);
+    targetLf = lfW > 0 ? lfTw / lfW : weightedTargetFromBookings(summaryRows, kpiBookings, q, 'lifting', b => b.is_w3 ? (b.fst_teu || 0) : 0);
+    targetHp = hpW > 0 ? hpTw / hpW : weightedTargetFromBookings(summaryRows, kpiBookings, q, 'high_profit', b => b.is_w3 ? (b.fst_teu || 0) : 0);
+  } else {
+    targetBk = routeAdjustedBookingTargetFromBsaAllocations(summaryRows, bsaAllocations, q);
+    targetLf = weightedTargetFromBookings(summaryRows, kpiBookings, q, 'lifting', b => b.is_w3 ? (b.fst_teu || 0) : 0);
+    targetHp = weightedTargetFromBookings(summaryRows, kpiBookings, q, 'high_profit', b => b.is_w3 ? (b.fst_teu || 0) : 0);
+  }
 
   return {
     originCount: origins.size,
@@ -1473,10 +1517,133 @@ function uniqueShipperCount(bookings, w3Only = false) {
   return set.size;
 }
 
+// ─── Filter-linked 2025 base / Target recompute (base2025.json) ──────
+// '25 비중 / '25 3W/BSA and the three Target columns are derived from 2025
+// actuals (target = base_2025 + input_pp). When a DIMENSIONAL filter
+// (도착지/등급/고수익) is active we re-slice the 2025 raw and rebuild the bases,
+// then add the same per-row Δ (= sheet target − unfiltered base) to get the
+// filtered target. 분기/월/WOS do not slice 2025 (annual WOS-3 base is kept).
+const ALL_DIM_PREDS = { gradeOk: () => true, hiOk: () => true, dlyOk: () => true };
+
+function pairKey(origin, salesman) {
+  return `${origin}${salesman}`;
+}
+
+function dimFilterPredicates() {
+  const f = STATE.filters;
+  const destCountrySet = f.destCountries.length ? new Set(f.destCountries) : null;
+  const destPortSet = f.destPorts.length ? new Set(f.destPorts) : null;
+  const grade = f.grade;
+  const profit = f.profit;
+  return {
+    gradeOk(g) {
+      if (grade === 'ALL') return true;
+      const c = String(g || '').charAt(0).toUpperCase();
+      if (grade === 'AB') return c === 'A' || c === 'B';
+      if (grade === 'CD') return c === 'C' || c === 'D';
+      if (['A', 'B', 'C', 'D'].includes(grade)) return c === grade;
+      return true;
+    },
+    hiOk(hi) {
+      if (profit === 'HI') return !!hi;
+      if (profit === 'NOTHI') return !hi;
+      return true;
+    },
+    dlyOk(dlyc, dly) {
+      if (destCountrySet && !destCountrySet.has(dlyc)) return false;
+      if (destPortSet && !destPortSet.has(`${dlyc}/${dly}`)) return false;
+      return true;
+    },
+  };
+}
+
+// Sum the 2025 cells of one (tab, salesman) under the given predicates. Grade /
+// route-hi slice the numerators only; BSA (route capacity) slices on DLY dest.
+function sliced2025Measures(tab, salesman, preds) {
+  const out = { nlst: 0, w3f: 0, w3l: 0, w3h: 0, bsa: 0 };
+  const slot = STATE.base2025?.[tab]?.[salesman];
+  if (!slot) return out;
+  (slot.num || []).forEach(c => {
+    if (!preds.gradeOk(c.g) || !preds.hiOk(c.hi) || !preds.dlyOk(c.dlyc, c.dly)) return;
+    out.nlst += c.nlst || 0;
+    out.w3f += c.w3f || 0;
+    out.w3l += c.w3l || 0;
+    out.w3h += c.w3h || 0;
+  });
+  (slot.bsa || []).forEach(c => {
+    if (!preds.dlyOk(c.dlyc, c.dly)) return;
+    out.bsa += c.bsa || 0;
+  });
+  return out;
+}
+
+function aggregate2025MeasuresForTab(tab, preds) {
+  const out = { nlst: 0, w3f: 0, w3l: 0, w3h: 0, bsa: 0 };
+  const origin = STATE.base2025?.[tab];
+  if (!origin) return out;
+  for (const salesman in origin) {
+    const m = sliced2025Measures(tab, salesman, preds);
+    out.nlst += m.nlst; out.w3f += m.w3f; out.w3l += m.w3l; out.w3h += m.w3h; out.bsa += m.bsa;
+  }
+  return out;
+}
+
+function team2025Nlst(tab, preds) {
+  const origin = STATE.base2025?.[tab];
+  if (!origin) return 0;
+  let s = 0;
+  for (const salesman in origin) s += sliced2025Measures(tab, salesman, preds).nlst;
+  return s;
+}
+
+// Returns {share_2025, booking_base_2025, lifting_base_2025, hp_base_2025,
+// w3_2025_teu, targets:{booking,lifting,high_profit}} or null when the origin
+// has no 2025 cells (caller then keeps the static sheet values).
+function recompute2025ForRow(row, q, preds, teamNlstByTab) {
+  const tab = row.tab;
+  if (!STATE.base2025 || !STATE.base2025[tab]) return null;
+  const isTotal = row.row_type === 'TOTAL';
+  const m = isTotal ? aggregate2025MeasuresForTab(tab, preds) : sliced2025Measures(tab, row.name, preds);
+  const um = isTotal ? aggregate2025MeasuresForTab(tab, ALL_DIM_PREDS) : sliced2025Measures(tab, row.name, ALL_DIM_PREDS);
+  let teamNlst = teamNlstByTab.get(tab);
+  if (teamNlst === undefined) { teamNlst = team2025Nlst(tab, preds); teamNlstByTab.set(tab, teamNlst); }
+
+  const bases = {
+    booking_base_2025: safeRatio(m.w3f, m.bsa),
+    lifting_base_2025: safeRatio(m.w3l, m.w3f),
+    hp_base_2025: safeRatio(m.w3h, m.w3f),
+  };
+  const unfBase = {
+    booking: safeRatio(um.w3f, um.bsa),
+    lifting: safeRatio(um.w3l, um.w3f),
+    high_profit: safeRatio(um.w3h, um.w3f),
+  };
+  const filtBase = { booking: bases.booking_base_2025, lifting: bases.lifting_base_2025, high_profit: bases.hp_base_2025 };
+  const targets = {};
+  ['booking', 'lifting', 'high_profit'].forEach(kpi => {
+    const sheetTarget = Number(row?.kpi?.[kpi]?.[q]?.target);
+    if (Number.isFinite(sheetTarget) && Number.isFinite(filtBase[kpi]) && Number.isFinite(unfBase[kpi])) {
+      targets[kpi] = filtBase[kpi] + (sheetTarget - unfBase[kpi]);
+    } else {
+      targets[kpi] = Number.isFinite(sheetTarget) ? sheetTarget : null;
+    }
+  });
+  return {
+    share_2025: isTotal ? 1.0 : safeRatio(m.nlst, teamNlst),
+    booking_base_2025: bases.booking_base_2025,
+    lifting_base_2025: bases.lifting_base_2025,
+    hp_base_2025: bases.hp_base_2025,
+    w3_2025_teu: m.w3f,
+    targets,
+  };
+}
+
 function detailedSummaryRows(displayRows, targetRows, allBookings, allBsaAllocations, q) {
   const countBookings = applyBookingFilters(allBookings);
   const kpiBookings = applyBookingFiltersForKpiCards(allBookings);
   const bsaAllocations = applyBsaAllocationFilters(allBsaAllocations);
+  const preds = STATE.base2025 ? dimFilterPredicates() : null;
+  const teamNlstByTab = new Map();
   return displayRows.map(row => {
     const rowCountBookings = countBookings.filter(b => summaryRowMatchesBooking(row, b));
     const rowKpiBookings = kpiBookings.filter(b => summaryRowMatchesBooking(row, b));
@@ -1489,19 +1656,41 @@ function detailedSummaryRows(displayRows, targetRows, allBookings, allBsaAllocat
     const allocatedBsa = sumAllocatedBsa(rowBsaAllocations);
     const acTotal = uniqueShipperCount(rowCountBookings, false);
     const acW3 = uniqueShipperCount(rowCountBookings, true);
-    const routeBookingReference = row.row_type === 'TOTAL' && routeBookingFiltersActive()
-      ? bookingReferenceFromBsaAllocations(targetRows, rowBsaAllocations, q)
-      : null;
-    const bookingTarget = row.row_type === 'TOTAL' && routeBookingFiltersActive()
-      ? routeAdjustedBookingTargetFromBsaAllocations(targetRows, rowBsaAllocations, q)
-      : (finiteTargetOfRow(row, q, 'booking') ??
-        weightedTargetFromBsaAllocations(targetRows, rowBsaAllocations, q, 'booking'));
-    const liftingTarget = weightedTargetFromBookings(targetRows, rowKpiBookings, q, 'lifting', b => b.is_w3 ? (b.fst_teu || 0) : 0);
-    const hpTarget = weightedTargetFromBookings(targetRows, rowKpiBookings, q, 'high_profit', b => b.is_w3 ? (b.fst_teu || 0) : 0);
+
+    // 2025 columns + Targets: recompute from base2025.json when available.
+    const rc = preds ? recompute2025ForRow(row, q, preds, teamNlstByTab) : null;
+    let share_2025 = row.share_2025;
+    let booking_base_2025 = row.booking_base_2025;
+    let w3_2025_teu = row.w3_2025_teu;
+    let bookingTarget;
+    let liftingTarget;
+    let hpTarget;
+    if (rc) {
+      share_2025 = rc.share_2025;
+      booking_base_2025 = rc.booking_base_2025;
+      w3_2025_teu = rc.w3_2025_teu;
+      bookingTarget = rc.targets.booking;
+      liftingTarget = rc.targets.lifting;
+      hpTarget = rc.targets.high_profit;
+    } else {
+      // Legacy fallback (base2025.json missing or origin has no 2025 cells).
+      const routeBookingReference = row.row_type === 'TOTAL' && routeBookingFiltersActive()
+        ? bookingReferenceFromBsaAllocations(targetRows, rowBsaAllocations, q)
+        : null;
+      booking_base_2025 = Number.isFinite(routeBookingReference) ? routeBookingReference : row.booking_base_2025;
+      bookingTarget = row.row_type === 'TOTAL' && routeBookingFiltersActive()
+        ? routeAdjustedBookingTargetFromBsaAllocations(targetRows, rowBsaAllocations, q)
+        : (finiteTargetOfRow(row, q, 'booking') ??
+          weightedTargetFromBsaAllocations(targetRows, rowBsaAllocations, q, 'booking'));
+      liftingTarget = weightedTargetFromBookings(targetRows, rowKpiBookings, q, 'lifting', b => b.is_w3 ? (b.fst_teu || 0) : 0);
+      hpTarget = weightedTargetFromBookings(targetRows, rowKpiBookings, q, 'high_profit', b => b.is_w3 ? (b.fst_teu || 0) : 0);
+    }
 
     return {
       ...row,
-      booking_base_2025: Number.isFinite(routeBookingReference) ? routeBookingReference : row.booking_base_2025,
+      share_2025,
+      booking_base_2025,
+      w3_2025_teu,
       kpi: {
         booking: { [q]: metricWithTarget(bookingTarget, safeRatio(w3Fst, allocatedBsa)) },
         lifting: { [q]: metricWithTarget(liftingTarget, safeRatio(w3Lst, w3Fst)) },
