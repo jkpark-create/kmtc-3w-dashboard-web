@@ -1873,18 +1873,24 @@ async function loadDrillDataMulti(pairs, months, containerId) {
     });
   });
   const merged = mergeChunks(valid);
+  // The shipper table shows each shipper's FULL booking activity: 부킹시/LST TEU are
+  // all-lead-time totals, while the WOS-3 columns isolate the W3 subset. So the WOS
+  // filter must NOT shrink it (ignoreWos); other dimensional filters still apply. The
+  // BSA basis (Normal LST, all lead times) matches the workbook allocate_bsa_by_booking.
+  const shipperBookings = applyBookingFiltersForKpiCards(merged.bookings);
+  // The booking-level "전체 매칭 BKG" panel / CSV stay WOS-aware (respect every filter).
   const filtered = applyBookingFilters(merged.bookings);
   const allBsa = [];
   valid.forEach(c => (c.bsa_allocations || []).forEach(a => allBsa.push(a)));
-  const shipperBsa = allocateShipperBsa(filtered, applyBsaAllocationFilters(allBsa));
-  const shippers = aggregateShippers(filtered, shipperBsa);
+  const shipperBsa = allocateShipperBsa(shipperBookings, applyBsaAllocationFilters(allBsa));
+  const shippers = aggregateShippers(shipperBookings, shipperBsa);
   STATE.drillBookings = filtered;
   const scopeLabel = pairs.map(p => `${p[0]}/${p[1]}`).join(',');
   const scopeKey = safeToken(scopeLabel);
   elContainer.innerHTML =
-    renderShipperTable(scopeLabel, '', shippers, filtered) +
+    renderShipperTable(scopeLabel, '', shippers, shipperBookings) +
     renderAllMatchingBkgPanel(filtered, scopeKey);
-  attachShipperHandlers(scopeLabel, '', filtered);
+  attachShipperHandlers(scopeLabel, '', shipperBookings);
   attachAllBkgPanelHandlers(filtered, scopeKey);
 }
 
