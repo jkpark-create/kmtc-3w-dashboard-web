@@ -1908,8 +1908,9 @@ async function loadDrillDataMulti(pairs, months, containerId) {
   const filtered = applyBookingFilters(merged.bookings);
   const allBsa = [];
   valid.forEach(c => (c.bsa_allocations || []).forEach(a => allBsa.push(a)));
-  const shipperBsa = allocateShipperBsa(shipperBookings, applyBsaAllocationFilters(allBsa));
-  const shippers = aggregateShippers(shipperBookings, shipperBsa);
+  const scopedBsa = applyBsaAllocationFilters(allBsa);
+  const shipperBsa = allocateShipperBsa(shipperBookings, scopedBsa);
+  const shippers = aggregateShippers(shipperBookings, shipperBsa, scopedBsa);
   STATE.drillBookings = filtered;
   const scopeLabel = pairs.map(p => `${p[0]}/${p[1]}`).join(',');
   const scopeKey = safeToken(scopeLabel);
@@ -2026,7 +2027,7 @@ function allocateShipperBsa(bookings, bsaAllocations) {
   }
   return shipperBsa;
 }
-function aggregateShippers(bookings, shipperBsa) {
+function aggregateShippers(bookings, shipperBsa, scopeAllocations) {
   const map = new Map();
   bookings.forEach(b => {
     const key = b.shipper_no || b.shipper_name || '(unknown)';
@@ -2062,7 +2063,7 @@ function aggregateShippers(bookings, shipperBsa) {
     if (b.is_cancel) s.cancel_teu += b.fst_teu || 0;
     if (!s.grade && b.grade) s.grade = b.grade;
   });
-  return Array.from(map.values())
+  const rows = Array.from(map.values())
     .map(s => {
       const key = s.shipper_no || s.shipper_name || '(unknown)';
       const bsa = (shipperBsa && shipperBsa.get(key)) || 0;
@@ -2077,8 +2078,49 @@ function aggregateShippers(bookings, shipperBsa) {
         hi_share_w3: safeRatio(s.hi_w3_fst, s.w3_fst),
         cm1_per_teu: safeRatio(s.cm1, s.lst_teu),
       };
-    })
-    .sort((a, b) => b.fst_teu - a.fst_teu);
+    });
+  appendChurnedShippers(rows, shipperBsa, scopeAllocations);
+  return rows.sort((a, b) => b.fst_teu - a.fst_teu);
+}
+
+// 이탈화주: 2025 실적으로 BSA(목표)를 배분받았으나 현재 스코프에 2026 부킹이 없는
+// 화주를 0-활동 행으로 추가한다 (목표는 그대로, BKG/부킹시/실선=0, 달성률=0%). 이로써
+// 이탈 화주가 표에 드러나고, 합계 목표 = 구간 allocated_bsa 로 정확히 일치한다.
+// 단 등급·고수익 필터가 걸리면 BSA는 등급/수익 무관이라 합=BSA 불변식이 깨지므로
+// 기본 뷰(필터 없음)에서만 추가한다.
+function appendChurnedShippers(rows, shipperBsa, scopeAllocations) {
+  if (!shipperBsa || !shipperBsa.size) return;
+  const f = STATE.filters || {};
+  if ((f.grade && f.grade !== 'ALL') || (f.profit && f.profit !== 'ALL')) return;
+  const present = new Set(rows.map(r => r.shipper_no || r.shipper_name || '(unknown)'));
+  const meta = churnedShipperMeta(scopeAllocations);
+  shipperBsa.forEach((bsa, sk) => {
+    if (!(bsa > 0) || present.has(sk)) return;
+    const m = meta.get(sk) || [];
+    rows.push({
+      shipper_no: sk, shipper_name: m[0] || '', grade: m[1] || '',
+      bkg_count: 0, bkg_count_unique: 0, w3_bkg_count_unique: 0,
+      fst_teu: 0, lst_teu: 0, cm1: 0, w3_fst: 0, w3_lst: 0, hi_w3_fst: 0,
+      cancel_teu: 0, bsa,
+      fill_rate: safeRatio(0, bsa),   // 0% — 목표는 있으나 실선 0
+      w3_share: null, lst_rate_w3: null, hi_share_w3: null, cm1_per_teu: null,
+      churned: true,
+    });
+  });
+}
+
+// sk -> [name, grade] gathered from the scope's (origin, salesman) base2025 smeta.
+function churnedShipperMeta(scopeAllocations) {
+  const map = new Map();
+  const seen = new Set();
+  (scopeAllocations || []).forEach(a => {
+    const pk = `${a.__origin}${a.__salesman}`;
+    if (seen.has(pk)) return;
+    seen.add(pk);
+    const sm = STATE.base2025 && STATE.base2025[a.__origin] && STATE.base2025[a.__origin][a.__salesman] && STATE.base2025[a.__origin][a.__salesman].smeta;
+    if (sm) for (const sk in sm) { if (!map.has(sk)) map.set(sk, sm[sk]); }
+  });
+  return map;
 }
 
 function renderShipperTable(origin, sales, shippers, bookings) {
@@ -2111,9 +2153,16 @@ function renderShipperTable(origin, sales, shippers, bookings) {
   <table class="dt"><thead><tr>
     <th>${cols.shipper}</th><th>${cols.grade}</th><th class="grp-sep">${cols.bsa}</th><th>${cols.bkgCnt}</th><th>${cols.fstTeu}</th><th>${cols.lstTeu}</th><th>${cols.fillRate}</th><th class="grp-sep">${cols.w3bkgCnt}</th><th>${cols.w3fst}</th><th>${cols.w3share}</th><th>${cols.w3lst}</th><th>${cols.lstRate}</th><th>${cols.hiShare}</th><th>${cols.cm1}</th>
   </tr></thead><tbody>`;
+  const churnTag = STATE.lang === 'ko' ? '이탈' : 'lost';
   shippers.forEach((s, i) => {
-    h += `<tr class="row-clickable" data-action="shipper-toggle" data-shipper-key="${escapeHtml(s.shipper_no || s.shipper_name)}" data-idx="${i}">
-      <td class="txt">${escapeHtml(s.shipper_name || s.shipper_no || '-')} <span style="color:#80868b;font-size:10px">${escapeHtml(s.shipper_no || '')}</span></td>
+    // Churned 화주 (allocated BSA, no 2026 booking): show as a non-expandable muted
+    // row so the target is visible and 합계 목표 = 구간 BSA, but it can't be drilled.
+    const rowAttr = s.churned
+      ? `class="row-churned"`
+      : `class="row-clickable" data-action="shipper-toggle" data-shipper-key="${escapeHtml(s.shipper_no || s.shipper_name)}" data-idx="${i}"`;
+    const nameTag = s.churned ? ` <span class="churn-tag">${churnTag}</span>` : '';
+    h += `<tr ${rowAttr}>
+      <td class="txt">${escapeHtml(s.shipper_name || s.shipper_no || '-')} <span style="color:#80868b;font-size:10px">${escapeHtml(s.shipper_no || '')}</span>${nameTag}</td>
       <td>${gradeBadge(s.grade)}</td>
       <td class="grp-sep">${fmtNum(s.bsa)}</td>
       <td>${fmtNum(s.bkg_count_unique)}</td>
