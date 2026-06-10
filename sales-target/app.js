@@ -258,6 +258,25 @@ const QUARTER_MONTHS = {
   q2: ['202604', '202605', '202606'],
 };
 
+// Default 분기/월 = the quarter & month of the current 해당주차, mirroring the main
+// -3W dashboard (month of [이번주 일요일 + 3주], capped at the latest available data
+// month) so both screens land on the same period. Returns null when the resulting
+// month falls outside the known quarters (keeps the static default). URL params
+// (e.g. the main dashboard's ?quarter=/?month=) still override this in applyInitialParams.
+function defaultPeriodFromData() {
+  const months = (STATE.manifest && STATE.manifest.months) || [];
+  if (!months.length) return null;
+  const now = new Date();
+  const sun = new Date(now); sun.setDate(now.getDate() - now.getDay()); // 이번주 일요일
+  const target = new Date(sun); target.setDate(sun.getDate() + 21);      // +3주
+  const cand = `${target.getFullYear()}${String(target.getMonth() + 1).padStart(2, '0')}`;
+  const month = months.includes(cand) ? cand : months[months.length - 1];
+  for (const q of Object.keys(QUARTER_MONTHS)) {
+    if (QUARTER_MONTHS[q].includes(month)) return { quarter: q, month };
+  }
+  return null;
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
@@ -370,6 +389,9 @@ async function init() {
     STATE.manifest = manifest;
     STATE.base2025 = base2025 && base2025.base ? base2025.base : null;
     STATE.initialUrlParams = readUrlParams();
+    // Land on the current 해당주차's quarter+month by default (overridden by URL params).
+    const defPeriod = defaultPeriodFromData();
+    if (defPeriod) { STATE.filters.quarter = defPeriod.quarter; STATE.filters.month = defPeriod.month; }
     setupFilters();
     setupListeners();
     applyInitialParams();
@@ -1053,11 +1075,13 @@ function setupListeners() {
     });
   });
   document.getElementById('btnReset').addEventListener('click', () => {
-    STATE.filters = { quarter: 'q1', countries: [], origins: [], destCountries: [], destPorts: [], sales: [], month: 'ALL', grade: 'ALL', profit: 'ALL', wos: 'W3' };
+    // Reset returns to the same 해당주차 default (current quarter+month), not Q1/전체.
+    const def = defaultPeriodFromData() || { quarter: 'q1', month: 'ALL' };
+    STATE.filters = { quarter: def.quarter, countries: [], origins: [], destCountries: [], destPorts: [], sales: [], month: def.month, grade: 'ALL', profit: 'ALL', wos: 'W3' };
     STATE.expandedKey = null;
     STATE.expandedShipperKey = null;
-    document.getElementById('fQuarter').value = 'q1';
-    document.getElementById('fMonth').value = 'ALL';
+    document.getElementById('fQuarter').value = def.quarter;
+    document.getElementById('fMonth').value = def.month;
     document.getElementById('fGrade').value = 'ALL';
     document.getElementById('fProfit').value = 'ALL';
     if (STATE.multiSelect.msCountry) STATE.multiSelect.msCountry.setSelected([]);
