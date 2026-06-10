@@ -2086,7 +2086,7 @@ function renderShipperTable(month) {
     const gradeStyle = r.grade==='A+B' ? 'color:#1a73e8;font-weight:600' : 'color:#f9ab00';
     h += `<tr><td class="lbl shipper-col">${r.name}</td><td style="${gradeStyle}">${r.grade}</td><td class="sales-col"><span>${r.sales}</span></td><td>${fmt(r.bkg)}</td><td>${fmt(r.ship)}</td><td>${pct(r.ship,r.bkg)}</td>`;
     h += `<td>${fmt(r.hi)}</td><td>${pct(r.hi,r.bkg)}</td><td>${fmt(r.hiShip)}</td><td>${pct(r.hiShip,r.hi)}</td><td>${fmt(Math.round(r.cm1))}</td><td>${fmt(Math.round(ct))}</td><td class="basis-col">${basis ? fmtBasisCm1Teu(r.basisCm1, r.basisLst) : '-'}</td>`;
-    if (hasTargets) h += targetCellsForSalespeople(r.salesArray, quarter, performKey);
+    if (hasTargets) h += targetCellsForSalespeople(r.salesArray, quarter, performKey, month);
     h += '</tr>';
   });
   h += '</table></div>';
@@ -2204,12 +2204,12 @@ function renderSalesDestDetail(rows, sourceRows, month) {
 
 function fmtPctFrac(v, digits) {
   if (v === null || v === undefined || Number.isNaN(v)) return '-';
-  const d = (digits == null) ? 1 : digits;
+  const d = (digits == null) ? 0 : digits;
   return (v*100).toFixed(d) + '%';
 }
 function fmtPctSignedFrac(v, digits) {
   if (v === null || v === undefined || Number.isNaN(v)) return '-';
-  const d = (digits == null) ? 1 : digits;
+  const d = (digits == null) ? 0 : digits;
   const p = v*100;
   return (p>0?'+':'') + p.toFixed(d) + '%';
 }
@@ -2234,20 +2234,28 @@ function targetHeaderColumnsHtml() {
 function emptyTargetCells() {
   return `<td class="tgt-mini" style="color:#bdc1c6;text-align:center">-</td><td class="tgt-mini" style="color:#bdc1c6;text-align:center">-</td><td class="tgt-mini" style="color:#bdc1c6;text-align:center">-</td><td style="text-align:center;color:#bdc1c6">-</td>`;
 }
-function targetCellsForSalesperson(name, quarter, performKey) {
+function targetCellsForSalesperson(name, quarter, performKey, month) {
   const row = SALES_TARGET.byName.get(name);
   if (!row) {
     return emptyTargetCells();
   }
-  const kpis = ['booking','lifting','high_profit'];
+  // P(rogress) = the SELECTED MONTH's live value (booking=w3f/BSA, lifting=w3l/w3f,
+  // hp=w3h/w3f) so this overlay matches the Sales Target screen for the same month.
+  // ±(gap) is recomputed as P − T. Falls back to the workbook's static quarter
+  // Progress when month_progress is unavailable (e.g. index.json not yet rebuilt).
+  const mp = (month && row.month_progress) ? row.month_progress[month] : null;
+  const kpis = [['booking','b'],['lifting','l'],['high_profit','h']];
   let cells = '';
-  kpis.forEach(k => {
+  kpis.forEach(([k, mk]) => {
     const kpi = row.kpi?.[k]?.[quarter] || {};
-    const cls = tgtGapClass(kpi.gap);
+    const target = kpi.target;
+    const progress = (mp && mp[mk] != null) ? mp[mk] : kpi[performKey];
+    const gap = (target == null || progress == null) ? null : (progress - target);
+    const cls = tgtGapClass(gap);
     cells += `<td class="tgt-mini">
-      <div class="tg-row"><span class="tg-l">T</span><span class="tg-v">${fmtPctFrac(kpi.target)}</span></div>
-      <div class="tg-row"><span class="tg-l">P</span><span class="tg-v">${fmtPctFrac(kpi[performKey])}</span></div>
-      <div class="tg-row tg-gap ${cls}"><span class="tg-l">±</span><span class="tg-v">${fmtPctSignedFrac(kpi.gap)}</span></div>
+      <div class="tg-row"><span class="tg-l">T</span><span class="tg-v">${fmtPctFrac(target)}</span></div>
+      <div class="tg-row"><span class="tg-l">P</span><span class="tg-v">${fmtPctFrac(progress)}</span></div>
+      <div class="tg-row tg-gap ${cls}"><span class="tg-l">±</span><span class="tg-v">${fmtPctSignedFrac(gap)}</span></div>
     </td>`;
   });
   const origin = row.tab;
@@ -2255,9 +2263,9 @@ function targetCellsForSalesperson(name, quarter, performKey) {
   cells += `<td style="text-align:center"><a class="tgt-link" href="${url}" target="_blank" rel="noopener">→</a></td>`;
   return cells;
 }
-function targetCellsForSalespeople(names, quarter, performKey) {
+function targetCellsForSalespeople(names, quarter, performKey, month) {
   const unique = [...new Set((names || []).filter(Boolean))];
-  return unique.length === 1 ? targetCellsForSalesperson(unique[0], quarter, performKey) : emptyTargetCells();
+  return unique.length === 1 ? targetCellsForSalesperson(unique[0], quarter, performKey, month) : emptyTargetCells();
 }
 
 function renderSalesmanTable(month) {
@@ -2329,7 +2337,7 @@ function renderSalesmanTable(month) {
     const ct = r.cm1l>0?r.cm1/r.cm1l:0;
     h += `<tr><td class="lbl">${r.name}</td><td>${r.custCnt}</td><td>${fmt(r.bkg)}</td><td>${fmt(r.ship)}</td><td>${pct(r.ship,r.bkg)}</td>`;
     h += `<td>${fmt(r.hi)}</td><td>${pct(r.hi,r.bkg)}</td><td>${fmt(r.hiShip)}</td><td>${pct(r.hiShip,r.hi)}</td><td>${fmt(Math.round(r.cm1))}</td><td>${fmt(Math.round(ct))}</td>`;
-    if (hasTargets) h += targetCellsForSalesperson(r.name, quarter, performKey);
+    if (hasTargets) h += targetCellsForSalesperson(r.name, quarter, performKey, month);
     h += '</tr>';
   });
 
