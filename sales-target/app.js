@@ -934,8 +934,14 @@ function destPortValue(b) {
 
 function applyFacetOptions(sets) {
   let changed = false;
-  changed = setFacetOptions('msCountry', 'countries', countryOptionsFromSet(sets.countries)) || changed;
-  changed = setFacetOptions('msPort', 'origins', originOptionsFromSet(sets.origins)) || changed;
+  // NOTE: 선적국가(country)/선적포트(origin) options are intentionally NOT narrowed
+  // from the booking pool. That pool is already restricted to the currently-selected
+  // origins (filterFacetChunkMetas → effectiveOrigins), so deriving country/port
+  // options from it would collapse them to just the current selection and make the
+  // 선적국가/선적포트 filters single-select. These two come from the manifest instead
+  // (full data-bearing set), maintained by refreshPortOptions on country change, so
+  // the user can keep adding origins. Dest/sales facets DO narrow by selected origins
+  // (the desired 선택지→하위 direction) and stay booking-derived.
   changed = setFacetOptions('msSales', 'sales', salesOptionsForCurrentFacet(sets.sales)) || changed;
   changed = setFacetOptions('msDestCountry', 'destCountries', destCountryOptionsFromSet(sets.destCountries)) || changed;
   changed = setFacetOptions('msDestPort', 'destPorts', destPortOptionsFromSet(sets.destPorts)) || changed;
