@@ -269,11 +269,11 @@ function displayOrigin(origin) {
   return value === 'ID-IDO' ? 'IDO' : value;
 }
 
-function fmtPct(frac, digits = 1) {
+function fmtPct(frac, digits = 0) {
   if (frac === null || frac === undefined || Number.isNaN(frac)) return '-';
   return (frac * 100).toFixed(digits) + '%';
 }
-function fmtPctSigned(frac, digits = 1) {
+function fmtPctSigned(frac, digits = 0) {
   if (frac === null || frac === undefined || Number.isNaN(frac)) return '-';
   const pct = frac * 100;
   const sign = pct > 0 ? '+' : '';
@@ -2561,7 +2561,7 @@ function pivotAggregate(rows, metric) {
 const RATIO_METRICS = new Set(['lst_rate_w3', 'hi_share_w3', 'cancel_rate']);
 
 function pivotFormat(value, metric) {
-  if (RATIO_METRICS.has(metric)) return fmtPct(value, 1);
+  if (RATIO_METRICS.has(metric)) return fmtPct(value, 0);
   return fmtNum(value, 0);
 }
 
@@ -2643,7 +2643,7 @@ function renderPivotTable(bookings) {
     else if (normalize === 'col') denom = pivotAggregate(colBks || [], metric);
     else if (normalize === 'grand') denom = grandValue;
     if (!denom) return pivotFormat(val, metric);
-    return ((val / denom) * 100).toFixed(1) + '%';
+    return ((val / denom) * 100).toFixed(0) + '%';
   };
 
   const totalLabel = I18N[STATE.lang].columns.totalLabel;
