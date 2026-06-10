@@ -133,7 +133,7 @@ const I18N = {
       bk3w: '3W Booking (vs BSA)', lf3w: 'Actual Lifting Rate', hp3w: 'High-Profit Rate',
       ac: 'No. of A/C (Q1)', acTotal: 'Total', ac3w: '3W', acPct: '%',
       target: 'Target', perform: 'Perform', progress: 'Progress', gap: '+/-', achievement: '달성률',
-      shipper: '화주', grade: '등급', bkgUnique: '고유 BKG_NO', bkgCnt: 'BKG 건', bsa: '목표(배분BSA)', fillRate: '소석률',
+      shipper: '화주', grade: '등급', bkgUnique: '고유 BKG_NO', bkgCnt: 'BKG 건', bsa: '목표(배분BSA)', fillRate: '달성률',
       w3bkgCnt: 'WOS-3 BKG건', w3share: '3주전 부킹 비중',
       fstTeu: '부킹시 TEU', lstTeu: 'LST TEU', w3fst: 'WOS-3 부킹시', w3lst: 'WOS-3 LST',
       lstRate: '실선적률(W3)', hiShare: '고수익 비중(W3)', cm1: 'CM1',
@@ -197,7 +197,7 @@ const I18N = {
       bk3w: '3W Booking (vs BSA)', lf3w: 'Actual Lifting Rate', hp3w: 'High-Profit Rate',
       ac: 'No. of A/C (Q1)', acTotal: 'Total', ac3w: '3W', acPct: '%',
       target: 'Target', perform: 'Perform', progress: 'Progress', gap: '+/-', achievement: 'Achv.%',
-      shipper: 'Shipper', grade: 'Grade', bkgUnique: 'Unique BKG_NO', bkgCnt: 'BKG count', bsa: 'Target BSA', fillRate: 'Fill%',
+      shipper: 'Shipper', grade: 'Grade', bkgUnique: 'Unique BKG_NO', bkgCnt: 'BKG count', bsa: 'Target BSA', fillRate: 'Achv.%',
       w3bkgCnt: 'WOS-3 BKG', w3share: 'WOS-3 share',
       fstTeu: 'Booked TEU', lstTeu: 'LST TEU', w3fst: 'WOS-3 Booked', w3lst: 'WOS-3 LST',
       lstRate: 'LFT% (W3)', hiShare: 'Hi-Profit% (W3)', cm1: 'CM1',
@@ -1954,42 +1954,78 @@ function applyBookingFiltersCore(bookings, ignoreWos) {
   });
 }
 
-// Sub-allocate each (salesman, 구간=DLY route) BSA to its shippers in proportion
-// to their Normal LST_TEU on that route — same basis as the target workbook's
-// allocate_bsa_by_booking (BSA배분기준TEU = is_normal ? lst). Returns shipperKey -> BSA.
+// Split each (salesperson, 구간=DLY route) allocated 2026 BSA among that
+// salesperson's shippers IN PROPORTION TO EACH SHIPPER'S 2025 Normal LST share
+// (base2025 `shpr` cells). 목표_i = 구간BSA × 화주2025nlst ÷ 영업사원·구간 2025nlst합.
+// Summing one salesperson's route shippers reproduces build_allocated_bsa's
+// basis_lst, so the per-shipper 목표 sum back to the route's allocated_bsa. Because
+// the basis is 2025 (not the current 2026 LST), 달성률 = 2026 LST ÷ 목표 now varies
+// per shipper (grew vs 2025 → >100%, shrank → <100%) instead of collapsing to the
+// route average. Falls back to the current-period Normal LST split only when
+// base2025 is absent/stale so a route's BSA is never silently dropped.
 function allocateShipperBsa(bookings, bsaAllocations) {
-  const SEP = '';
-  const routeBsa = new Map();          // origin|salesman|dlyCtry|dlyPort -> allocated BSA (salesman's route portion)
+  const SEP = '\u0001';
+  const routeBsa = new Map();          // origin|salesman|dlyc|dly -> allocated 2026 BSA
   (bsaAllocations || []).forEach(a => {
     const rk = `${a.__origin}${SEP}${a.__salesman}${SEP}${a.pod_country}${SEP}${a.pod}`;
     routeBsa.set(rk, (routeBsa.get(rk) || 0) + (Number(a.allocated_bsa) || 0));
   });
-  const routeBasis = new Map();        // routeKey -> total Normal LST across shippers
-  const shipperRouteBasis = new Map(); // routeKey|shipperKey -> shipper Normal LST
-  bookings.forEach(b => {
-    const basis = normalLstTeu(b);
-    if (!basis) return;
-    const rk = `${b.__origin}${SEP}${b.__salesman}${SEP}${b.dly_country}${SEP}${b.dly_plc}`;
-    if (!routeBsa.has(rk)) return;     // route carries no BSA → nothing to distribute
-    routeBasis.set(rk, (routeBasis.get(rk) || 0) + basis);
-    const shipperKey = b.shipper_no || b.shipper_name || '(unknown)';
-    const srk = `${rk}${SEP}${shipperKey}`;
-    shipperRouteBasis.set(srk, (shipperRouteBasis.get(srk) || 0) + basis);
-  });
   const shipperBsa = new Map();
-  shipperRouteBasis.forEach((basis, srk) => {
-    const cut = srk.lastIndexOf(SEP);
-    const rk = srk.slice(0, cut);
-    const shipperKey = srk.slice(cut + 1);
-    const total = routeBasis.get(rk) || 0;
-    const bsa = routeBsa.get(rk) || 0;
-    if (total > 0 && bsa > 0) {
-      shipperBsa.set(shipperKey, (shipperBsa.get(shipperKey) || 0) + bsa * basis / total);
+  const base = STATE.base2025;
+  const fallbackRoutes = new Set();    // routes with no 2025 basis → legacy split below
+  routeBsa.forEach((bsa, rk) => {
+    if (!bsa) return;
+    const p1 = rk.indexOf(SEP);
+    const p2 = rk.indexOf(SEP, p1 + 1);
+    const p3 = rk.indexOf(SEP, p2 + 1);
+    const origin = rk.slice(0, p1);
+    const salesman = rk.slice(p1 + 1, p2);
+    const dlyc = rk.slice(p2 + 1, p3);
+    const dly = rk.slice(p3 + 1);
+    const cells = (base && base[origin] && base[origin][salesman] && base[origin][salesman].shpr) || [];
+    let total = 0;
+    const matched = [];
+    cells.forEach(c => {
+      if (c.dlyc === dlyc && c.dly === dly && c.nlst > 0) { total += c.nlst; matched.push(c); }
+    });
+    if (total > 0) {
+      matched.forEach(c => {
+        shipperBsa.set(c.sk, (shipperBsa.get(c.sk) || 0) + bsa * c.nlst / total);
+      });
+    } else {
+      fallbackRoutes.add(rk);
     }
   });
+  // Legacy fallback: only for routes that carry BSA but have no 2025 shipper basis
+  // (e.g. base2025 missing, or a brand-new route). Distribute by current Normal LST
+  // so the BSA isn't lost — this is the only place the old circular behaviour can
+  // still occur, and only where no 2025 footprint exists.
+  if (fallbackRoutes.size) {
+    const routeBasis = new Map();
+    const shipperRouteBasis = new Map();
+    bookings.forEach(b => {
+      const basis = normalLstTeu(b);
+      if (!basis) return;
+      const rk = `${b.__origin}${SEP}${b.__salesman}${SEP}${b.dly_country}${SEP}${b.dly_plc}`;
+      if (!fallbackRoutes.has(rk)) return;
+      routeBasis.set(rk, (routeBasis.get(rk) || 0) + basis);
+      const shipperKey = b.shipper_no || b.shipper_name || '(unknown)';
+      const srk = `${rk}${SEP}${shipperKey}`;
+      shipperRouteBasis.set(srk, (shipperRouteBasis.get(srk) || 0) + basis);
+    });
+    shipperRouteBasis.forEach((basis, srk) => {
+      const cut = srk.lastIndexOf(SEP);
+      const rk = srk.slice(0, cut);
+      const shipperKey = srk.slice(cut + 1);
+      const total = routeBasis.get(rk) || 0;
+      const bsa = routeBsa.get(rk) || 0;
+      if (total > 0 && bsa > 0) {
+        shipperBsa.set(shipperKey, (shipperBsa.get(shipperKey) || 0) + bsa * basis / total);
+      }
+    });
+  }
   return shipperBsa;
 }
-
 function aggregateShippers(bookings, shipperBsa) {
   const map = new Map();
   bookings.forEach(b => {
