@@ -2583,24 +2583,24 @@ function renderTab5() {
   const byShpr = {};
   sd.forEach(r => {
     const k = r.BKG_SHPR_CST_ENM || r.BKG_SHPR_CST_NO;
-    if (!byShpr[k]) byShpr[k] = {w3:0,w2:0,w1:0,wos:0,sm:new Set(),tags:new Set()};
+    if (!byShpr[k]) byShpr[k] = {w3:0,w2:0,w1:0,wos:0,sm:new Set(),grades:new Set()};
     const s = byShpr[k];
     s.w3 += r.w3_fst||0; s.w2 += r.w2_fst||0; s.w1 += r.w1_fst||0; s.wos += r.wos_fst||0;
     if (r.Salesman_POR) s.sm.add(r.Salesman_POR);
-    if (shipperTag(r)) s.tags.add(shipperTag(r));
+    if (r.grade) s.grades.add(r.grade);
   });
   let custRows = Object.entries(byShpr).map(([k,s]) => {
     const total = s.w3+s.w2+s.w1+s.wos;
     const smArray = [...s.sm];
     const sales = smArray.length > 2 ? smArray.slice(0, 2).join(', ') + '...' : smArray.join(', ');
-    return {name:k, tag:[...s.tags].join(', '), sales, total, w3:s.w3, w2:s.w2, w1:s.w1, wos:s.wos};
+    return {name:k, grade:[...s.grades].join(', '), sales, total, w3:s.w3, w2:s.w2, w1:s.w1, wos:s.wos};
   }).sort((a,b)=>b.total-a.total);
 
   html += `<div class="chart-card"><h3>${L('화주별 부킹 접수 시점','Shipper Booking Timing')} (${fmtMonth(month)})</h3>
-  <table class="summary shipper-table"><tr><th class="shipper-col">${L('화주','Shipper')}</th><th>${L('고수익화주','Hi-Shipper')}</th><th class="sales-col"><span>${L('영업사원','Sales')}</span></th><th>${L('전체BKG','Total')}</th><th>WOS-3</th><th>${L('비중','Ratio')}</th><th>WOS-2</th><th>${L('비중','Ratio')}</th><th>WOS-1</th><th>${L('비중','Ratio')}</th><th>WOS</th><th>${L('비중','Ratio')}</th></tr>`;
+  <table class="summary shipper-table"><tr><th class="shipper-col">${L('화주','Shipper')}</th><th>${L('등급','Grade')}</th><th class="sales-col"><span>${L('영업사원','Sales')}</span></th><th>${L('전체BKG','Total')}</th><th>WOS-3</th><th>${L('비중','Ratio')}</th><th>WOS-2</th><th>${L('비중','Ratio')}</th><th>WOS-1</th><th>${L('비중','Ratio')}</th><th>WOS</th><th>${L('비중','Ratio')}</th></tr>`;
   custRows.forEach(r => {
-    const tagStyle = r.tag==='고수익화주' ? 'color:#34a853;font-weight:600' : r.tag==='저수익화주' ? 'color:#ea4335' : '';
-    html += `<tr><td class="lbl shipper-col">${r.name}</td><td style="${tagStyle}">${tagLabel(r.tag)}</td><td class="sales-col"><span>${r.sales}</span></td><td>${fmt(r.total)}</td>`;
+    const gradeStyle = r.grade==='A+B' ? 'color:#1a73e8;font-weight:600' : r.grade ? 'color:#f9ab00' : '';
+    html += `<tr><td class="lbl shipper-col">${r.name}</td><td style="${gradeStyle}">${r.grade}</td><td class="sales-col"><span>${r.sales}</span></td><td>${fmt(r.total)}</td>`;
     html += `<td>${fmt(r.w3)}</td><td>${pct(r.w3,r.total)}</td>`;
     html += `<td>${fmt(r.w2)}</td><td>${pct(r.w2,r.total)}</td>`;
     html += `<td>${fmt(r.w1)}</td><td>${pct(r.w1,r.total)}</td>`;
