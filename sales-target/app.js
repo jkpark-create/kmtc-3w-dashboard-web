@@ -1107,17 +1107,40 @@ function setupListeners() {
 }
 
 // ─── Filtered summary rows from index.json ───────────────────────
+// Group rows by their origin tab (in tab-first-appearance order), TOTAL before
+// its SALES rows. Supplemental sales rows (e.g. activity_fallback backfill) are
+// appended to the end of index.json rather than inside their tab block, so a flat
+// filter would render them detached at the very bottom of the table. Regrouping
+// here keeps them under the correct 선적지 group without needing a data rebuild.
+function groupRowsByTab(rows) {
+  const byTab = new Map();
+  const order = [];
+  rows.forEach(r => {
+    if (!byTab.has(r.tab)) { byTab.set(r.tab, []); order.push(r.tab); }
+    byTab.get(r.tab).push(r);
+  });
+  const out = [];
+  order.forEach(tab => {
+    // Stable sort: TOTAL first, SALES keep their original relative order.
+    const group = byTab.get(tab).slice().sort(
+      (a, b) => (a.row_type === 'TOTAL' ? 0 : 1) - (b.row_type === 'TOTAL' ? 0 : 1)
+    );
+    out.push(...group);
+  });
+  return out;
+}
+
 function filteredSummaryRows() {
   const scope = effectiveOrigins();
   const salesSel = STATE.filters.sales;
   const salesSet = salesSel.length ? new Set(salesSel) : null;
   const rows = STATE.index?.rows || [];
-  return rows.filter(r => {
+  return groupRowsByTab(rows.filter(r => {
     if (!scope.has(r.tab)) return false;
     if (r.row_type === 'TOTAL') return !salesSet;
     if (salesSet && !salesSet.has(r.name)) return false;
     return true;
-  });
+  }));
 }
 
 function kpiOfRow(r, quarter, kpiKey) {
