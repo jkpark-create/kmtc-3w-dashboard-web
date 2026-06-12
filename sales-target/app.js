@@ -2173,6 +2173,7 @@ function renderShipperTable(origin, sales, shippers, bookings) {
   const hiShare = safeRatio(totals.w3hi, totals.w3fst);
   const fillRate = safeRatio(totals.lst, totals.bsa);
   const w3Share = safeRatio(totals.w3fst, totals.fst);
+  const cm1PerTeu = safeRatio(totals.cm1, totals.lst);
 
   // The breadcrumbs above already display origin + salesperson scope, so the
   // panel title only needs the month range to avoid the long comma-separated repeat.
@@ -2181,7 +2182,7 @@ function renderShipperTable(origin, sales, shippers, bookings) {
     <div class="panel-actions">${cols.shipper} ${shippers.length} · ${cols.bkgCnt} ${fmtNum(totals.bkgU)}</div>
   </div>
   <table class="dt"><thead><tr>
-    <th>${cols.shipper}</th><th>${cols.grade}</th><th class="grp-sep">${cols.bsa}</th><th>${cols.bkgCnt}</th><th>${cols.fstTeu}</th><th>${cols.lstTeu}</th><th>${cols.fillRate}</th><th class="grp-sep">${cols.w3bkgCnt}</th><th>${cols.w3fst}</th><th>${cols.w3share}</th><th>${cols.w3lst}</th><th>${cols.lstRate}</th><th>${cols.hiShare}</th><th>${cols.cm1}</th>
+    <th>${cols.shipper}</th><th>${cols.grade}</th><th class="grp-sep">${cols.bsa}</th><th>${cols.bkgCnt}</th><th>${cols.fstTeu}</th><th>${cols.lstTeu}</th><th>${cols.fillRate}</th><th class="grp-sep">${cols.w3bkgCnt}</th><th>${cols.w3fst}</th><th>${cols.w3share}</th><th>${cols.w3lst}</th><th>${cols.lstRate}</th><th>${cols.hiShare}</th><th>${cols.cm1}</th><th>${cols.cm1PerTeu}</th>
   </tr></thead><tbody>`;
   const churnTag = STATE.lang === 'ko' ? '이탈' : 'lost';
   shippers.forEach((s, i) => {
@@ -2206,6 +2207,7 @@ function renderShipperTable(origin, sales, shippers, bookings) {
       <td class="pct">${fmtPct(s.lst_rate_w3)}</td>
       <td class="pct">${fmtPct(s.hi_share_w3)}</td>
       <td>${fmtNum(s.cm1)}</td>
+      <td>${fmtNum(s.cm1_per_teu, 0)}</td>
     </tr>`;
   });
   h += `<tr class="row-total">
@@ -2222,6 +2224,7 @@ function renderShipperTable(origin, sales, shippers, bookings) {
       <td class="pct">${fmtPct(lstRate)}</td>
       <td class="pct">${fmtPct(hiShare)}</td>
       <td>${fmtNum(totals.cm1)}</td>
+      <td>${fmtNum(cm1PerTeu, 0)}</td>
     </tr></tbody></table>
     <p style="margin-top:10px;font-size:11px;color:#80868b">${tr('clueShipper')}</p>`;
   return h;
@@ -2240,7 +2243,7 @@ function attachShipperHandlers(origin, sales, bookings) {
       detail.className = 'detail-row';
       detail.dataset.key = key;
       const cell = document.createElement('td');
-      cell.colSpan = 14;
+      cell.colSpan = 15;
       cell.innerHTML = renderBkgDetail(key, bookings);
       detail.appendChild(cell);
       row.parentNode.insertBefore(detail, row.nextSibling);
