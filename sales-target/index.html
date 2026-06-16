@@ -8,17 +8,19 @@
 <style>html.auth-pending body{visibility:hidden}</style>
 <script>
 // Auth gate — mirrors the main dashboard's company-domain check. The main
-// dashboard stores the OAuth token + user object in sessionStorage on login;
+// dashboard stores the OAuth token + user object for this origin on login;
 // since GitHub Pages serves both screens from the same origin, we just verify
 // the stored credentials here. If missing/invalid, bounce to the main login
 // page and remember where to return.
 (function authGate() {
   const ALLOWED_DOMAINS = ['ekmtc.com'];
+  const AUTH_TOKEN_KEY = 'gtoken';
+  const AUTH_USER_KEY = 'guser';
   // Hide page contents until we confirm auth, to avoid a flash of the dashboard.
   document.documentElement.classList.add('auth-pending');
   let user = null;
-  try { user = JSON.parse(sessionStorage.getItem('guser') || 'null'); } catch (_) {}
-  const token = sessionStorage.getItem('gtoken');
+  try { user = JSON.parse(localStorage.getItem(AUTH_USER_KEY) || sessionStorage.getItem(AUTH_USER_KEY) || 'null'); } catch (_) {}
+  const token = localStorage.getItem(AUTH_TOKEN_KEY) || sessionStorage.getItem(AUTH_TOKEN_KEY);
   function bounceToLogin(reason) {
     try {
       sessionStorage.setItem('obtReturnPath', location.pathname + location.search);
@@ -33,10 +35,19 @@
   }
   const domain = ((user.email || '').split('@')[1] || '').toLowerCase();
   if (ALLOWED_DOMAINS.length && !ALLOWED_DOMAINS.includes(domain)) {
-    try { sessionStorage.clear(); } catch (_) {}
+    try {
+      localStorage.removeItem(AUTH_TOKEN_KEY);
+      localStorage.removeItem(AUTH_USER_KEY);
+      sessionStorage.removeItem(AUTH_TOKEN_KEY);
+      sessionStorage.removeItem(AUTH_USER_KEY);
+    } catch (_) {}
     bounceToLogin('bad-domain');
     return;
   }
+  try {
+    sessionStorage.setItem(AUTH_TOKEN_KEY, token);
+    sessionStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
+  } catch (_) {}
   // Authenticated — reveal the page.
   document.documentElement.classList.remove('auth-pending');
 })();

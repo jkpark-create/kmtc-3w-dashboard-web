@@ -8,10 +8,12 @@
 // Same auth gate as the screen — see sales-target/index.html for the rationale.
 (function authGate() {
   const ALLOWED_DOMAINS = ['ekmtc.com'];
+  const AUTH_TOKEN_KEY = 'gtoken';
+  const AUTH_USER_KEY = 'guser';
   document.documentElement.style.visibility = 'hidden';
   let user = null;
-  try { user = JSON.parse(sessionStorage.getItem('guser') || 'null'); } catch (_) {}
-  const token = sessionStorage.getItem('gtoken');
+  try { user = JSON.parse(localStorage.getItem(AUTH_USER_KEY) || sessionStorage.getItem(AUTH_USER_KEY) || 'null'); } catch (_) {}
+  const token = localStorage.getItem(AUTH_TOKEN_KEY) || sessionStorage.getItem(AUTH_TOKEN_KEY);
   function bounce() {
     try { sessionStorage.setItem('obtReturnPath', location.pathname + location.search); } catch (_) {}
     location.replace('../');
@@ -19,9 +21,18 @@
   if (!token || !user) return bounce();
   const domain = ((user.email || '').split('@')[1] || '').toLowerCase();
   if (ALLOWED_DOMAINS.length && !ALLOWED_DOMAINS.includes(domain)) {
-    try { sessionStorage.clear(); } catch (_) {}
+    try {
+      localStorage.removeItem(AUTH_TOKEN_KEY);
+      localStorage.removeItem(AUTH_USER_KEY);
+      sessionStorage.removeItem(AUTH_TOKEN_KEY);
+      sessionStorage.removeItem(AUTH_USER_KEY);
+    } catch (_) {}
     return bounce();
   }
+  try {
+    sessionStorage.setItem(AUTH_TOKEN_KEY, token);
+    sessionStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
+  } catch (_) {}
   document.documentElement.style.visibility = '';
 })();
 </script>

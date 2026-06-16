@@ -187,6 +187,9 @@ const DRIVE_READONLY_SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
 const SCOPES = `email profile openid ${DRIVE_READONLY_SCOPE}`;
 const DRIVE_FOLDER_ID = '1JIxg6Y-_gRfI1HueXZ1Q9j4-Z5bxvNgv';
 const REDIRECT_URI = location.origin + '/kmtc-3w-dashboard-web/';
+const AUTH_TOKEN_KEY = 'gtoken';
+const AUTH_USER_KEY = 'guser';
+const RETURN_PATH_KEY = 'obtReturnPath';
 
 let gToken = null, gUser = null, DATA = null;
 
@@ -215,14 +218,42 @@ function loadSalesTargetSummary() {
     .catch(() => {});
 }
 
+function storedUser() {
+  try {
+    return JSON.parse(localStorage.getItem(AUTH_USER_KEY) || sessionStorage.getItem(AUTH_USER_KEY) || 'null');
+  } catch (_) {
+    return null;
+  }
+}
+
+function saveAuthSession(token, user) {
+  const userText = JSON.stringify(user);
+  localStorage.setItem(AUTH_TOKEN_KEY, token);
+  localStorage.setItem(AUTH_USER_KEY, userText);
+  sessionStorage.setItem(AUTH_TOKEN_KEY, token);
+  sessionStorage.setItem(AUTH_USER_KEY, userText);
+}
+
+function clearAuthSession(keepUser) {
+  localStorage.removeItem(AUTH_TOKEN_KEY);
+  sessionStorage.removeItem(AUTH_TOKEN_KEY);
+  if (!keepUser) {
+    localStorage.removeItem(AUTH_USER_KEY);
+    sessionStorage.removeItem(AUTH_USER_KEY);
+  }
+}
+
 function doLogin() {
-  const authUrl = 'https://accounts.google.com/o/oauth2/v2/auth' +
-    '?client_id=' + encodeURIComponent(GOOGLE_CLIENT_ID) +
-    '&redirect_uri=' + encodeURIComponent(REDIRECT_URI) +
-    '&response_type=token' +
-    '&scope=' + encodeURIComponent(SCOPES) +
-    '&include_granted_scopes=true' +
-    '&prompt=select_account';
+  const prevUser = storedUser();
+  const params = new URLSearchParams({
+    client_id: GOOGLE_CLIENT_ID,
+    redirect_uri: REDIRECT_URI,
+    response_type: 'token',
+    scope: SCOPES,
+    include_granted_scopes: 'true'
+  });
+  if (prevUser && prevUser.email) params.set('login_hint', prevUser.email);
+  const authUrl = 'https://accounts.google.com/o/oauth2/v2/auth?' + params.toString();
   location.href = authUrl;
 }
 
@@ -248,11 +279,10 @@ function handleRedirect() {
     }
     gToken = token;
     gUser = {email: info.email, name: info.name, picture: info.picture};
-    sessionStorage.setItem('gtoken', token);
-    sessionStorage.setItem('guser', JSON.stringify(gUser));
-    const returnPath = sessionStorage.getItem('obtReturnPath');
+    saveAuthSession(token, gUser);
+    const returnPath = sessionStorage.getItem(RETURN_PATH_KEY);
     if (returnPath && returnPath !== location.pathname) {
-      sessionStorage.removeItem('obtReturnPath');
+      sessionStorage.removeItem(RETURN_PATH_KEY);
       location.href = returnPath;
       return;
     }
@@ -268,18 +298,26 @@ function checkSession() {
   // 1. Check redirect callback
   if (handleRedirect()) return;
   // 2. Check existing session
-  const t = sessionStorage.getItem('gtoken');
-  const u = sessionStorage.getItem('guser');
+  const t = localStorage.getItem(AUTH_TOKEN_KEY) || sessionStorage.getItem(AUTH_TOKEN_KEY);
+  const u = localStorage.getItem(AUTH_USER_KEY) || sessionStorage.getItem(AUTH_USER_KEY);
   if (t && u) {
     gToken = t; gUser = JSON.parse(u);
     fetch('https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=' + t)
-      .then(r => { if (r.ok) showApp(); else sessionStorage.clear(); })
-      .catch(() => sessionStorage.clear());
+      .then(r => {
+        if (r.ok) {
+          saveAuthSession(t, gUser);
+          showApp();
+        } else {
+          clearAuthSession(true);
+        }
+      })
+      .catch(() => clearAuthSession(true));
   }
 }
 
 function logout() {
-  sessionStorage.clear();
+  clearAuthSession(false);
+  sessionStorage.removeItem(RETURN_PATH_KEY);
   location.reload();
 }
 
