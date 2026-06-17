@@ -391,7 +391,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <tr><td>'25 3W/BSA</td><td>2025년 해당 (선적지·영업사원) 의 WOS-3 부킹률 (= WOS-3 FST TEU ÷ BSA TEU). Target 컬럼의 baseline 값이 되는 비율. 셀에 마우스를 올리면 raw FST TEU 합계가 툴팁으로 표시됩니다.</td></tr>
 <tr><td>3W Booking (vs BSA)</td><td>WOS-3 시점 BKG TEU ÷ BSA TEU</td></tr>
 <tr><td>Actual Lifting Rate</td><td>WOS-3 BKG 중 실제 선적된 비율</td></tr>
-<tr><td>High-Profit Rate</td><td>WOS-3 BKG 중 고수익 화주 BKG 비중</td></tr>
+<tr><td>High-Profit Rate</td><td>WOS-3 BKG 중 구간별 고수익 BKG 비중 (화주×POR×DLY 루트 분류 기준 → <a href="#hi-logic">9.1</a>)</td></tr>
 <tr><td>Target / Perform / 달성률 / +-</td><td>2025_base + Input %p / 실적 / 실적 ÷ Target / 차이</td></tr>
 </table>
 <div class="tip"><strong>상세 필터 적용 시:</strong> 월·도착지·등급·고수익·WOS 필터가 선택되면 ① 요약도 필터에 맞는 BKG 기준으로 다시 그려집니다. 행 수, Target, Perform, +/-, 달성률, A/C 수가 모두 현재 필터 조건에 맞춰 변동됩니다.</div>
@@ -407,7 +407,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <tr><td>'25 W3/BSA</td><td>2025 WOS-3 booking rate (= WOS-3 FST TEU ÷ BSA TEU) for that (origin, salesperson). This is the baseline used in the Target column. Hover the cell to see the raw TEU sum.</td></tr>
 <tr><td>3W Booking (vs BSA)</td><td>WOS-3 BKG TEU ÷ BSA TEU</td></tr>
 <tr><td>Actual Lifting Rate</td><td>Loaded / WOS-3 BKG</td></tr>
-<tr><td>High-Profit Rate</td><td>Hi-profit BKG / WOS-3 BKG</td></tr>
+<tr><td>High-Profit Rate</td><td>Route-segment hi-profit BKG / WOS-3 BKG (shipper×POR×DLY route classification → <a href="#hi-logic">9.1</a>)</td></tr>
 <tr><td>Target / Perform / achievement / +-</td><td>2025 base + Input %p / Actual / Actual ÷ Target / Diff</td></tr>
 </table>
 <div class="tip"><strong>With detail filters:</strong> When month, destination, grade, hi-profit, or WOS filters are selected, ① Summary is rebuilt from the matching BKG rows. Row count, Target, Perform, +/-, achievement rate, and A/C counts all follow the current filter.</div>
@@ -427,6 +427,70 @@ document.addEventListener('DOMContentLoaded', () => {
 <div class="shot"><img src="guide-img/03_drill_shipper.png" alt="shipper"><div class="cap"><b>Fig. 4.</b> Shipper rollup — 31 shippers + total.</div></div>
 <p>Click any shipper row to expand its BKG_NO list.</p>
 <div class="shot"><img src="guide-img/04_bkg_detail.png" alt="bkg"><div class="cap"><b>Fig. 5.</b> Click a shipper → 243 BKG rows. Columns: POL→POD, VSL/VOY, Booking date, FST/LST TEU, CM1, CM1/TEU, WOS, grade, hi-profit, status.</div></div>
+</div>
+
+<!-- 9.1 HI LOGIC FAQ -->
+<h3 id="hi-logic" class="ko">9.1 "고수익(HI)" 판정 로직 — 자주 묻는 질문</h3>
+<h3 id="hi-logic" class="en" style="display:none">9.1 "Hi-Profit (HI)" logic — FAQ</h3>
+<div class="card ko">
+<p><strong>핵심:</strong> BKG 상세의 <b>고수익(HI)</b> 컬럼과 화주 행의 <b>고수익 비중(W3)</b>은 <u>부킹 1건의 CM1/TEU로 판정하지 않습니다.</u> 또 화주 단위 태그인 "고수익 화주(전월 기준 태그)"와도 다른, <b>구간(루트)별 분류</b>입니다.</p>
+
+<h4>① 무엇을 기준으로 판정하나</h4>
+<p>판정 단위는 <b>화주 × 선적항(POR) × 도착항(DLY)</b> 조합 하나입니다. 데이터 생성 시 다음을 계산합니다 (전체기간 · Normal · CM1≠0 · TEU&gt;0 건만 대상):</p>
+<ul>
+<li><b>화주 기준값</b> = 그 화주가 해당 POR→DLY 루트에서 낸 CM1 합 ÷ LST_TEU 합 (그 루트에서의 화주 평균 CM1/TEU)</li>
+<li><b>루트 평균</b> = 같은 POR→DLY 루트의 <u>모든 화주</u> CM1 합 ÷ LST_TEU 합</li>
+<li><b>판정:</b> 화주 기준값 ≥ 루트 평균 → <b>고수익</b>, 아니면 저수익</li>
+</ul>
+<p>이렇게 나온 <b>하나의 결과(고/저)가 그 화주·그 루트의 모든 부킹에 그대로 복사</b>됩니다. 즉 한 화주가 한 루트에서 고수익이면 그 루트의 부킹이 전부 HI, 저수익이면 전부 공란입니다. <b>부킹별로 따로 켜지고 꺼지지 않습니다.</b></p>
+
+<h4>② "개별 부킹은 단가가 높은데 왜 HI가 0인가?"</h4>
+<p>고단가 부킹과 저단가 부킹이 <b>먼저 합산되어 화주 평균</b>이 만들어진 뒤 루트 평균과 비교되기 때문입니다. 일부 부킹의 CM1/TEU가 루트 평균을 넘어도, 그 화주의 <u>합산 평균</u>이 루트 평균보다 낮으면 해당 루트는 통째로 저수익으로 분류되어 모든 행이 공란이 됩니다 (all-or-nothing).</p>
+<div class="tip"><strong>실제 예시 — SINOOCEAN GROUP LTD. · SHK→KHI · 2026-05</strong><br>
+• SHK→KHI 루트 평균 = <b>805</b> CM1/TEU<br>
+• SINOOCEAN의 SHK→KHI 합산 평균 = <b>742</b> CM1/TEU → 805보다 낮음 → 루트 전체 <b>저수익</b> → 고수익 비중(W3) = <b>0%</b><br>
+• 1,693 / 1,648 / 1,428 / 1,370 / 818 처럼 805를 넘는 개별 부킹이 있어도, 517~797 구간의 다수 부킹과 합산되면 평균이 742로 내려가므로 0%가 됩니다.</div>
+
+<h4>③ 버그가 아니라 의도된 기준인 이유</h4>
+<ul>
+<li><b>"이 화주를 이 루트에서 끌고 갈 가치가 있나"</b>를 보는 지표입니다. 운임 협상·물량 배분은 화주×루트 단위로 이뤄지므로, 한두 건이 우수해도 그 화주의 루트 전체 수익성이 동종 대비 낮으면 관리 대상(저수익)으로 봅니다.</li>
+<li>부킹 1건 단위로 판정하면 같은 화주·같은 루트가 어떤 건은 HI, 어떤 건은 저수익으로 섞여 화주 단위 영업 액션과 어긋납니다.</li>
+<li>비교 기준(루트 평균)과 화주 기준값은 <b>전체기간 고정</b>이라, 주차·월 필터를 바꿔도 분류 자체는 흔들리지 않습니다. (그 달 실적의 좋고 나쁨과 분류는 분리해서 봅니다.)</li>
+</ul>
+
+<h4>④ 그러면 화주의 실제 수익성은 어디서 보나</h4>
+<p>분류(HI)와 별개로, 그 화주가 이번 달 실제로 얼마를 벌었는지는 <b>CM1</b>·<b>CM1/TEU</b> 컬럼으로 봅니다. BKG 상세에서 부킹별 CM1/TEU를 직접 보면 어떤 건의 단가가 높은지 알 수 있습니다. <b>HI=0이라도 CM1/TEU가 높은 화주</b>는 "동종 루트 평균보다는 낮지만 절대 수익은 있는" 상태로 해석합니다. 반대로 HI 비중이 높으면 그 화주가 해당 루트에서 동종 대비 수익성이 좋다는 뜻입니다.</p>
+<div class="warn"><strong>요약:</strong> HI는 <u>화주가 그 루트에서 동종 대비 우수한가</u>(상대평가)이고, CM1/TEU는 <u>절대 단가</u>입니다. 두 값은 다를 수 있으며, 둘을 함께 봐야 합니다.</div>
+</div>
+<div class="card en" style="display:none">
+<p><strong>Key point:</strong> The <b>Hi-Profit (HI)</b> column in the BKG detail and the <b>Hi-Profit Rate (W3)</b> on the shipper row are <u>not decided per individual booking's CM1/TEU.</u> They are also distinct from the shipper-level "high-profit shipper (prior-month tag)" — this is a <b>route-segment classification</b>.</p>
+
+<h4>① What the verdict is based on</h4>
+<p>The unit of judgement is one <b>shipper × origin port (POR) × destination port (DLY)</b> combination. At build time we compute (full period · Normal · CM1≠0 · TEU&gt;0 only):</p>
+<ul>
+<li><b>Shipper basis</b> = that shipper's Σ CM1 ÷ Σ LST_TEU on that POR→DLY route (its average CM1/TEU on that route)</li>
+<li><b>Route average</b> = Σ CM1 ÷ Σ LST_TEU across <u>all shippers</u> on the same POR→DLY route</li>
+<li><b>Verdict:</b> shipper basis ≥ route average → <b>high-profit</b>, otherwise low-profit</li>
+</ul>
+<p>That <b>single verdict is copied onto every booking</b> of that shipper on that route. So if a shipper is high-profit on a route, all its bookings on that route are HI; if low-profit, all are blank. <b>It does not toggle per booking.</b></p>
+
+<h4>② "Some bookings clearly have high CM1/TEU — why is HI still 0?"</h4>
+<p>Because high- and low-rate bookings are <b>first pooled into the shipper average</b>, which is then compared to the route average. Even if some bookings exceed the route average, if the shipper's <u>blended average</u> falls below it, the whole route is tagged low-profit and every row is blank (all-or-nothing).</p>
+<div class="tip"><strong>Real example — SINOOCEAN GROUP LTD. · SHK→KHI · 2026-05</strong><br>
+• SHK→KHI route average = <b>805</b> CM1/TEU<br>
+• SINOOCEAN's blended SHK→KHI average = <b>742</b> CM1/TEU → below 805 → whole route is <b>low-profit</b> → Hi-Profit Rate (W3) = <b>0%</b><br>
+• Even with individual bookings above 805 (1,693 / 1,648 / 1,428 / 1,370 / 818), pooling them with the many 517–797 bookings pulls the average to 742, giving 0%.</div>
+
+<h4>③ Why this is by design, not a bug</h4>
+<ul>
+<li>It answers <b>"is this shipper worth keeping on this route?"</b> Rate negotiation and capacity allocation happen at the shipper×route level, so a couple of strong bookings don't change the verdict if the shipper's overall route profitability lags its peers.</li>
+<li>Per-booking judgement would mix HI and low-profit within the same shipper+route, which conflicts with shipper-level sales actions.</li>
+<li>Both the route average and the shipper basis are <b>fixed over the full period</b>, so changing the week/month filter never shifts the classification itself (the month's performance and the classification are kept separate).</li>
+</ul>
+
+<h4>④ Where to read the shipper's actual profitability</h4>
+<p>Separately from the HI flag, use the <b>CM1</b> and <b>CM1/TEU</b> columns to see what the shipper actually earned this month, and inspect per-booking CM1/TEU in the BKG detail. A shipper with <b>HI=0 but high CM1/TEU</b> is "below its route peers but still earning in absolute terms." A high HI share means the shipper is more profitable than peers on that route.</p>
+<div class="warn"><strong>In short:</strong> HI is <u>relative</u> (is the shipper above its route peers?), CM1/TEU is <u>absolute</u> rate. They can disagree — read both together.</div>
 </div>
 
 <!-- 10. BKG PANEL -->
@@ -481,7 +545,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <tr><td>CM1</td><td>Σ CM1</td><td>총 수익</td></tr>
 <tr><td>CM1/TEU</td><td>Σ CM1 ÷ Σ LST</td><td>TEU당 평균 수익 — 수익성 비교</td></tr>
 <tr><td><b>실선적률 W3%</b></td><td>Σ w3_lst ÷ Σ w3_fst</td><td>3주전 예측 대비 실선적 전환율</td></tr>
-<tr><td><b>고수익 비중 W3%</b></td><td>Σ w3_hi_fst ÷ Σ w3_fst</td><td>3주전 BKG 중 고수익 화주 비중</td></tr>
+<tr><td><b>고수익 비중 W3%</b></td><td>Σ w3_hi_fst ÷ Σ w3_fst</td><td>3주전 BKG 중 구간별 고수익 비중 (화주×POR×DLY 루트 분류 → <a href="#hi-logic">9.1</a>)</td></tr>
 <tr><td><b>캔슬률 %</b></td><td>Σ cancel ÷ Σ fst</td><td>발주 대비 캔슬 비율</td></tr>
 </table>
 <div class="tip">% metric은 단순 평균이 아니라 <b>분자/분모 합산 후 비율</b>로 계산되어 합계 행에서도 정확히 가중평균으로 나옵니다.</div>
@@ -497,7 +561,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <tr><td><b>화주 집중도 — 누가 매출의 80%를 만드는가</b></td><td>행=화주 · 열=(없음) · 값=CM1 · Top 50 · 표시=전체%</td><td>각 행이 전체 CM1의 몇 %인지 표시. 누적 80% 도달 지점이 핵심 화주군. (Pareto 분석)</td></tr>
 <tr><td><b>지역×영업사원 매트릭스</b></td><td>행=선적지 · 하위행=영업사원 · 열=POD 국가 · 값=WOS-3 FST · 히트맵 ON</td><td>선적지별 영업사원이 어느 도착국가에 강한지 한눈에 본다. 빈 셀은 미진출, 진한 셀은 주력 라인.</td></tr>
 <tr><td><b>실선적률 낮은 노선 찾기</b></td><td>행=선적지 · 열=POD 국가 · 값=실선적률 W3% · 정렬=오름차순</td><td>비율이 낮은 순으로 정렬되어 부킹 후 캔슬 많은 노선 우선 표시. 클릭 시 그 노선 BKG 리스트 → 화주별 패턴 점검.</td></tr>
-<tr><td><b>고수익 비중이 낮은 영업사원</b></td><td>행=영업사원 · 열=(없음) · 값=고수익 비중 W3% · 정렬=오름차순 · Top 20</td><td>고수익 화주 비중이 낮은 영업사원 식별 → 화주 믹스 개선 대화의 출발점.</td></tr>
+<tr><td><b>고수익 비중이 낮은 영업사원</b></td><td>행=영업사원 · 열=(없음) · 값=고수익 비중 W3% · 정렬=오름차순 · Top 20</td><td>구간별 고수익 비중이 낮은 영업사원 식별 → 화주 믹스 개선 대화의 출발점.</td></tr>
 <tr><td><b>캔슬률이 높은 화주</b></td><td>행=화주 · 열=(없음) · 값=캔슬률% · 정렬=내림차순 · Top 30</td><td>캔슬 잦은 화주 상위. 단, 행 클릭이 아니라 BKG 건수가 낮은 화주는 노이즈(1건 캔슬 = 100%)이므로 BKG 건수와 함께 비교.</td></tr>
 <tr><td><b>월별 수익성 추세</b></td><td>행=월 · 열=등급 · 값=CM1/TEU · 히트맵 ON</td><td>등급별 TEU당 수익 추세. A+B vs C+D의 수익 격차가 좁아지면 등급 정책 점검 필요.</td></tr>
 <tr><td><b>WOS 전환 funnel</b></td><td>행=영업사원 · 열=WOS 단계 · 값=FST TEU · 표시=행%</td><td>각 영업사원의 WOS-1 → WOS-2 → WOS-3 → 실선적 전환 비율. 특정 단계에서 갑자기 떨어지는 패턴 식별.</td></tr>
@@ -545,7 +609,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <tr><td>CM1</td><td>Σ CM1</td><td>Total margin</td></tr>
 <tr><td>CM1/TEU</td><td>Σ CM1 ÷ Σ LST</td><td>Margin per TEU — profitability comparison</td></tr>
 <tr><td><b>LFT% W3</b></td><td>Σ w3_lst ÷ Σ w3_fst</td><td>Loading conversion vs forecast</td></tr>
-<tr><td><b>Hi-profit% W3</b></td><td>Σ w3_hi_fst ÷ Σ w3_fst</td><td>Hi-profit shipper share of WOS-3 BKG</td></tr>
+<tr><td><b>Hi-profit% W3</b></td><td>Σ w3_hi_fst ÷ Σ w3_fst</td><td>Route-segment hi-profit share of WOS-3 BKG (shipper×POR×DLY classification → <a href="#hi-logic">9.1</a>)</td></tr>
 <tr><td><b>Cancel%</b></td><td>Σ cancel ÷ Σ fst</td><td>Cancellation ratio</td></tr>
 </table>
 <div class="tip">Ratio metrics compute as <b>numerator/denominator at the aggregate level</b> — totals are exact weighted averages, not naive means.</div>
@@ -711,6 +775,8 @@ document.addEventListener('DOMContentLoaded', () => {
 <p>헤더 우측의 <b>EN</b> 버튼. 선택은 브라우저에 저장. 화면 라벨뿐 아니라 BKG 상세 / Pivot 셀 상세의 <b>Booking 날짜 형식도 함께 전환</b>됩니다 (KO: <code>2026년 03월 05일</code> ↔ EN: <code>2026-03-05</code>).</p>
 <h4>Q6. 데이터가 오래 됐어요.</h4>
 <p>매일 10:00 KST 자동 빌드 (<code>3W_BKG_Dashboard_Daily</code>). 헤더의 "데이터 기준일"이 메인 대시보드와 다르거나 24시간 이상 지났으면 운영 담당자에게 문의.</p>
+<h4>Q7. 부킹 단가(CM1/TEU)는 높은데 고수익(HI)이 0으로 나옵니다.</h4>
+<p>고수익은 부킹 1건 단위가 아니라 <b>화주×선적항×도착항(루트)</b> 단위로 판정되고, 그 화주의 루트 합산 평균을 같은 루트의 전체 평균과 비교합니다. 합산 평균이 루트 평균보다 낮으면 단가 높은 개별 부킹이 있어도 루트 전체가 저수익으로 표시됩니다. 상세 로직과 SINOOCEAN 실제 예시는 <a href="#hi-logic">9.1 "고수익(HI)" 판정 로직</a> 참고.</p>
 </div>
 <div class="card en" style="display:none">
 <h4>Q1. I can't see my data.</h4>
@@ -725,6 +791,8 @@ document.addEventListener('DOMContentLoaded', () => {
 <p>The <b>EN</b> button on the top right. Your choice is saved in localStorage. The toggle covers labels <i>and</i> the Booking date format in BKG / Pivot detail rows (KO: <code>2026년 03월 05일</code> ↔ EN: <code>2026-03-05</code>).</p>
 <h4>Q6. Data looks stale.</h4>
 <p>Daily build runs at 10:00 KST (<code>3W_BKG_Dashboard_Daily</code>). If the header "Data date" differs from the main dashboard or is older than 24 h, contact the operator.</p>
+<h4>Q7. A booking's CM1/TEU is high, but Hi-Profit (HI) shows 0.</h4>
+<p>Hi-Profit is judged per <b>shipper × origin port × destination port (route)</b>, not per booking: the shipper's blended average on that route is compared to the route's overall average. If the blended average is below the route average, the whole route shows low-profit even when some individual bookings are high. See <a href="#hi-logic">9.1 "Hi-Profit (HI)" logic</a> for the full explanation and the SINOOCEAN worked example.</p>
 </div>
 
 <hr>
