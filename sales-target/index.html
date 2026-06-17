@@ -75,6 +75,7 @@
       <select id="fQuarter">
         <option value="q1">1Q 2026</option>
         <option value="q2" data-i18n-attr="text:q2Label">2Q 2026 (Progress)</option>
+        <option value="q3" data-i18n-attr="text:q3Label">3Q 2026</option>
       </select>
     </div>
     <div class="group">
@@ -137,7 +138,7 @@
       <div class="label" data-i18n="bkLabel">3W Before Booking Rate (vs BSA)</div>
       <div class="kpi-grid">
         <div class="kpi-cell"><span class="k-label" data-i18n="kT">Target</span><span class="k-val" id="cBkT">-</span></div>
-        <div class="kpi-cell"><span class="k-label" data-i18n="kP">Perform</span><span class="k-val" id="cBkP">-</span></div>
+        <div class="kpi-cell"><span class="k-label" data-i18n="kP" data-quarter-performance-label>Perform</span><span class="k-val" id="cBkP">-</span></div>
         <div class="kpi-cell"><span class="k-label">+/-</span><span class="k-val" id="cBkG">-</span></div>
       </div>
     </div>
@@ -145,7 +146,7 @@
       <div class="label" data-i18n="lfLabel">3W Before Actual Lifting Rate</div>
       <div class="kpi-grid">
         <div class="kpi-cell"><span class="k-label" data-i18n="kT">Target</span><span class="k-val" id="cLfT">-</span></div>
-        <div class="kpi-cell"><span class="k-label" data-i18n="kP">Perform</span><span class="k-val" id="cLfP">-</span></div>
+        <div class="kpi-cell"><span class="k-label" data-i18n="kP" data-quarter-performance-label>Perform</span><span class="k-val" id="cLfP">-</span></div>
         <div class="kpi-cell"><span class="k-label">+/-</span><span class="k-val" id="cLfG">-</span></div>
       </div>
     </div>
@@ -153,7 +154,7 @@
       <div class="label" data-i18n="hpLabel">3W Before High-Profit Rate</div>
       <div class="kpi-grid">
         <div class="kpi-cell"><span class="k-label" data-i18n="kT">Target</span><span class="k-val" id="cHpT">-</span></div>
-        <div class="kpi-cell"><span class="k-label" data-i18n="kP">Perform</span><span class="k-val" id="cHpP">-</span></div>
+        <div class="kpi-cell"><span class="k-label" data-i18n="kP" data-quarter-performance-label>Perform</span><span class="k-val" id="cHpP">-</span></div>
         <div class="kpi-cell"><span class="k-label">+/-</span><span class="k-val" id="cHpG">-</span></div>
       </div>
     </div>
@@ -169,6 +170,6 @@
   </div>
 </div>
 
-<script src="app.js?v=20260608-filter-restore"></script>
+<script src="app.js?v=20260617-q3-target"></script>
 </body>
 </html>

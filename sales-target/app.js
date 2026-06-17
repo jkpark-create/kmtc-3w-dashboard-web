@@ -102,6 +102,7 @@ const I18N = {
     monthAll: '전체 (분기 합산)',
     profitHi: '고수익만', profitNotHi: '고수익 제외',
     q2Label: '2Q 2026 (Progress)',
+    q3Label: '3Q 2026',
     cardScope: '대상 영업사원', originCount: '선적지', routeCount: '구간수', salesCount: '영업사원', custCount: '화주 (A/C)',
     bkLabel: '3W Before Booking Rate (vs BSA)',
     lfLabel: '3W Before Actual Lifting Rate',
@@ -166,6 +167,7 @@ const I18N = {
     monthAll: 'All (quarter sum)',
     profitHi: 'High-profit only', profitNotHi: 'Exclude high-profit',
     q2Label: '2Q 2026 (Progress)',
+    q3Label: '3Q 2026',
     cardScope: 'Scope', originCount: 'Origins', routeCount: 'Routes', salesCount: 'Salespeople', custCount: 'Shippers (A/C)',
     bkLabel: '3W Before Booking Rate (vs BSA)',
     lfLabel: '3W Before Actual Lifting Rate',
@@ -249,14 +251,36 @@ function applyLang() {
   const monthSel = document.getElementById('fMonth');
   if (monthSel && monthSel.options[0]) monthSel.options[0].textContent = dict.monthAll;
   const qSel = document.getElementById('fQuarter');
-  if (qSel && qSel.options[1]) qSel.options[1].textContent = dict.q2Label;
+  if (qSel) {
+    const q2Opt = qSel.querySelector('option[value="q2"]');
+    const q3Opt = qSel.querySelector('option[value="q3"]');
+    if (q2Opt && dict.q2Label) q2Opt.textContent = dict.q2Label;
+    if (q3Opt && dict.q3Label) q3Opt.textContent = dict.q3Label;
+  }
+  updatePerformanceLabels(STATE.filters.quarter);
   updateDataInfo();
 }
 
 const QUARTER_MONTHS = {
   q1: ['202601', '202602', '202603'],
   q2: ['202604', '202605', '202606'],
+  q3: ['202607', '202608', '202609'],
 };
+
+function performKeyForQuarter(q) {
+  return q === 'q1' ? 'perform' : 'progress';
+}
+
+function performanceLabelForQuarter(q) {
+  const cols = I18N[STATE.lang].columns;
+  return q === 'q1' ? cols.perform : cols.progress;
+}
+
+function updatePerformanceLabels(q) {
+  document.querySelectorAll('[data-quarter-performance-label]').forEach(el => {
+    el.textContent = performanceLabelForQuarter(q);
+  });
+}
 
 // Default 분기/월 = the quarter & month of the current 해당주차, mirroring the main
 // -3W dashboard (month of [이번주 일요일 + 3주], capped at the latest available data
@@ -1161,19 +1185,22 @@ function kpiOfRow(r, quarter, kpiKey) {
 //   - Otherwise (sales-specific selection drops the TOTALs) fall back to the
 //     account-weighted average of the SALES rows.
 function aggregateKpi(rows, quarter, kpiKey) {
-  const performKey = quarter === 'q1' ? 'perform' : 'progress';
+  const performKey = performKeyForQuarter(quarter);
   const totals = rows.filter(r => r.row_type === 'TOTAL');
   const pool = totals.length ? totals : rows.filter(r => r.row_type === 'SALES');
-  let tw = 0, pw = 0, gw = 0, w = 0;
+  let tw = 0, pw = 0, gw = 0, targetW = 0, performW = 0, gapW = 0;
   pool.forEach(r => {
     const k = kpiOfRow(r, quarter, kpiKey);
     const weight = Math.max(1, r.accounts?.total || 1);
-    if (k.target !== null && k.target !== undefined) { tw += k.target * weight; w += weight; }
-    if (k[performKey] !== null && k[performKey] !== undefined) pw += k[performKey] * weight;
-    if (k.gap !== null && k.gap !== undefined) gw += k.gap * weight;
+    if (k.target !== null && k.target !== undefined) { tw += k.target * weight; targetW += weight; }
+    if (k[performKey] !== null && k[performKey] !== undefined) { pw += k[performKey] * weight; performW += weight; }
+    if (k.gap !== null && k.gap !== undefined) { gw += k.gap * weight; gapW += weight; }
   });
-  if (w === 0) return { target: null, perform: null, gap: null };
-  return { target: tw / w, perform: pw / w, gap: gw / w };
+  return {
+    target: targetW ? tw / targetW : null,
+    perform: performW ? pw / performW : null,
+    gap: gapW ? gw / gapW : null,
+  };
 }
 
 function summaryCardValues(rows, q) {
@@ -1502,6 +1529,7 @@ function renderKpiCards() {
   const requestId = ++STATE.kpiCardRequest;
   const rows = filteredSummaryRows();
   const q = STATE.filters.quarter;
+  updatePerformanceLabels(q);
   const summary = summaryCardValues(rows, q);
   const detailActive = detailCardFiltersActive();
   // Always load the scoped bookings: the static index.json counts sum
@@ -1518,7 +1546,8 @@ function renderKpiCards() {
         // Keep the TOTAL-row-based KPI averages (more accurate than recomputing
         // from chunks when the scope is whole origins), but overlay deduped shipper count.
         const live = computeLiveCardCounts(bookings);
-        applyKpiCardValues({ ...summary, custCount: live.custCount, routeCount: live.routeCount });
+        const liveCounts = bookings.length ? { custCount: live.custCount, routeCount: live.routeCount } : {};
+        applyKpiCardValues({ ...summary, ...liveCounts });
       }
     })
     .catch(() => {
@@ -1801,7 +1830,7 @@ function renderDetailedSummaryView(rows, q) {
 
 function renderSummaryTable(rows, q) {
   const cols = I18N[STATE.lang].columns;
-  const performLabel = q === 'q1' ? cols.perform : cols.progress;
+  const performLabel = performanceLabelForQuarter(q);
   if (!rows.length) {
     return `<div class="empty">${tr('noMatches')}</div>`;
   }
@@ -1833,7 +1862,7 @@ function renderSummaryTable(rows, q) {
     const bk = kpiOfRow(r, q, 'booking');
     const lf = kpiOfRow(r, q, 'lifting');
     const hp = kpiOfRow(r, q, 'high_profit');
-    const performKey = q === 'q1' ? 'perform' : 'progress';
+    const performKey = performKeyForQuarter(q);
     const totalCls = r.row_type === 'TOTAL' ? ' row-total' : '';
     const clickAttr = r.row_type === 'SALES'
       ? ` data-action="drill" data-origin="${escapeHtml(r.tab)}" data-sales="${escapeHtml(r.name)}" class="row-clickable${totalCls}"`
