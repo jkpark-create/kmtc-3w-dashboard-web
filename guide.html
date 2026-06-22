@@ -131,7 +131,7 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   // Section IDs for scroll spy
-  var sectionIds = ['overview','filters','history','week-rule','tab1','tab2','tab3','tab4','tab5','wos','profit','data','update','scheduler'];
+  var sectionIds = ['overview','filters','history','week-rule','tab1','tab2','tab3','tab4','tab5','tab6','wos','profit','data','update','scheduler'];
   var sideToc = document.getElementById('sideToc');
   var mainTocs = document.querySelectorAll('.container > .toc');
 
@@ -979,6 +979,11 @@ document.addEventListener('DOMContentLoaded', function() {
     <li>salesman.csv 기준 영업사원 remap (메인 대시보드 + sales-target chunks)</li>
     <li><strong>GitHub Pages 자동 push</strong> → 웹 배포 완료</li>
   </ol>
+  <h3>수동 재실행</h3>
+  <p>Tableau 원천 extract가 늦게 갱신된 날은 아래 명령으로 같은 날짜의 업데이트를 다시 실행합니다. 실행하면 기존 당일 로그는 <code>logs/run_YYYYMMDD_HHMMSS_previous.log</code>로 보관되고, 새 로그가 <code>logs/run_YYYYMMDD.log</code>에 기록됩니다.</p>
+  <pre><code>cd /d "C:\Users\JKPARK\OneDrive\Documents\Claude\-3W bkg dashboard"
+run_daily.bat</code></pre>
+  <p>재실행 범위는 Tableau 다운로드, Snapshot 처리, <code>dist/data.json</code>, OBT history, sales-target chunks, GitHub Pages push까지입니다. 메일 알림은 마지막 단계이며, 알림 토큰 문제로 실패해도 데이터 배포가 이미 성공했으면 대시보드에는 영향이 없습니다.</p>
   <h3>데이터 범위</h3>
   <table>
     <tr><th>파일</th><th>범위</th></tr>
@@ -996,6 +1001,11 @@ document.addEventListener('DOMContentLoaded', function() {
     <li>Re-attribute Salesman_POR via salesman.csv (main dashboard + sales-target chunks)</li>
     <li><strong>Auto push to GitHub Pages</strong></li>
   </ol>
+  <h3>Manual Re-run</h3>
+  <p>If the Tableau source extract is refreshed late, rerun the same-day update with the command below. The previous same-day log is archived as <code>logs/run_YYYYMMDD_HHMMSS_previous.log</code>, and the new run writes <code>logs/run_YYYYMMDD.log</code>.</p>
+  <pre><code>cd /d "C:\Users\JKPARK\OneDrive\Documents\Claude\-3W bkg dashboard"
+run_daily.bat</code></pre>
+  <p>The rerun covers Tableau download, snapshot processing, <code>dist/data.json</code>, OBT history, sales-target chunks, and GitHub Pages push. Email notification is the final step; if it fails due to an alert-token issue after data push, the deployed dashboard is already updated.</p>
   <h3>Data Range</h3>
   <p>1.csv: 2025-12-28 ~ current week +4 weeks | 2.csv: Full | BSA: 2025-2027 all months</p>
 </div>
