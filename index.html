@@ -1295,6 +1295,7 @@ function teuRowMetrics(rows) {
   return {
     // 전체(결과) = 실선적 B/L 기준 (LST_TEU, Normal)
     all: sum(rows, 'norm_lst'),
+    allBkg: sum(rows, 'fst'),            // 전체 TEU(BKG) = 부킹예측 FST
     allHi: sum(rows, 'route_hi_norm_lst'),
     allHiLft: sum(rows, 'route_hi_norm_lst'),
     // WOS-3(선행지표) = 부킹예측 FST_TEU 기준 유지
@@ -2774,16 +2775,18 @@ function renderTab6() {
   const totalPotential = Math.max(0, total.w3 - total.w3Hi);
 
   let html = `<div class="chart-card" style="margin-bottom:12px;padding:10px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-    <span class="sub">${L('고/저 분류는 CM1/TEU 구간 기준. · WOS-3 컬럼 = 부킹예측(FST) 기준, 고수익 실선적·전체 컬럼 = 실선적 B/L(LST) 기준.','High/low by CM1/TEU route basis. · WOS-3 columns = booking forecast (FST); High-Profit LFT & Total columns = lifted B/L (LST).')}</span>
+    <span class="sub">${L('고/저 분류는 CM1/TEU 구간 기준. · WOS-3 TEU·전체 TEU(BKG) = 부킹예측(FST), WOS-3 실선적·고수익 실선적·전체 TEU(B/L)·전체 고수익 = 실선적 B/L(LST) 기준. · 마감월은 B/L=KMTC 실측, 진행월은 미출항분 포함.','High/low by CM1/TEU route. · WOS-3 TEU & Total(BKG) = booking forecast (FST); WOS-3 LFT, Hi LFT, Total(B/L) & Total Hi = lifted B/L (LST). Closed months: B/L matches KMTC actuals; open months include not-yet-sailed.')}</span>
   </div>
   <div class="row">
     ${kpi(`WOS-3 ${ctx.unit}`, fmt(total.w3), '#1a73e8')}
     ${kpi(L(`WOS-3 고수익 ${ctx.unit}`, `WOS-3 Hi ${ctx.unit}`), fmt(total.w3Hi), '#34a853')}
     ${kpi(L('WOS-3 고수익비중','WOS-3 Hi %'), pct1(total.w3Hi,total.w3), '#34a853')}
+    ${kpi(L(`WOS-3 실선적 ${ctx.unit}`, `WOS-3 LFT ${ctx.unit}`), fmt(total.w3Lft), '#0984e3')}
     ${kpi(L(`고수익 실선적 ${ctx.unit}`, `Hi LFT ${ctx.unit}`), fmt(total.w3HiLft), '#00b894')}
     ${kpi(L('고수익 실선적률','Hi LFT %'), pct1(total.w3HiLft,total.w3Hi), '#00b894')}
     ${kpi(L('고수익 실선적 비중','Hi LFT Share'), pct1(total.w3HiLft,total.w3Lft), '#00cec9')}
-    ${kpi(L(`전체 ${ctx.unit}`, `Total ${ctx.unit}`), fmt(total.all), '#5f6368')}
+    ${kpi(L(`전체 ${ctx.unit}(BKG)`, `Total ${ctx.unit}(BKG)`), fmt(total.allBkg), '#b2bec3')}
+    ${kpi(L(`전체 ${ctx.unit}(B/L)`, `Total ${ctx.unit}(B/L)`), fmt(total.all), '#5f6368')}
     ${kpi(L('전체 고수익비중','Overall Hi %'), pct1(total.allHi,total.all), '#6c5ce7')}
     ${kpi(L(`전환 여지 ${ctx.unit}`, `Potential ${ctx.unit}`), fmt(totalPotential), '#f9ab00')}
   </div>`;
@@ -2798,10 +2801,10 @@ function renderTab6() {
   const dt = ctx.metrics(fd);
 
   html += `<div class="chart-card"><h3>${vl} ${ctx.title} (${fmtMonth(month)})</h3>
-  <table class="summary"><tr><th>${vl}</th><th>WOS-3 ${ctx.unit}</th><th>${L(`고수익 ${ctx.unit}`, `Hi ${ctx.unit}`)}</th><th>${L('고수익비중','Hi %')}</th><th>${L('고수익 실선적','Hi LFT')}</th><th>${L('실선적률','LFT %')}</th><th>${L('고수익 실선적 비중','Hi LFT Share')}</th><th>${L(`전체 ${ctx.unit}`, `Total ${ctx.unit}`)}</th><th>${L(`전체 고수익 ${ctx.unit}`, `Total Hi ${ctx.unit}`)}</th><th>${L('전체 고수익비중','Total Hi %')}</th><th>${L('전환 여지','Potential')}</th></tr>`;
-  html += `<tr class="total"><td class="lbl">${L('합계','Total')}</td><td>${fmt(dt.w3)}</td><td>${fmt(dt.w3Hi)}</td><td>${pct1(dt.w3Hi,dt.w3)}</td><td>${fmt(dt.w3HiLft)}</td><td>${pct1(dt.w3HiLft,dt.w3Hi)}</td><td>${pct1(dt.w3HiLft,dt.w3Lft)}</td><td>${fmt(dt.all)}</td><td>${fmt(dt.allHi)}</td><td>${pct1(dt.allHi,dt.all)}</td><td>${fmt(Math.max(0, dt.w3-dt.w3Hi))}</td></tr>`;
+  <table class="summary"><tr><th>${vl}</th><th>WOS-3 ${ctx.unit}</th><th>${L(`고수익 ${ctx.unit}`, `Hi ${ctx.unit}`)}</th><th>${L('고수익비중','Hi %')}</th><th>${L(`WOS-3 실선적 ${ctx.unit}`, `WOS-3 LFT ${ctx.unit}`)}</th><th>${L('고수익 실선적','Hi LFT')}</th><th>${L('실선적률','LFT %')}</th><th>${L('고수익 실선적 비중','Hi LFT Share')}</th><th>${L(`전체 ${ctx.unit}(BKG)`, `Total ${ctx.unit}(BKG)`)}</th><th>${L(`전체 ${ctx.unit}(B/L)`, `Total ${ctx.unit}(B/L)`)}</th><th>${L(`전체 고수익 ${ctx.unit}`, `Total Hi ${ctx.unit}`)}</th><th>${L('전체 고수익비중','Total Hi %')}</th><th>${L('전환 여지','Potential')}</th></tr>`;
+  html += `<tr class="total"><td class="lbl">${L('합계','Total')}</td><td>${fmt(dt.w3)}</td><td>${fmt(dt.w3Hi)}</td><td>${pct1(dt.w3Hi,dt.w3)}</td><td>${fmt(dt.w3Lft)}</td><td>${fmt(dt.w3HiLft)}</td><td>${pct1(dt.w3HiLft,dt.w3Hi)}</td><td>${pct1(dt.w3HiLft,dt.w3Lft)}</td><td>${fmt(dt.allBkg)}</td><td>${fmt(dt.all)}</td><td>${fmt(dt.allHi)}</td><td>${pct1(dt.allHi,dt.all)}</td><td>${fmt(Math.max(0, dt.w3-dt.w3Hi))}</td></tr>`;
   shownDestRows.forEach(r => {
-    html += `<tr><td class="lbl">${r.name || L('(미지정)','(N/A)')}</td><td>${fmt(r.w3)}</td><td>${fmt(r.w3Hi)}</td><td>${pct1(r.w3Hi,r.w3)}</td><td>${fmt(r.w3HiLft)}</td><td>${pct1(r.w3HiLft,r.w3Hi)}</td><td>${pct1(r.w3HiLft,r.w3Lft)}</td><td>${fmt(r.all)}</td><td>${fmt(r.allHi)}</td><td>${pct1(r.allHi,r.all)}</td><td>${fmt(r.potential)}</td></tr>`;
+    html += `<tr><td class="lbl">${r.name || L('(미지정)','(N/A)')}</td><td>${fmt(r.w3)}</td><td>${fmt(r.w3Hi)}</td><td>${pct1(r.w3Hi,r.w3)}</td><td>${fmt(r.w3Lft)}</td><td>${fmt(r.w3HiLft)}</td><td>${pct1(r.w3HiLft,r.w3Hi)}</td><td>${pct1(r.w3HiLft,r.w3Lft)}</td><td>${fmt(r.allBkg)}</td><td>${fmt(r.all)}</td><td>${fmt(r.allHi)}</td><td>${pct1(r.allHi,r.all)}</td><td>${fmt(r.potential)}</td></tr>`;
   });
   html += `</table></div>`;
 
@@ -2834,10 +2837,10 @@ function renderTab6() {
     return s;
   }, {custCnt:0,w3:0,w3Hi:0,w3HiLft:0,w3Lft:0,all:0,allHi:0,potential:0});
   html += `<div class="chart-card"><h3>${ctx.conversionTitle} (${fmtMonth(month)})</h3>
-  <table class="summary"><tr><th class="wrap">${L('영업사원','Salesperson')}</th><th>${L('화주수','Shippers')}</th><th>WOS-3 ${ctx.unit}</th><th>${L(`고수익 ${ctx.unit}`, `Hi ${ctx.unit}`)}</th><th>${L('고수익비중','Hi %')}</th><th>${L('고수익 실선적','Hi LFT')}</th><th>${L('실선적률','LFT %')}</th><th>${L('고수익 실선적 비중','Hi LFT Share')}</th><th>${L('전체 고수익비중','Overall Hi %')}</th><th>${L('전환 여지','Potential')}</th></tr>`;
-  html += `<tr class="total"><td class="lbl">${L('합계','Total')}</td><td>${fmt(st.custCnt)}</td><td>${fmt(st.w3)}</td><td>${fmt(st.w3Hi)}</td><td>${pct1(st.w3Hi,st.w3)}</td><td>${fmt(st.w3HiLft)}</td><td>${pct1(st.w3HiLft,st.w3Hi)}</td><td>${pct1(st.w3HiLft,st.w3Lft)}</td><td>${pct1(st.allHi,st.all)}</td><td>${fmt(st.potential)}</td></tr>`;
+  <table class="summary"><tr><th class="wrap">${L('영업사원','Salesperson')}</th><th>${L('화주수','Shippers')}</th><th>WOS-3 ${ctx.unit}</th><th>${L(`고수익 ${ctx.unit}`, `Hi ${ctx.unit}`)}</th><th>${L('고수익비중','Hi %')}</th><th>${L(`WOS-3 실선적 ${ctx.unit}`, `WOS-3 LFT ${ctx.unit}`)}</th><th>${L('고수익 실선적','Hi LFT')}</th><th>${L('실선적률','LFT %')}</th><th>${L('고수익 실선적 비중','Hi LFT Share')}</th><th>${L('전체 고수익비중','Overall Hi %')}</th><th>${L('전환 여지','Potential')}</th></tr>`;
+  html += `<tr class="total"><td class="lbl">${L('합계','Total')}</td><td>${fmt(st.custCnt)}</td><td>${fmt(st.w3)}</td><td>${fmt(st.w3Hi)}</td><td>${pct1(st.w3Hi,st.w3)}</td><td>${fmt(st.w3Lft)}</td><td>${fmt(st.w3HiLft)}</td><td>${pct1(st.w3HiLft,st.w3Hi)}</td><td>${pct1(st.w3HiLft,st.w3Lft)}</td><td>${pct1(st.allHi,st.all)}</td><td>${fmt(st.potential)}</td></tr>`;
   salesRows.forEach(r => {
-    html += `<tr><td class="lbl">${r.name}</td><td>${fmt(r.custCnt)}</td><td>${fmt(r.w3)}</td><td>${fmt(r.w3Hi)}</td><td>${pct1(r.w3Hi,r.w3)}</td><td>${fmt(r.w3HiLft)}</td><td>${pct1(r.w3HiLft,r.w3Hi)}</td><td>${pct1(r.w3HiLft,r.w3Lft)}</td><td>${pct1(r.allHi,r.all)}</td><td>${fmt(r.potential)}</td></tr>`;
+    html += `<tr><td class="lbl">${r.name}</td><td>${fmt(r.custCnt)}</td><td>${fmt(r.w3)}</td><td>${fmt(r.w3Hi)}</td><td>${pct1(r.w3Hi,r.w3)}</td><td>${fmt(r.w3Lft)}</td><td>${fmt(r.w3HiLft)}</td><td>${pct1(r.w3HiLft,r.w3Hi)}</td><td>${pct1(r.w3HiLft,r.w3Lft)}</td><td>${pct1(r.allHi,r.all)}</td><td>${fmt(r.potential)}</td></tr>`;
   });
   html += `</table></div>`;
 
@@ -2864,10 +2867,10 @@ function renderTab6() {
   ).slice(0, 100);
 
   html += `<div class="chart-card"><h3>${L('화주별 WOS-3 고수익 실선적률','Shipper WOS-3 High-Profit LFT Rate')} (${fmtMonth(month)})</h3>
-  <table class="summary shipper-table"><tr><th class="shipper-col">${L('화주','Shipper')}</th><th>${L('등급','Grade')}</th><th class="sales-col"><span>${L('영업사원','Sales')}</span></th><th>WOS-3 ${ctx.unit}</th><th>${L(`고수익 ${ctx.unit}`, `Hi ${ctx.unit}`)}</th><th>${L('고수익비중','Hi %')}</th><th>${L('고수익 실선적','Hi LFT')}</th><th>${L('실선적률','LFT %')}</th><th>${L('고수익 실선적 비중','Hi LFT Share')}</th><th>${L(`전체 ${ctx.unit}`, `Total ${ctx.unit}`)}</th><th>${L('전체 고수익비중','Overall Hi %')}</th><th>${L('전환 여지','Potential')}</th></tr>`;
+  <table class="summary shipper-table"><tr><th class="shipper-col">${L('화주','Shipper')}</th><th>${L('등급','Grade')}</th><th class="sales-col"><span>${L('영업사원','Sales')}</span></th><th>WOS-3 ${ctx.unit}</th><th>${L(`고수익 ${ctx.unit}`, `Hi ${ctx.unit}`)}</th><th>${L('고수익비중','Hi %')}</th><th>${L(`WOS-3 실선적 ${ctx.unit}`, `WOS-3 LFT ${ctx.unit}`)}</th><th>${L('고수익 실선적','Hi LFT')}</th><th>${L('실선적률','LFT %')}</th><th>${L('고수익 실선적 비중','Hi LFT Share')}</th><th>${L(`전체 ${ctx.unit}(BKG)`, `Total ${ctx.unit}(BKG)`)}</th><th>${L(`전체 ${ctx.unit}(B/L)`, `Total ${ctx.unit}(B/L)`)}</th><th>${L('전체 고수익비중','Overall Hi %')}</th><th>${L('전환 여지','Potential')}</th></tr>`;
   shprRows.forEach(r => {
     const gradeStyle = r.grade === 'A+B' ? 'color:#1a73e8;font-weight:600' : r.grade ? 'color:#f9ab00' : '';
-    html += `<tr><td class="lbl shipper-col">${r.name}</td><td style="${gradeStyle}">${r.grade}</td><td class="sales-col"><span>${r.sales}</span></td><td>${fmt(r.w3)}</td><td>${fmt(r.w3Hi)}</td><td>${pct1(r.w3Hi,r.w3)}</td><td>${fmt(r.w3HiLft)}</td><td>${pct1(r.w3HiLft,r.w3Hi)}</td><td>${pct1(r.w3HiLft,r.w3Lft)}</td><td>${fmt(r.all)}</td><td>${pct1(r.allHi,r.all)}</td><td>${fmt(r.potential)}</td></tr>`;
+    html += `<tr><td class="lbl shipper-col">${r.name}</td><td style="${gradeStyle}">${r.grade}</td><td class="sales-col"><span>${r.sales}</span></td><td>${fmt(r.w3)}</td><td>${fmt(r.w3Hi)}</td><td>${pct1(r.w3Hi,r.w3)}</td><td>${fmt(r.w3Lft)}</td><td>${fmt(r.w3HiLft)}</td><td>${pct1(r.w3HiLft,r.w3Hi)}</td><td>${pct1(r.w3HiLft,r.w3Lft)}</td><td>${fmt(r.allBkg)}</td><td>${fmt(r.all)}</td><td>${pct1(r.allHi,r.all)}</td><td>${fmt(r.potential)}</td></tr>`;
   });
   html += `</table></div>`;
 
