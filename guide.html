@@ -174,6 +174,7 @@ document.addEventListener('DOMContentLoaded', function() {
   <li><a href="#tab3">③ 전환 분석</a></li>
   <li><a href="#tab4">④ 수익성 분석</a></li>
   <li><a href="#tab5">⑤ 부킹 패턴</a></li>
+  <li><a href="#tab6">⑥ BL 고수익</a></li>
   <li><a href="#wos">WOS 상세 설명</a></li>
   <li><a href="#profit">구간별 고수익 부킹분류</a></li>
   <li><a href="#data">데이터 기준</a></li>
@@ -190,6 +191,7 @@ document.addEventListener('DOMContentLoaded', function() {
   <li><a href="#tab3">③ Conversion Analysis</a></li>
   <li><a href="#tab4">④ Profitability</a></li>
   <li><a href="#tab5">⑤ Booking Patterns</a></li>
+  <li><a href="#tab6">⑥ BL High-Profit</a></li>
   <li><a href="#wos">WOS Details</a></li>
   <li><a href="#profit">Route Profit Classification</a></li>
   <li><a href="#data">Data Definitions</a></li>
@@ -208,6 +210,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <li><strong>③ 전환 분석</strong> — 캔슬률 분석, 화주별 캔슬 Top 15</li>
     <li><strong>④ 수익성</strong> — CM1/TEU Top/Bottom, 수익 집중도</li>
     <li><strong>⑤ 부킹 패턴</strong> — WOS 단계별 부킹 접수 시점 분석</li>
+    <li><strong>⑥ BL 고수익</strong> — B/L에 연결된 CM1/TEU 구간분류로 WOS-3와 전체기간 고수익 비중 모니터링</li>
   </ul>
   <p>기본 필터: <strong>현재 주 +3주 후의 월 및 해당 주차</strong>로 자동 설정됩니다.</p>
   <h3>이 대시보드가 답하는 질문</h3>
@@ -218,6 +221,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <tr><td>3주전 부킹이 실제 선적으로 잘 전환되는가?</td><td>③ 전환 분석</td><td>실선적률, 캔슬률, 캔슬 화주</td></tr>
     <tr><td>물량이 수익성 있는 물량인가?</td><td>④ 수익성 분석</td><td>CM1/TEU, Top/Bottom 화주, 수익 집중도</td></tr>
     <tr><td>부킹이 충분히 일찍 들어오는가?</td><td>⑤ 부킹 패턴</td><td>WOS-3/2/1/WOS 비중, 조기 부킹 비중</td></tr>
+    <tr><td>B/L 기준 전체 고수익 비중은 어떤가?</td><td>⑥ BL 고수익</td><td>WOS-3 고수익 BKG 비중, 고수익 실선적(B/L), 전체기간 고수익 B/L 비중</td></tr>
   </table>
   <h3>권장 사용 순서</h3>
   <ol>
@@ -226,6 +230,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <li><strong>② 부킹 트렌드</strong>에서 부족 또는 초과를 만든 지역, 화주, 영업사원을 찾습니다.</li>
     <li><strong>③ 전환 분석</strong>에서 캔슬과 실선적 전환 리스크를 확인합니다.</li>
     <li><strong>④ 수익성</strong>과 <strong>⑤ 부킹 패턴</strong>으로 물량의 질과 조기 확보 여부를 점검합니다.</li>
+    <li><strong>⑥ BL 고수익</strong>에서 선택한 선적지/도착지 기준의 고수익 BKG와 실제 선적 B/L 전환을 확인합니다.</li>
   </ol>
 </div>
 <div class="card en" style="display:none">
@@ -236,6 +241,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <li><strong>③ Conversion</strong> — Cancel rate analysis, Top 15 cancel shippers</li>
     <li><strong>④ Profitability</strong> — CM1/TEU Top/Bottom, revenue concentration</li>
     <li><strong>⑤ Patterns</strong> — WOS stage booking timing analysis</li>
+    <li><strong>⑥ BL High-Profit</strong> — WOS-3 and full-period high-profit share using B/L-linked CM1/TEU route classification</li>
   </ul>
   <p>Default filter: automatically set to <strong>the month &amp; week of current week + 3 weeks ahead</strong>.</p>
   <h3>Questions This Dashboard Answers</h3>
@@ -246,6 +252,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <tr><td>Does WOS-3 BKG convert to actual shipment?</td><td>③ Conversion</td><td>LFT rate, cancel rate, cancel-heavy shippers</td></tr>
     <tr><td>Is the volume profitable?</td><td>④ Profitability</td><td>CM1/TEU, top/bottom shippers, revenue concentration</td></tr>
     <tr><td>Are bookings coming early enough?</td><td>⑤ Patterns</td><td>WOS-3/2/1/WOS mix and early-booking share</td></tr>
+    <tr><td>What is the high-profit mix on a B/L-linked basis?</td><td>⑥ BL High-Profit</td><td>WOS-3 high-profit BKG share, high-profit LFT(B/L), full-period high-profit B/L share</td></tr>
   </table>
   <h3>Recommended Workflow</h3>
   <ol>
@@ -254,6 +261,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <li>Use <strong>② Trends</strong> to find the region, shipper, or salesperson behind the movement.</li>
     <li>Use <strong>③ Conversion</strong> to check cancel and shipment-conversion risk.</li>
     <li>Use <strong>④ Profitability</strong> and <strong>⑤ Patterns</strong> to judge quality and early-booking stability.</li>
+    <li>Use <strong>⑥ BL High-Profit</strong> to compare high-profit bookings and actual B/L lift by the selected origin/destination view.</li>
   </ol>
 </div>
 
@@ -714,6 +722,58 @@ document.addEventListener('DOMContentLoaded', function() {
     <li><strong>High WOS/WOS-1 share</strong> — Greater reliance on last-minute or spot volume.</li>
     <li><strong>Falling high-profit WOS-3 share</strong> — Early-booked volume quality may be weakening.</li>
     <li><strong>Repeated late-booking shipper</strong> — Review booking rules, cut-off management, and sales communication.</li>
+  </ul>
+</div>
+
+<!-- TAB6 -->
+<span class="anchor" id="tab6"></span>
+<h2 class="ko">⑥ BL 고수익</h2><h2 class="en" style="display:none">⑥ BL High-Profit</h2>
+<div class="card ko">
+  <p>BL 고수익 탭은 SHK+DCB 같은 특정 구간만이 아니라, 선택한 필터 범위의 <strong>전체 B/L 기준 고수익 비중</strong>을 TEU로 모니터링하는 화면입니다. 보기 필터를 도착지별/선적지별로 바꾸면 상단 요약표와 하단 그래프가 같은 기준으로 함께 바뀝니다.</p>
+  <div class="tip"><strong>분류 기준:</strong> CM1/BL은 사용하지 않습니다. 각 B/L이 연결된 화주+POR+DLY의 전체기간 CM1/TEU를 동일 POR+DLY 루트 평균과 비교해 고수익/저수익을 분류하고, 화면의 수량과 비중은 TEU 기준으로 계산합니다.</div>
+  <table>
+    <tr><th>구간</th><th>열</th><th>계산 기준</th></tr>
+    <tr><td rowspan="5"><strong>WOS-3</strong></td><td>-3W BKG</td><td>WOS-3 단계의 부킹 FST_TEU</td></tr>
+    <tr><td>고수익(BKG)</td><td>WOS-3 BKG 중 고수익으로 분류된 FST_TEU</td></tr>
+    <tr><td>고수익 비중</td><td>고수익(BKG) ÷ -3W BKG</td></tr>
+    <tr><td>실선적(B/L)</td><td>WOS-3 BKG 중 Normal로 실제 선적된 LST_TEU</td></tr>
+    <tr><td>고수익 실선적(B/L)</td><td>WOS-3 고수익 BKG 중 Normal로 실제 선적된 LST_TEU</td></tr>
+    <tr><td rowspan="6"><strong>전체 기간</strong></td><td>BKG</td><td>선택 월/필터 전체 부킹 FST_TEU</td></tr>
+    <tr><td>B/L</td><td>선택 월/필터 전체 Normal LST_TEU</td></tr>
+    <tr><td>실선적률</td><td>B/L ÷ BKG</td></tr>
+    <tr><td>고수익(BKG)</td><td>전체 BKG 중 고수익으로 분류된 FST_TEU</td></tr>
+    <tr><td>고수익(B/L)</td><td>전체 Normal B/L 중 고수익으로 분류된 LST_TEU</td></tr>
+    <tr><td>고수익비중</td><td>고수익(B/L) ÷ B/L</td></tr>
+  </table>
+  <h3>해석 포인트</h3>
+  <ul>
+    <li><strong>WOS-3 고수익 비중</strong>은 조기 확보한 부킹의 수익성 품질입니다. 높을수록 출항 3주 전부터 좋은 구간 물량이 잡히고 있다는 뜻입니다.</li>
+    <li><strong>고수익 실선적(B/L)</strong>은 고수익으로 잡힌 부킹이 실제 선적으로 얼마나 남았는지 보는 값입니다. 고수익(BKG)과 차이가 크면 캔슬, 감량, 스케줄 변경을 확인합니다.</li>
+    <li><strong>전체기간 고수익비중</strong>은 최종 B/L 결과 기준의 고수익 믹스입니다. WOS-3 비중과 함께 보면 조기 부킹 품질과 최종 실적 품질을 분리해서 볼 수 있습니다.</li>
+  </ul>
+</div>
+<div class="card en" style="display:none">
+  <p>The BL High-Profit tab monitors the <strong>overall high-profit share on a B/L-linked basis</strong>, not only a specific pair such as SHK+DCB. Switching the View filter between destination and origin updates both the summary table and the charts using the same axis.</p>
+  <div class="tip"><strong>Classification basis:</strong> CM1/BL is not used. Each B/L is classified by comparing the full-period shipper+POR+DLY CM1/TEU with the same POR+DLY route average. Displayed volumes and ratios are calculated on a TEU basis.</div>
+  <table>
+    <tr><th>Group</th><th>Column</th><th>Basis</th></tr>
+    <tr><td rowspan="5"><strong>WOS-3</strong></td><td>-3W BKG</td><td>WOS-3 booking FST_TEU</td></tr>
+    <tr><td>Hi(BKG)</td><td>WOS-3 FST_TEU classified as high-profit</td></tr>
+    <tr><td>Hi %</td><td>Hi(BKG) / -3W BKG</td></tr>
+    <tr><td>LFT(B/L)</td><td>WOS-3 bookings that became Normal LST_TEU</td></tr>
+    <tr><td>Hi LFT(B/L)</td><td>WOS-3 high-profit bookings that became Normal LST_TEU</td></tr>
+    <tr><td rowspan="6"><strong>Total Period</strong></td><td>BKG</td><td>Total FST_TEU in the selected month/filter</td></tr>
+    <tr><td>B/L</td><td>Total Normal LST_TEU in the selected month/filter</td></tr>
+    <tr><td>LFT %</td><td>B/L / BKG</td></tr>
+    <tr><td>Hi(BKG)</td><td>Total FST_TEU classified as high-profit</td></tr>
+    <tr><td>Hi(B/L)</td><td>Total Normal LST_TEU classified as high-profit</td></tr>
+    <tr><td>Hi %</td><td>Hi(B/L) / B/L</td></tr>
+  </table>
+  <h3>Interpretation</h3>
+  <ul>
+    <li><strong>WOS-3 Hi %</strong> measures the profitability quality of early-booked volume.</li>
+    <li><strong>Hi LFT(B/L)</strong> shows how much of the high-profit early booking actually remained as loaded B/L. A large gap against Hi(BKG) points to cancel, reduction, or schedule movement.</li>
+    <li><strong>Total-period Hi %</strong> is the final B/L result mix. Read it together with WOS-3 Hi % to separate early-booking quality from final shipment quality.</li>
   </ul>
 </div>
 
