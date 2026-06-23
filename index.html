@@ -3011,7 +3011,7 @@ function applyLang() {
   const stLink = document.getElementById('salesTargetLink');
   if (stLink) stLink.innerHTML = '🎯 ' + t.salesTarget;
   // Filter labels
-  document.querySelectorAll('.filters label').forEach((el, i) => {
+  document.querySelectorAll('.filters > label').forEach((el, i) => {
     const keys = ['team','origin','oriPort','dest','dstPort','view','month','week','profitType','grade','sales'];
     if (keys[i]) el.textContent = t[keys[i]];
   });
@@ -3029,7 +3029,7 @@ function applyLang() {
     pEl.options[0].text = t.all; pEl.options[1].text = t.hi; pEl.options[2].text = t.lo;
   }
   // All "전체" options in dropdowns
-  ['fTeam','fWeek','fSales'].forEach(id => {
+  ['fTeam','fGrade','fSales'].forEach(id => {
     const el = document.getElementById(id);
     if (el && el.options && el.options[0] && el.options[0].value === 'ALL') el.options[0].text = t.all;
   });
