@@ -94,6 +94,8 @@ table.summary.monthly-summary-table tr.summary-data-row:hover td.lbl{background:
 @media (max-width:900px){
   .content{padding:12px 10px}
   .chart-card{padding:12px}
+  .chart-row{flex-direction:column}
+  .chart-row .chart-card{width:100%;flex:none!important}
 }
 .loading{text-align:center;padding:60px;color:#5f6368;font-size:16px}
 table.summary td.tgt-mini{padding:2px 4px;line-height:1.25;min-width:74px}
@@ -1284,6 +1286,18 @@ function filterShipperTEU(month) {
     const weekSet = new Set(weeks);
     d = d.filter(r => weekSet.has(r.week_start_date));
   }
+  const sales = gv('fSales');
+  if (sales !== 'ALL') d = d.filter(r => r.Salesman_POR === sales);
+  const grade = gv('fGrade');
+  if (grade === 'ab') d = d.filter(r => r.grade === 'A+B');
+  if (grade === 'cd') d = d.filter(r => r.grade === 'C+D');
+  return d;
+}
+
+function filterShipperTEUMonthOnly(month) {
+  if (!DATA.shipper) return [];
+  let d = applyGlobalFilter(DATA.shipper, true);
+  if (month) d = d.filter(r => r.YYYYMM === month);
   const sales = gv('fSales');
   if (sales !== 'ALL') d = d.filter(r => r.Salesman_POR === sales);
   const grade = gv('fGrade');
@@ -2838,7 +2852,7 @@ function renderTab6() {
 
   html += `<div class="chart-row">
     <div class="chart-card" style="flex:1"><h3>${ctx.monthlyTitle}</h3><div id="ch6trend" style="height:330px"></div></div>
-    <div class="chart-card" style="flex:1"><h3>${vl} ${L('화주수 (고수익 화주)','Shipper Count (High-Profit)')}</h3><div id="ch6region" style="height:330px"></div></div>
+    <div class="chart-card" style="flex:1"><h3>${L('월별 화주수 트렌드 (고수익 화주)','Monthly Shipper Trend (High-Profit)')}</h3><div id="ch6region" style="height:330px"></div></div>
   </div>`;
 
   const bySales = {};
@@ -2924,27 +2938,40 @@ function renderTab6() {
   ], {margin:{l:45,r:20,t:20,b:35},yaxis:{title:'%',gridcolor:'#f0f0f0',range:[0,100]},
       legend:{orientation:'h',y:1.12},plot_bgcolor:'#fff',paper_bgcolor:'#fff'}, {displayModeBar:false});
 
-  // 지역별 화주수 (전체 화주수 + 고수익 화주수). shipper-level 데이터에서 중복 제거 카운트.
-  const regionShpr = {};
-  sd.forEach(r => {
-    const k = r[vk] || L('(미지정)','(N/A)');
-    const sk = r.BKG_SHPR_CST_NO || r.BKG_SHPR_CST_ENM;
-    if (!sk) return;
-    if (!regionShpr[k]) regionShpr[k] = {all:new Set(), hi:new Set()};
-    regionShpr[k].all.add(sk);
-    if (String(r.tag || '').includes('고수익화주')) regionShpr[k].hi.add(sk);
+  // 월별 화주수 트렌드 (전체 화주수 + 고수익 화주수). shipper-level 데이터에서 중복 제거 카운트.
+  const shipperTrend = DATA.months.map(m => {
+    const monthlyRows = filterShipperTEUMonthOnly(m);
+    const all = new Set();
+    const hi = new Set();
+    monthlyRows.forEach(r => {
+      const sk = r.BKG_SHPR_CST_NO || r.BKG_SHPR_CST_ENM;
+      if (!sk) return;
+      all.add(sk);
+      if (String(r.tag || '').includes('고수익화주')) hi.add(sk);
+    });
+    return {month:m, all:all.size, hi:hi.size};
   });
-  const topShpr = Object.entries(regionShpr)
-    .map(([name, s]) => ({name, cnt:s.all.size, hi:s.hi.size}))
-    .sort((a,b) => b.cnt - a.cnt)
-    .slice(0, 12).reverse();
+  const shipperTrendX = shipperTrend.map(r => fmtMonth(r.month));
+  const shipperTrendAll = shipperTrend.map(r => r.all);
+  const shipperTrendHi = shipperTrend.map(r => r.hi);
+  const shipperTrendShare = shipperTrend.map(r => r.all > 0 ? r.hi / r.all * 100 : 0);
+  const compactShipperTrend = window.innerWidth < 520;
+  const shipperTrendText = values => values.map((v, i) =>
+    !compactShipperTrend || i % 2 === 0 || i === values.length - 1 ? fmt(v) : '');
+  const shipperTrendMax = Math.max(...shipperTrendAll, ...shipperTrendHi, 1);
   plot('ch6region', [
-    {y: topShpr.map(r => r.name), x: topShpr.map(r => r.cnt), type:'bar', orientation:'h',
-     name:L('화주수','Shippers'), marker:{color:'#c5cae9'}, text:topShpr.map(r => fmt(r.cnt)), textposition:'auto'},
-    {y: topShpr.map(r => r.name), x: topShpr.map(r => r.hi), type:'bar', orientation:'h',
-     name:L('고수익 화주수','High-Profit Shippers'), marker:{color:'#1a73e8'}, text:topShpr.map(r => fmt(r.hi)), textposition:'auto'}
-  ], {margin:{l:70,r:30,t:20,b:35}, barmode:'overlay',
-      xaxis:{title:L('화주수','Shippers'),gridcolor:'#f0f0f0'},
+    {x: shipperTrendX, y: shipperTrendAll, mode:'lines+markers+text',
+     name:L('화주수','Shippers'), line:{color:'#5f6fc6',width:3}, marker:{size:8},
+     text:shipperTrendText(shipperTrendAll), textposition:'top center', textfont:{size:11},
+     customdata:shipperTrendShare,
+     hovertemplate:`%{x}<br>${L('화주수','Shippers')}: %{y:,}<br>${L('고수익 비중','High-Profit Share')}: %{customdata:.1f}%<extra></extra>`},
+    {x: shipperTrendX, y: shipperTrendHi, mode:'lines+markers+text',
+     name:L('고수익 화주수','High-Profit Shippers'), line:{color:'#1a73e8',width:3}, marker:{size:8},
+     text:shipperTrendText(shipperTrendHi), textposition:'bottom center', textfont:{size:11},
+     customdata:shipperTrendShare,
+     hovertemplate:`%{x}<br>${L('고수익 화주수','High-Profit Shippers')}: %{y:,}<br>${L('고수익 비중','High-Profit Share')}: %{customdata:.1f}%<extra></extra>`}
+  ], {margin:{l:50,r:30,t:20,b:35},
+      yaxis:{title:L('화주수','Shippers'),gridcolor:'#f0f0f0',range:[0, shipperTrendMax * 1.18]},
       legend:{orientation:'h',y:1.18},plot_bgcolor:'#fff',paper_bgcolor:'#fff'}, {displayModeBar:false});
 }
 
