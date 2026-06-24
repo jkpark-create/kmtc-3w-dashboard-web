@@ -448,6 +448,9 @@ function normalizeMetricKeys(data) {
       if (row.week !== undefined && row.week_start_date === undefined) row.week_start_date = row.week;
       if (row.rhn !== undefined && row.w3_route_hi_norm_lst === undefined) row.w3_route_hi_norm_lst = row.rhn;
       if (row.rhc !== undefined && row.w3_route_hi_cm1_norm === undefined) row.w3_route_hi_cm1_norm = row.rhc;
+      if (row.route_hi_fst === undefined && row.route_hi_bl !== undefined && row.fst !== undefined) {
+        row.route_hi_fst = (row.route_hi_bl || 0) > 0 ? (row.fst || 0) : 0;
+      }
       Object.entries(renameMap).forEach(([oldKey, newKey]) => {
         if (Object.prototype.hasOwnProperty.call(row, oldKey)) {
           if (!Object.prototype.hasOwnProperty.call(row, newKey)) row[newKey] = row[oldKey];
@@ -1306,10 +1309,31 @@ function filterShipperTEUMonthOnly(month) {
   return d;
 }
 
+function tab6ScopeRows(rows) {
+  if (gv('fTeam') !== 'OBT' || !Array.isArray(DATA.obt_salesmen)) return rows;
+  const obtSet = new Set(DATA.obt_salesmen);
+  const missingLabel = L('(미지정)','(N/A)');
+  return rows.filter(r => {
+    const name = r.Salesman_POR || missingLabel;
+    return obtSet.has(name) || name === missingLabel;
+  });
+}
+
+function tab6Rows(month, withWeeks=true) {
+  return tab6ScopeRows(withWeeks ? filterShipperTEU(month) : filterShipperTEUMonthOnly(month));
+}
+
+function sumRouteHiFst(rows) {
+  if (rows.some(r => Object.prototype.hasOwnProperty.call(r, 'route_hi_fst'))) {
+    return sum(rows, 'route_hi_fst');
+  }
+  return rows.reduce((s, r) => s + ((r.route_hi_bl || 0) > 0 ? (r.fst || 0) : 0), 0);
+}
+
 function teuRowMetrics(rows) {
   const allBkg = sum(rows, 'fst');
   const allBl = sum(rows, 'norm_lst');
-  const allHiBkg = sum(rows, 'route_hi_fst');
+  const allHiBkg = sumRouteHiFst(rows);
   const allHiBl = sum(rows, 'route_hi_norm_lst');
   const w3Bkg = sum(rows, 'w3_fst');
   const w3HiBkg = sum(rows, 'w3_route_hi_fst');
@@ -2811,8 +2835,8 @@ function renderTab6() {
   }
 
   const month = gv('fMonth'), vk = viewKey(), vl = viewLabel();
-  const fd = hasWeekSelection() ? filterWeekly(month) : filterMonthly(month);
-  const sd = filterShipperTEU(month);
+  const sd = tab6Rows(month);
+  const fd = sd;
   const total = ctx.metrics(fd);
   const totalPotential = Math.max(0, total.w3 - total.w3Hi);
 
@@ -2836,7 +2860,7 @@ function renderTab6() {
   const destRows = Object.entries(groupByKey(fd, vk)).map(([name, rows]) => {
     const m = ctx.metrics(rows);
     return {...m, name, potential: Math.max(0, m.w3 - m.w3Hi)};
-  }).filter(r => r.w3 > 0 || r.all > 0).sort((a,b) =>
+  }).filter(r => r.w3 > 0 || r.allBkg > 0 || r.all > 0).sort((a,b) =>
     b.w3 - a.w3 || b.all - a.all || String(a.name).localeCompare(String(b.name))
   );
   const shownDestRows = destRows.slice(0, 25);
@@ -2865,12 +2889,7 @@ function renderTab6() {
   let salesRows = Object.values(bySales).map(s => {
     const m = ctx.metrics(s.rows);
     return {...m, name:s.name, custCnt:s.custs.size, potential: Math.max(0, m.w3 - m.w3Hi)};
-  }).filter(r => r.w3 > 0 || r.all > 0);
-  if (gv('fTeam') === 'OBT' && Array.isArray(DATA.obt_salesmen)) {
-    const obtSet = new Set(DATA.obt_salesmen);
-    const missingLabel = L('(미지정)','(N/A)');
-    salesRows = salesRows.filter(r => obtSet.has(r.name) || r.name === missingLabel);
-  }
+  }).filter(r => r.w3 > 0 || r.allBkg > 0 || r.all > 0);
   salesRows.sort((a,b) => b.w3 - a.w3 || b.all - a.all || a.name.localeCompare(b.name));
 
   const st = salesRows.reduce((s,r) => {
@@ -2906,7 +2925,7 @@ function renderTab6() {
       sales:sales.length > 2 ? sales.slice(0,2).join(', ') + '...' : sales.join(', '),
       potential: Math.max(0, m.w3 - m.w3Hi)
     };
-  }).filter(r => r.w3 > 0 || r.all > 0).sort((a,b) =>
+  }).filter(r => r.w3 > 0 || r.allBkg > 0 || r.all > 0).sort((a,b) =>
     b.w3 - a.w3 || b.w3Hi - a.w3Hi || String(a.name).localeCompare(String(b.name))
   ).slice(0, 100);
 
@@ -2921,12 +2940,12 @@ function renderTab6() {
   document.getElementById('tabContent').innerHTML = html;
 
   const trendW3 = DATA.months.map(m => {
-    const d = filterMonthly(m);
+    const d = tab6Rows(m, false);
     const mm = ctx.metrics(d);
     return ratio(mm.w3Hi, mm.w3);
   });
   const trendAll = DATA.months.map(m => {
-    const d = filterMonthly(m);
+    const d = tab6Rows(m, false);
     const mm = ctx.metrics(d);
     return ratio(mm.allHi, mm.all);
   });
@@ -2940,16 +2959,21 @@ function renderTab6() {
 
   // 월별 화주수 트렌드 (전체 화주수 + 고수익 화주수). shipper-level 데이터에서 중복 제거 카운트.
   const shipperTrend = DATA.months.map(m => {
-    const monthlyRows = filterShipperTEUMonthOnly(m);
-    const all = new Set();
-    const hi = new Set();
+    const monthlyRows = tab6Rows(m, false);
+    const byShipper = {};
     monthlyRows.forEach(r => {
       const sk = r.BKG_SHPR_CST_NO || r.BKG_SHPR_CST_ENM;
       if (!sk) return;
-      all.add(sk);
-      if (String(r.tag || '').includes('고수익화주')) hi.add(sk);
+      if (!byShipper[sk]) byShipper[sk] = [];
+      byShipper[sk].push(r);
     });
-    return {month:m, all:all.size, hi:hi.size};
+    const all = Object.keys(byShipper).length;
+    let hi = 0;
+    Object.values(byShipper).forEach(rows => {
+      const mm = ctx.metrics(rows);
+      if (mm.w3HiBkg > 0 || mm.w3HiBl > 0 || mm.allHiBkg > 0 || mm.allHiBl > 0) hi += 1;
+    });
+    return {month:m, all, hi};
   });
   const shipperTrendX = shipperTrend.map(r => fmtMonth(r.month));
   const shipperTrendAll = shipperTrend.map(r => r.all);
