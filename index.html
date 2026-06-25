@@ -1415,6 +1415,43 @@ function plot(target, traces, layout, config) {
   return Plotly.newPlot(target, traces, out, {...PLOT_CONFIG, ...(config || {})});
 }
 
+function dualLineValueAnnotations(x, topAwareSeries, options = {}) {
+  const annotations = [];
+  const closeThreshold = options.closeThreshold ?? 3;
+  const defaultFormat = options.format || (value => `${value.toFixed(1)}%`);
+  x.forEach((label, i) => {
+    const points = topAwareSeries
+      .map(s => ({...s, value: s.y[i]}))
+      .filter(p => p.value !== null && p.value !== undefined && Number.isFinite(p.value));
+    if (!points.length) return;
+
+    const close = points.length > 1 && Math.abs(points[0].value - points[1].value) < closeThreshold;
+    const sorted = [...points].sort((a, b) => b.value - a.value || a.order - b.order);
+    points.forEach((point) => {
+      const rank = sorted.findIndex(p => p.key === point.key);
+      const isUpper = rank === 0;
+      const format = point.format || defaultFormat;
+      annotations.push({
+        x: label,
+        y: point.value,
+        xref: 'x',
+        yref: 'y',
+        text: format(point.value),
+        showarrow: false,
+        yshift: isUpper ? 15 : -15,
+        xshift: close ? (point.order === 0 ? -11 : 11) : 0,
+        align: 'center',
+        bgcolor: 'rgba(255,255,255,.88)',
+        bordercolor: point.color,
+        borderwidth: 1,
+        borderpad: 2,
+        font: {size: options.fontSize || 11, color: point.color, family: 'Segoe UI, sans-serif'}
+      });
+    });
+  });
+  return annotations;
+}
+
 function render() {
   if (!DATA) return;
   resetFilterMemo();
@@ -2949,12 +2986,22 @@ function renderTab6() {
     const mm = ctx.metrics(d);
     return ratio(mm.allHi, mm.all);
   });
+  const trendX = DATA.months.map(fmtMonth);
+  const W3_TREND_COLOR = '#1a73e8';
+  const ALL_TREND_COLOR = '#6c5ce7';
+  const trendAnnotations = dualLineValueAnnotations(trendX, [
+    {key:'w3', order:0, y:trendW3, color:W3_TREND_COLOR},
+    {key:'all', order:1, y:trendAll, color:ALL_TREND_COLOR}
+  ]);
   plot('ch6trend', [
-    {x: DATA.months.map(fmtMonth), y: trendW3, mode:'lines+markers+text', name:'WOS-3',
-     line:{color:'#1a73e8',width:3}, marker:{size:8}, text:trendW3.map(v => v !== null ? v.toFixed(1)+'%' : ''), textposition:'top center'},
-    {x: DATA.months.map(fmtMonth), y: trendAll, mode:'lines+markers+text', name:L('전체','Total'),
-     line:{color:'#6c5ce7',width:3}, marker:{size:8}, text:trendAll.map(v => v !== null ? v.toFixed(1)+'%' : ''), textposition:'bottom center'}
-  ], {margin:{l:45,r:20,t:20,b:35},yaxis:{title:'%',gridcolor:'#f0f0f0',range:[0,100]},
+    {x: trendX, y: trendW3, mode:'lines+markers', name:'WOS-3',
+     line:{color:W3_TREND_COLOR,width:3}, marker:{size:8},
+     hovertemplate:'%{x}<br>WOS-3: %{y:.1f}%<extra></extra>'},
+    {x: trendX, y: trendAll, mode:'lines+markers', name:L('전체','Total'),
+     line:{color:ALL_TREND_COLOR,width:3}, marker:{size:8},
+     hovertemplate:`%{x}<br>${L('전체','Total')}: %{y:.1f}%<extra></extra>`}
+  ], {margin:{l:45,r:28,t:30,b:35},yaxis:{title:'%',gridcolor:'#f0f0f0',range:[0,100]},
+      annotations: trendAnnotations,
       legend:{orientation:'h',y:1.12},plot_bgcolor:'#fff',paper_bgcolor:'#fff'}, {displayModeBar:false});
 
   // 월별 화주수 트렌드 (전체 화주수 + 고수익 화주수). shipper-level 데이터에서 중복 제거 카운트.
@@ -2980,22 +3027,27 @@ function renderTab6() {
   const shipperTrendHi = shipperTrend.map(r => r.hi);
   const shipperTrendShare = shipperTrend.map(r => r.all > 0 ? r.hi / r.all * 100 : 0);
   const compactShipperTrend = window.innerWidth < 520;
-  const shipperTrendText = values => values.map((v, i) =>
-    !compactShipperTrend || i % 2 === 0 || i === values.length - 1 ? fmt(v) : '');
   const shipperTrendMax = Math.max(...shipperTrendAll, ...shipperTrendHi, 1);
+  const shipperTrendLabelValues = values => values.map((v, i) =>
+    !compactShipperTrend || i % 2 === 0 || i === values.length - 1 ? v : null);
+  const SHIPPER_TOTAL_COLOR = '#5f6fc6';
+  const SHIPPER_HI_COLOR = '#1a73e8';
+  const shipperTrendAnnotations = dualLineValueAnnotations(shipperTrendX, [
+    {key:'all', order:0, y:shipperTrendLabelValues(shipperTrendAll), color:SHIPPER_TOTAL_COLOR, format:fmt},
+    {key:'hi', order:1, y:shipperTrendLabelValues(shipperTrendHi), color:SHIPPER_HI_COLOR, format:fmt}
+  ], {closeThreshold: Math.max(80, shipperTrendMax * .035), format:fmt});
   plot('ch6region', [
-    {x: shipperTrendX, y: shipperTrendAll, mode:'lines+markers+text',
-     name:L('화주수','Shippers'), line:{color:'#5f6fc6',width:3}, marker:{size:8},
-     text:shipperTrendText(shipperTrendAll), textposition:'top center', textfont:{size:11},
+    {x: shipperTrendX, y: shipperTrendAll, mode:'lines+markers',
+     name:L('화주수','Shippers'), line:{color:SHIPPER_TOTAL_COLOR,width:3}, marker:{size:8},
      customdata:shipperTrendShare,
      hovertemplate:`%{x}<br>${L('화주수','Shippers')}: %{y:,}<br>${L('고수익 비중','High-Profit Share')}: %{customdata:.1f}%<extra></extra>`},
-    {x: shipperTrendX, y: shipperTrendHi, mode:'lines+markers+text',
-     name:L('고수익 화주수','High-Profit Shippers'), line:{color:'#1a73e8',width:3}, marker:{size:8},
-     text:shipperTrendText(shipperTrendHi), textposition:'bottom center', textfont:{size:11},
+    {x: shipperTrendX, y: shipperTrendHi, mode:'lines+markers',
+     name:L('고수익 화주수','High-Profit Shippers'), line:{color:SHIPPER_HI_COLOR,width:3}, marker:{size:8},
      customdata:shipperTrendShare,
      hovertemplate:`%{x}<br>${L('고수익 화주수','High-Profit Shippers')}: %{y:,}<br>${L('고수익 비중','High-Profit Share')}: %{customdata:.1f}%<extra></extra>`}
   ], {margin:{l:50,r:30,t:20,b:35},
       yaxis:{title:L('화주수','Shippers'),gridcolor:'#f0f0f0',range:[0, shipperTrendMax * 1.18]},
+      annotations: shipperTrendAnnotations,
       legend:{orientation:'h',y:1.18},plot_bgcolor:'#fff',paper_bgcolor:'#fff'}, {displayModeBar:false});
 }
 
