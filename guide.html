@@ -68,7 +68,7 @@ li{margin:4px 0}
     <li><a href="#filters" data-id="filters">필터 사용법</a></li>
     <li><a href="#history" data-id="history">과거 데이터</a></li>
     <li><a href="#week-rule" data-id="week-rule">주차 선택 규칙</a></li>
-    <li><a href="#tab1" data-id="tab1">① 소석률</a></li>
+    <li><a href="#tab1" data-id="tab1">① BSA활용률</a></li>
     <li><a href="#tab2" data-id="tab2">② 트렌드</a></li>
     <li><a href="#tab3" data-id="tab3">③ 전환 분석</a></li>
     <li><a href="#tab4" data-id="tab4">④ 수익성</a></li>
@@ -169,7 +169,7 @@ document.addEventListener('DOMContentLoaded', function() {
   <li><a href="#filters">필터 사용법</a></li>
   <li><a href="#history">과거 데이터 조회</a></li>
   <li><a href="#week-rule">주차 선택 규칙</a></li>
-  <li><a href="#tab1">① 소석률 현황</a></li>
+  <li><a href="#tab1">① BSA활용률 현황</a></li>
   <li><a href="#tab2">② 부킹 트렌드</a></li>
   <li><a href="#tab3">③ 전환 분석</a></li>
   <li><a href="#tab4">④ 수익성 분석</a></li>
@@ -205,7 +205,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <div class="card ko">
   <p><strong>-3W Booking Dashboard</strong>는 출항 3주 전(WOS-3) 부킹 현황을 모니터링하는 대시보드입니다.</p>
   <ul>
-    <li><strong>① 소석률 현황</strong> — BSA 대비 실선적(Normal) 비율, 3주전BKG/BSA 비중</li>
+    <li><strong>① BSA활용률 현황</strong> — BSA 대비 실선적(Normal) 비율, 3주전BKG/BSA 비중</li>
     <li><strong>② 부킹 트렌드</strong> — 지역별/화주별/영업사원별 실적 + AB vs CD 등급 분석</li>
     <li><strong>③ 전환 분석</strong> — 캔슬률 분석, 화주별 캔슬 Top 15</li>
     <li><strong>④ 수익성</strong> — CM1/TEU Top/Bottom, 수익 집중도</li>
@@ -216,7 +216,7 @@ document.addEventListener('DOMContentLoaded', function() {
   <h3>이 대시보드가 답하는 질문</h3>
   <table>
     <tr><th>질문</th><th>먼저 볼 화면</th><th>판단 포인트</th></tr>
-    <tr><td>선복 대비 물량이 충분한가?</td><td>① 소석률 현황</td><td>BSA 대비 Normal 실선적, WOS-3 BKG/BSA, 월별 추이</td></tr>
+    <tr><td>선복 대비 물량이 충분한가?</td><td>① BSA활용률 현황</td><td>BSA 대비 Normal 실선적, WOS-3 BKG/BSA, 월별 추이</td></tr>
     <tr><td>어느 지역/화주/영업사원이 물량을 만들고 있는가?</td><td>② 부킹 트렌드</td><td>도착국가/선적지, 화주, 영업사원별 BKG와 실선적률</td></tr>
     <tr><td>3주전 부킹이 실제 선적으로 잘 전환되는가?</td><td>③ 전환 분석</td><td>실선적률, 캔슬률, 캔슬 화주</td></tr>
     <tr><td>물량이 수익성 있는 물량인가?</td><td>④ 수익성 분석</td><td>CM1/TEU, Top/Bottom 화주, 수익 집중도</td></tr>
@@ -226,7 +226,7 @@ document.addEventListener('DOMContentLoaded', function() {
   <h3>권장 사용 순서</h3>
   <ol>
     <li><strong>필터</strong>에서 팀/월/주차/도착국가를 맞춥니다.</li>
-    <li><strong>① 소석률</strong>에서 전체 물량과 선복 대비 부족/초과 여부를 봅니다.</li>
+    <li><strong>① BSA활용률</strong>에서 전체 물량과 선복 대비 부족/초과 여부를 봅니다.</li>
     <li><strong>② 부킹 트렌드</strong>에서 부족 또는 초과를 만든 지역, 화주, 영업사원을 찾습니다.</li>
     <li><strong>③ 전환 분석</strong>에서 캔슬과 실선적 전환 리스크를 확인합니다.</li>
     <li><strong>④ 수익성</strong>과 <strong>⑤ 부킹 패턴</strong>으로 물량의 질과 조기 확보 여부를 점검합니다.</li>
@@ -287,10 +287,10 @@ document.addEventListener('DOMContentLoaded', function() {
     <li><strong>선적지/선적포트/도착지/도착포트</strong>는 체크박스로 여러 값을 동시에 선택할 수 있습니다. 선택값이 없으면 전체로 처리됩니다.</li>
     <li>멀티셀렉트 메뉴 상단의 <strong>검색</strong> 입력창은 현재 필터의 옵션 목록만 좁힙니다. 검색어를 입력해도 대시보드 값은 바로 바뀌지 않습니다.</li>
     <li>체크박스를 선택하거나 <strong>전체</strong>를 눌러 선택을 비운 뒤, <strong>적용</strong> 버튼을 눌러야 실제 필터가 반영됩니다. <strong>닫기</strong>, ESC, 메뉴 밖 클릭은 적용 전 변경을 취소합니다.</li>
-    <li><strong>팀/선적지/선적포트/도착지/도착포트</strong>는 물리적인 운송 루트 범위를 좁히는 필터입니다. 지역별, 소석률, 수익성 화면에 모두 큰 영향을 줍니다.</li>
+    <li><strong>팀/선적지/선적포트/도착지/도착포트</strong>는 물리적인 운송 루트 범위를 좁히는 필터입니다. 지역별, BSA활용률, 수익성 화면에 모두 큰 영향을 줍니다.</li>
     <li><strong>보기</strong>는 지역을 묶는 축을 바꿉니다. 도착지별은 시장/수요 관점, 선적지별은 영업/공급 출발지 관점으로 읽으면 됩니다.</li>
     <li><strong>주차</strong>를 선택하면 선택 월은 해당 주 실적, 과거 월 비교는 주평균으로 표시됩니다. 특정 주의 상황을 과거 월 평균과 비교할 때 사용합니다.</li>
-    <li><strong>구간수익/등급/영업사원</strong>은 주로 화주 기반 데이터에 강하게 적용됩니다. 등급 필터는 ① 소석률 현황의 BKG/실선적/CM1 및 화주수에도 적용되며, BSA는 등급별로 나뉘지 않는 전체 선복 기준으로 유지됩니다. 영업사원 필터는 `shipper` 데이터 기반 화면에서 가장 정확합니다.</li>
+    <li><strong>구간수익/등급/영업사원</strong>은 주로 화주 기반 데이터에 강하게 적용됩니다. 등급 필터는 ① BSA활용률 현황의 BKG/실선적/CM1 및 화주수에도 적용되며, BSA는 등급별로 나뉘지 않는 전체 선복 기준으로 유지됩니다. 영업사원 필터는 `shipper` 데이터 기반 화면에서 가장 정확합니다.</li>
     <li>화주별 화면에서 구간수익 필터는 고/저수익 분류가 붙은 화주를 선별합니다. BKG/실선적은 선택 범위의 WOS-3 값이고, 구간별고수익은 각 부킹이 속한 화주+POR+DLY 조합의 전체기간 분류값을 따라 집계됩니다.</li>
     <li><strong>판단기준 CM1/TEU</strong>는 선적포트와 도착포트를 각각 1개 선택했을 때만 표시됩니다. 주차 필터와 관계없이 전체기간 기준을 보여주며, 화주 행은 해당 화주+POR+DLY 기준값, 합계 행은 해당 POR+DLY 루트 전체 평균입니다.</li>
   </ul>
@@ -343,7 +343,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <tr><td>최신 (기본)</td><td>GitHub Pages <code>data.json</code></td><td>매일 10:00 KST 자동 업데이트된 최신 스냅샷</td></tr>
     <tr><td>과거 날짜</td><td>Google Drive</td><td>해당 날짜에 생성된 <code>dashboard_summary_YYYYMMDD.json</code> 파일</td></tr>
   </table>
-  <div class="tip"><strong>활용 예시:</strong> 지난주와 이번주의 소석률 변화를 비교하거나, 특정 시점의 부킹 현황을 확인할 때 유용합니다. 최대 30개의 과거 날짜가 표시됩니다.</div>
+  <div class="tip"><strong>활용 예시:</strong> 지난주와 이번주의 BSA활용률 변화를 비교하거나, 특정 시점의 부킹 현황을 확인할 때 유용합니다. 최대 30개의 과거 날짜가 표시됩니다.</div>
 </div>
 <div class="card en" style="display:none">
   <p>Use the <strong>date dropdown</strong> in the top-right header to view dashboard data from past dates.</p>
@@ -391,33 +391,33 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <!-- TAB1 -->
 <span class="anchor" id="tab1"></span>
-<h2 class="ko">① 소석률 현황</h2><h2 class="en" style="display:none">① Occupancy Status</h2>
+<h2 class="ko">① BSA활용률 현황</h2><h2 class="en" style="display:none">① Occupancy Status</h2>
 <div class="card ko">
   <h3>KPI 카드</h3>
-  <p>전체BKG | 실선적(Normal) | 3주전BKG | <strong>3주전 BKG (not cancel)</strong> | 3주전실선적(Normal) | BSA | 소석률 | 실선적률 | CM1/TEU</p>
+  <p>전체BKG | 실선적(Normal) | 3주전BKG | <strong>3주전 BKG (not cancel)</strong> | 3주전실선적(Normal) | BSA | BSA활용률 | 실선적률 | CM1/TEU</p>
   <div class="tip"><strong>등급 필터:</strong> A+B 또는 C+D를 선택하면 BKG, 실선적, 실선적률, CM1/TEU, 구간별고수익, 화주수는 해당 등급 화주 기준으로 좁혀집니다. BSA는 등급별 선복이 없으므로 전체 BSA를 그대로 사용합니다.</div>
   <table>
     <tr><th>지표</th><th>의미</th><th>높거나 낮을 때 해석</th></tr>
     <tr><td><strong>전체BKG</strong></td><td>조회 범위 전체 부킹 TEU</td><td>시장 전체 물량 규모를 봅니다. BSA와 함께 봐야 과부족 판단이 가능합니다.</td></tr>
-    <tr><td><strong>실선적(Normal)</strong></td><td>Normal 상태로 실제 선적된 TEU</td><td>BSA 대비 실질 소석 기여 물량입니다.</td></tr>
+    <tr><td><strong>실선적(Normal)</strong></td><td>Normal 상태로 실제 선적된 TEU</td><td>BSA 대비 실질 활용 기여 물량입니다.</td></tr>
     <tr><td><strong>3주전BKG</strong></td><td>WOS-3 단계에서 확보된 부킹 TEU (Cancel 포함)</td><td>조기 확보 물량입니다. 높을수록 선복 계획이 안정적입니다.</td></tr>
     <tr><td><strong>3주전 BKG (not cancel)</strong></td><td><code>w3_lst − w3_canc_lst</code> (LST 기준). 3주전 부킹의 최종 LST_TEU에서 Cancel 전환분 LST_TEU를 제외</td><td>FST(최초 부킹 TEU)가 아니라 LST(최종 TEU)를 기준으로 보기 때문에 실제 선적된 TEU와 정합성이 좋습니다. 3주전BKG(FST)와 차이는 부킹 후 변경/감량이 반영된 결과입니다.</td></tr>
-    <tr><td><strong>소석률</strong></td><td>실선적(Normal) / BSA</td><td>낮으면 선복 미소진, 높으면 BSA 초과 또는 강한 수요를 의미합니다.</td></tr>
+    <tr><td><strong>BSA활용률</strong></td><td>실선적(Normal) / BSA</td><td>낮으면 선복 미소진, 높으면 BSA 초과 또는 강한 수요를 의미합니다.</td></tr>
     <tr><td><strong>실선적률</strong></td><td>3주전실선적 / 3주전BKG</td><td>낮으면 캔슬/노쇼/변경 리스크를 의심합니다.</td></tr>
     <tr><td><strong>CM1/TEU</strong></td><td>CM1 / LST_TEU</td><td>물량의 수익성을 판단합니다. 물량이 커도 이 값이 낮으면 믹스 점검이 필요합니다.</td></tr>
   </table>
   <h3>월별 BKG vs BSA 차트</h3>
   <p>보라 바=3주전BKG, 파란 바=실선적(Normal), 회색 바=BSA</p>
-  <p>빨간 실선=소석률(Normal/BSA), 노란 점선=3주전BKG/BSA, 보라 점선=구간별고수익비중(구간별고수익3주전BKG/3주전BKG)</p>
+  <p>빨간 실선=BSA활용률(Normal/BSA), 노란 점선=3주전BKG/BSA, 보라 점선=구간별고수익비중(구간별고수익3주전BKG/3주전BKG)</p>
   <p>실제 계산 결과가 100%를 넘으면 그대로 표시합니다. BKG/BSA는 BSA보다 부킹이 큰 경우, 실선적률은 최종 LST_TEU가 최초 FST_TEU보다 커진 경우 100%를 넘을 수 있습니다.</p>
-  <h3>소석률 바 차트 (토글)</h3>
+  <h3>BSA활용률 바 차트 (토글)</h3>
   <p><strong>3주전BKG/BSA</strong>와 <strong>Normal/BSA</strong> 두 모드를 버튼으로 전환하여 볼 수 있습니다.</p>
   <p>기본: 3주전BKG/BSA | 색상: 초록(≥65%), 노랑(50-65%), 빨강(&lt;50%)</p>
   <h3>사용 방법</h3>
   <ol>
-    <li>먼저 KPI 카드에서 전체 소석률과 실선적률을 봅니다.</li>
+    <li>먼저 KPI 카드에서 전체 BSA활용률과 실선적률을 봅니다.</li>
     <li>월별 차트에서 이번 달이 과거 월 대비 높은지 낮은지 확인합니다.</li>
-    <li>소석률 바 차트에서 부족한 도착국가/선적지를 찾습니다.</li>
+    <li>BSA활용률 바 차트에서 부족한 도착국가/선적지를 찾습니다.</li>
     <li>부족 지역은 ② 부킹 트렌드에서 화주/영업사원 원인을 확인하고, 초과 지역은 BSA 조정 또는 수익성 점검 대상으로 봅니다.</li>
   </ol>
 </div>
@@ -474,14 +474,14 @@ document.addEventListener('DOMContentLoaded', function() {
   <h3>서브탭별 상세 해석</h3>
   <table>
     <tr><th>서브탭</th><th>주요 질문</th><th>해석 기준</th></tr>
-    <tr><td><strong>지역별</strong></td><td>어느 지역에서 WOS-3 물량이 크거나 부족한가?</td><td>BKG는 수요 규모, BSA/소석률은 선복 대비 과부족, 실선적률은 부킹 품질을 의미합니다. 구간별고수익%가 높으면 해당 지역 물량의 수익성이 상대적으로 좋습니다.</td></tr>
+    <tr><td><strong>지역별</strong></td><td>어느 지역에서 WOS-3 물량이 크거나 부족한가?</td><td>BKG는 수요 규모, BSA/BSA활용률은 선복 대비 과부족, 실선적률은 부킹 품질을 의미합니다. 구간별고수익%가 높으면 해당 지역 물량의 수익성이 상대적으로 좋습니다.</td></tr>
     <tr><td><strong>화주별</strong></td><td>어떤 화주가 물량과 수익을 만들고 있는가?</td><td>BKG 큰 화주는 물량 영향도가 높고, 실선적률 낮은 화주는 캔슬/변경 관리 대상입니다. 선택 월 CM1/TEU와 판단기준 CM1/TEU를 함께 보면 현재 실적과 구간수익 분류 기준을 분리해 볼 수 있습니다.</td></tr>
     <tr><td><strong>영업사원별</strong></td><td>어떤 영업사원이 어느 도착국가에서 물량을 만들고 있는가?</td><td>영업사원 총성과와 도착국가 매트릭스를 함께 봅니다. 특정 국가 쏠림이 크면 해당 국가의 시장/화주 리스크가 영업사원 성과에 크게 영향을 줍니다.</td></tr>
     <tr><td><strong>AB vs CD</strong></td><td>물량이 대형화주 중심인가, 중소화주 기반인가?</td><td>A+B 비중이 높으면 물량 확보는 쉽지만 특정 화주 이탈 리스크가 큽니다. C+D 비중이 높으면 기반은 넓지만 실선적률과 캔슬 관리가 중요합니다.</td></tr>
   </table>
   <h3>지역별 화면 활용</h3>
   <ul>
-    <li><strong>3주전 BKG 현황</strong>은 선택한 보기 기준(도착지별/선적지별)으로 WOS-3 BKG, BSA, 소석률, 실선적률, 구간별고수익을 보여줍니다.</li>
+    <li><strong>3주전 BKG 현황</strong>은 선택한 보기 기준(도착지별/선적지별)으로 WOS-3 BKG, BSA, BSA활용률, 실선적률, 구간별고수익을 보여줍니다.</li>
     <li><strong>주차별 3주전 BKG</strong>는 해당 월 안에서 주차별 물량 변동을 보여줍니다. 특정 주차만 튀면 일시적 선복/선박 스케줄 영향인지 확인합니다.</li>
     <li><strong>구간별 고수익 vs 저수익 리드타임</strong>은 수익성 좋은 구간의 부킹이 조기에 들어오는지 확인하는 화면입니다.</li>
     <li><strong>구간별 고수익 비중 추이</strong>는 WOS-3 물량 중 구간별 고수익 비중의 월별 변화입니다. 물량이 늘어도 이 비중이 떨어지면 수익성 질이 나빠질 수 있습니다.</li>
@@ -525,7 +525,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <li><strong>수익성</strong> — BKG 규모가 커도 CM1/TEU가 낮으면 물량 확대보다 수익성 개선 또는 화주 믹스 점검이 우선일 수 있습니다.</li>
     <li><strong>고수익 구성</strong> — 구간별 고수익%가 높은 조합은 해당 영업사원/국가에서 수익성 있는 부킹이 잘 만들어지는 영역입니다.</li>
   </ul>
-  <div class="tip"><strong>주의:</strong> BSA는 도착국가/포트 전체 선복 기준 데이터이며 영업사원별로 배분되어 있지 않습니다. 따라서 영업사원×도착국가 상세에는 소석률을 넣지 않고, BKG/실선적/캔슬/수익성 지표 중심으로 봅니다.</div>
+  <div class="tip"><strong>주의:</strong> BSA는 도착국가/포트 전체 선복 기준 데이터이며 영업사원별로 배분되어 있지 않습니다. 따라서 영업사원×도착국가 상세에는 BSA활용률을 넣지 않고, BKG/실선적/캔슬/수익성 지표 중심으로 봅니다.</div>
   <h3>AB vs CD 분석 가이드</h3>
   <p>AB vs CD 탭 하단에 데이터 기반 자동 진단이 표시됩니다:</p>
   <ul>
@@ -615,7 +615,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <span class="anchor" id="tab3"></span>
 <h2 class="ko">③ 전환 분석</h2><h2 class="en" style="display:none">③ Conversion Analysis</h2>
 <div class="card ko">
-  <p>전환 분석은 <strong>3주전에 확보한 부킹이 실제 선적으로 얼마나 남았는지</strong>를 보는 화면입니다. 물량이 충분해 보여도 전환률이 낮으면 실제 소석과 매출로 이어지지 않을 수 있습니다.</p>
+  <p>전환 분석은 <strong>3주전에 확보한 부킹이 실제 선적으로 얼마나 남았는지</strong>를 보는 화면입니다. 물량이 충분해 보여도 실제 선복 활용과 매출로 이어지지 않을 수 있습니다.</p>
   <table>
     <tr><th>영역</th><th>의미</th><th>사용 방법</th></tr>
     <tr><td><strong>WOS-3 → 실선적 퍼널</strong></td><td>3주전BKG → 캔슬제외 → 실선적(Normal)의 흐름</td><td>어느 단계에서 물량이 빠지는지 확인합니다. 캔슬 제외 이후에도 실선적이 낮으면 스케줄 변경/노쇼/상태값을 확인합니다.</td></tr>
@@ -653,7 +653,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <span class="anchor" id="tab4"></span>
 <h2 class="ko">④ 수익성 분석</h2><h2 class="en" style="display:none">④ Profitability</h2>
 <div class="card ko">
-  <p>수익성 분석은 <strong>물량의 크기</strong>가 아니라 <strong>TEU당 얼마의 CM1을 만드는지</strong>를 보는 화면입니다. 소석률이 좋아도 CM1/TEU가 낮으면 좋은 물량이라고 보기 어렵습니다.</p>
+  <p>수익성 분석은 <strong>물량의 크기</strong>가 아니라 <strong>TEU당 얼마의 CM1을 만드는지</strong>를 보는 화면입니다. BSA활용률이 좋아도 CM1/TEU가 낮으면 좋은 물량이라고 보기 어렵습니다.</p>
   <table>
     <tr><th>영역</th><th>의미</th><th>사용 방법</th></tr>
     <tr><td><strong>지역별 CM1/TEU</strong></td><td>도착국가/선적지별 TEU당 CM1</td><td>같은 물량이라도 어느 지역이 더 좋은 수익을 만드는지 비교합니다.</td></tr>
@@ -865,7 +865,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <tr><td>선택 월 CM1/TEU가 높은데 구간별고수익이 0일 수 있나요?</td><td>가능합니다. 화면의 CM1/TEU는 선택 월/필터 범위의 WOS-3 실선적 기준이고, 구간별 고/저수익 판단은 전체기간 화주+POR+DLY 기준값과 동일 POR+DLY 루트 평균 비교 기준입니다. 이 차이를 확인하기 위해 화주별 표에 판단기준 CM1/TEU를 함께 표시합니다.</td></tr>
     <tr><td>WINCO GROUP LIMITED처럼 판단기준 CM1/TEU가 609인데 구간별고수익 부킹이 0인 이유는?</td><td>판단기준 609는 해당 화주+SHK→MAA의 전체기간 CM1/TEU입니다. 고수익 여부는 이 값을 전체기간 SHK→MAA 루트 평균과 비교해 정합니다. 예시 화면 기준 루트 평균이 약 613으로 더 높으면 저수익으로 분류되므로, 6월 WOS-3 BKG 60이 있어도 구간별고수익 부킹은 0입니다.</td></tr>
     <tr><td>CM1/TEU가 0이거나 공란이면 어떻게 되나요?</td><td>수익성 판단 근거가 부족한 건은 구간별 고수익으로 집계하지 않거나 공란으로 표시될 수 있습니다. 수익성 화면에서는 CM1/TEU와 함께 확인하는 것이 좋습니다.</td></tr>
-    <tr><td>구간수익 필터를 걸면 BKG/실선적도 바뀌나요?</td><td>지역/소석률 화면은 구간 기준으로 BKG와 실선적이 좁혀집니다. 화주별 화면은 선택된 고객의 전체 WOS-3 BKG/실선적을 유지하고, 구간별 고수익과 CM1/TEU 지표만 구간 기준으로 계산합니다.</td></tr>
+    <tr><td>구간수익 필터를 걸면 BKG/실선적도 바뀌나요?</td><td>지역/BSA활용률 화면은 구간 기준으로 BKG와 실선적이 좁혀집니다. 화주별 화면은 선택된 고객의 전체 WOS-3 BKG/실선적을 유지하고, 구간별 고수익과 CM1/TEU 지표만 구간 기준으로 계산합니다.</td></tr>
     <tr><td>구간별 고수익이면 무조건 좋은 부킹인가요?</td><td>루트 평균보다 좋은 수익성이라는 뜻이지만, 물량 규모, 실선적률, 캔슬, BSA 상황을 함께 봐야 합니다. 고수익 비중이 높아도 실선적률이 낮으면 실제 성과로 이어지지 않을 수 있습니다.</td></tr>
   </table>
 </div>
@@ -915,14 +915,14 @@ document.addEventListener('DOMContentLoaded', function() {
   <h3>자주 헷갈리는 지표</h3>
   <table>
     <tr><th>지표</th><th>계산/기준</th><th>주의사항</th></tr>
-    <tr><td><strong>소석률</strong></td><td>실선적(Normal) / BSA</td><td>선복 사용률 관점입니다. WOS-3 부킹만 보는 지표가 아닙니다.</td></tr>
+    <tr><td><strong>BSA활용률</strong></td><td>실선적(Normal) / BSA</td><td>선복 사용률 관점입니다. WOS-3 부킹만 보는 지표가 아닙니다.</td></tr>
     <tr><td><strong>3주전BKG/BSA</strong></td><td>WOS-3 BKG / BSA</td><td>출항 3주 전 확보 물량을 BSA와 비교합니다. 부킹이 BSA보다 많으면 100%를 넘을 수 있습니다.</td></tr>
     <tr><td><strong>실선적률</strong></td><td>WOS-3 실선적 / WOS-3 BKG</td><td>부킹이 실제 선적으로 남는 비율입니다. 캔슬 관리와 부킹 품질 판단에 사용합니다.</td></tr>
     <tr><td><strong>구간별고수익</strong></td><td>해당 부킹의 화주+POR+DLY 기준값 vs 동일 POR+DLY 전체기간 루트 평균</td><td>부킹은 이 사전 분류값을 따라 고/저수익 TEU로 집계됩니다.</td></tr>
     <tr><td><strong>판단기준 CM1/TEU</strong></td><td>행: 전체기간 화주+POR+DLY CM1/TEU / 합계: 동일 POR+DLY 루트 평균</td><td>현재 CM1/TEU와 구간별고수익 분류 기준이 다를 때 원인을 확인하는 보조 지표입니다.</td></tr>
     <tr><td><strong>A+B / C+D</strong></td><td>화주 등급</td><td>규모/등급 관점이며 수익성 태그가 아닙니다.</td></tr>
   </table>
-  <div class="tip"><strong>핵심:</strong> 소석률은 선복 사용률, 실선적률은 부킹 전환 품질, CM1/TEU는 수익성, WOS는 부킹 접수 타이밍입니다. 네 지표를 함께 봐야 물량의 양과 질을 동시에 판단할 수 있습니다.</div>
+  <div class="tip"><strong>핵심:</strong> BSA활용률은 선복 사용률, 실선적률은 부킹 전환 품질, CM1/TEU는 수익성, WOS는 부킹 접수 타이밍입니다. 네 지표를 함께 봐야 물량의 양과 질을 동시에 판단할 수 있습니다.</div>
   <h3>데이터 소스</h3>
   <p><strong>2.csv (Date_vsl 뷰)</strong>를 base로 하고, <strong>1.csv (Booking_schedule 뷰)</strong>에서 화주/부킹일 등 상세 정보를 보충합니다. 1.csv 범위 밖의 부킹도 2.csv에 있으면 포함됩니다.</p>
   <h3>제외 조건 (-3W 필터)</h3>

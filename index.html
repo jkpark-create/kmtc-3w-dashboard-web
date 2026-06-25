@@ -165,7 +165,7 @@ table.summary.shipper-table tr:hover td.basis-col{background:#f2f6ff}
 </div>
 
 <div class="tabs">
-  <div class="tab active" data-tab="t1" onclick="switchTab('t1')">① 소석률 현황</div>
+  <div class="tab active" data-tab="t1" onclick="switchTab('t1')">① BSA활용률 현황</div>
   <div class="tab" data-tab="t2" onclick="switchTab('t2')">② 부킹 트렌드</div>
   <div class="tab" data-tab="t3" onclick="switchTab('t3')">③ 전환 퍼널</div>
   <div class="tab" data-tab="t4" onclick="switchTab('t4')">④ 수익성</div>
@@ -1423,7 +1423,7 @@ function render() {
 }
 
 // ═══════════════════════════════════════════════
-// Tab 1: 소석률 현황
+// Tab 1: BSA활용률 현황
 // ═══════════════════════════════════════════════
 function renderTab1() {
   const month = gv('fMonth');
@@ -1558,7 +1558,7 @@ function renderTab1() {
     {x:xl, y:w3bkgM, type:'bar', name:L('3주전BKG','WOS-3 BKG'), marker:{color:'#6c5ce7',opacity:.7}, text:w3bkgM.map(fmt), textposition:'outside', textfont:{size:9}},
     {x:xl, y:shipM, type:'bar', name:L('실선적(Normal)','LFT(Normal)'), marker:{color:'#1a73e8',opacity:.85}, text:shipM.map(fmt), textposition:'outside', textfont:{size:10}},
     {x:xl, y:bsaM, type:'bar', name:'BSA', marker:{color:'#dadce0',opacity:.5}, text:bsaM.map(fmt), textposition:'outside', textfont:{size:10}},
-    {x:xl, y:occM, type:'scatter', mode:'lines+markers+text', name:L('소석률(Normal/BSA)','Occ(Normal/BSA)'), yaxis:'y2',
+    {x:xl, y:occM, type:'scatter', mode:'lines+markers+text', name:L('BSA활용률(Normal/BSA)','Occ(Normal/BSA)'), yaxis:'y2',
      text:occM.map(v=>v?v.toFixed(0)+'%':''), textposition:_oP, line:{color:'#ea4335',width:2}, marker:{size:8}},
     {x:xl, y:w3bkgBsaM, type:'scatter', mode:'lines+markers+text', name:L('3주전BKG/BSA','WOS-3 BKG/BSA'), yaxis:'y2',
      text:w3bkgBsaM.map(v=>v?v.toFixed(0)+'%':''), textposition:_wbP, line:{color:'#f9ab00',width:2,dash:'dot'}, marker:{size:6,symbol:'square'}},
@@ -1615,7 +1615,7 @@ function setOccMode(mode) {
     } else if (mode === 'w3') {
       title.textContent = `${vl} ${L('3주전BKG/BSA','WOS-3 BKG/BSA')}`;
     } else {
-      title.textContent = `${vl} ${L('소석률(Normal/BSA)','Occ(Normal/BSA)')}`;
+      title.textContent = `${vl} ${L('BSA활용률(Normal/BSA)','Occ(Normal/BSA)')}`;
     }
   }
   if (mode === 'trend') drawTrendChart();
@@ -2028,7 +2028,7 @@ function renderTab2() {
     }
     return;
   } else if (t2sub === 'region') {
-    // 지역별: 글로벌 보기 필터(도착지/선적지) 연동 + BSA/소석률
+    // 지역별: 글로벌 보기 필터(도착지/선적지) 연동 + BSA/BSA활용률
     const useVk = viewKey(), useVl = viewLabel(), useBk = bsaViewKey();
     const items = groupByKey(fd, useVk);
     const _bsaR = week !== 'ALL' ? filterBSA(month) : filterBSA(month, null);
@@ -2039,7 +2039,7 @@ function renderTab2() {
     })).sort((a,b)=>b.bkg-a.bkg).slice(0,15);
 
     html += `<div class="chart-card"><h3>${L('3주전 BKG 현황','WOS-3 BKG Status')} - ${useVl} (${fmtMonth(month)})</h3>
-    <table class="summary"><tr><th>${useVl}</th><th>BKG</th><th>BSA</th><th>${L('소석률','Occ')}</th><th>${L('실선적(Normal)','LFT(Normal)')}</th><th>${L('실선적률','LFT Rate')}</th><th>${L('구간별고수익','Route Hi')}</th><th>${L('구간별고수익%','Route Hi%')}</th></tr>`;
+    <table class="summary"><tr><th>${useVl}</th><th>BKG</th><th>BSA</th><th>${L('BSA활용률','Occ')}</th><th>${L('실선적(Normal)','LFT(Normal)')}</th><th>${L('실선적률','LFT Rate')}</th><th>${L('구간별고수익','Route Hi')}</th><th>${L('구간별고수익%','Route Hi%')}</th></tr>`;
     rows.forEach(r => {
       html += `<tr><td class="lbl">${r.name}</td><td>${fmt(r.bkg)}</td><td>${fmt(r.bsa)}</td><td>${pct(r.bkg,r.bsa)}</td><td>${fmt(r.ship)}</td><td>${pct(r.ship,r.bkg)}</td><td>${fmt(r.hi)}</td><td>${pct(r.hi,r.bkg)}</td></tr>`;
     });
@@ -3009,11 +3009,11 @@ const T = {
     team: '팀', origin: '선적지', oriPort: '선적포트', dest: '도착지', dstPort: '도착포트',
     view: '보기', month: '월', week: '주차', profitType: '구간수익', grade: '등급', sales: '영업사원',
     viewDest: '도착지별', viewOri: '선적지별', all: '전체', hi: '구간별고수익', lo: '구간별저수익',
-    tab1: '① 소석률 현황', tab2: '② 부킹 트렌드', tab3: '③ 전환 분석', tab4: '④ 수익성', tab5: '⑤ 부킹 패턴', tab6: '⑥ BL 고수익',
+    tab1: '① BSA활용률 현황', tab2: '② 부킹 트렌드', tab3: '③ 전환 분석', tab4: '④ 수익성', tab5: '⑤ 부킹 패턴', tab6: '⑥ BL 고수익',
     totalBkg: '전체 BKG', shipment: '실선적(Normal)', w3bkg: '3주전 BKG', w3bkgNotCancel: '3주전 BKG (not cancel)', w3ship: '3주전 실선적(Normal)',
-    bsa: 'BSA', occ: '소석률', shipRate: '실선적률', loading: '데이터 로딩 중...',
+    bsa: 'BSA', occ: 'BSA활용률', shipRate: '실선적률', loading: '데이터 로딩 중...',
     login: '회사 Google 계정으로 로그인하세요', loginBtn: 'Google 계정으로 로그인',
-    monthlyChart: '월별 BKG vs BSA', occChart: '소석률', byRegion: '지역별',
+    monthlyChart: '월별 BKG vs BSA', occChart: 'BSA활용률', byRegion: '지역별',
     monthlySummary: '월간 실적', bkgTrend: '부킹 트렌드', conversion: '전환 분석',
     profitability: '수익성 분석', bkgPattern: '부킹 패턴',
     shipper: '화주', salesperson: '영업사원', cancelRate: '캔슬률',
