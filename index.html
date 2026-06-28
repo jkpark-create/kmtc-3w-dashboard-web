@@ -419,11 +419,19 @@ function expandCompactData(data) {
     if (!packed || Array.isArray(packed)) return;
     const columns = packed.c || packed.columns;
     const rows = packed.r || packed.rows;
+    const dicts = packed.d || packed.dicts || {};
     if (!Array.isArray(columns) || !Array.isArray(rows)) return;
     data[section] = rows.map(row => {
       const out = {};
       columns.forEach((key, idx) => {
-        if (idx < row.length && row[idx] !== null && row[idx] !== undefined) out[key] = row[idx];
+        if (idx < row.length && row[idx] !== null && row[idx] !== undefined) {
+          const dict = dicts[key];
+          let value = row[idx];
+          if (Array.isArray(dict) && Number.isInteger(value) && value >= 0 && value < dict.length) {
+            value = dict[value];
+          }
+          out[key] = value;
+        }
       });
       return out;
     });
