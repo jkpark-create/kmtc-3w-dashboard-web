@@ -336,11 +336,33 @@ function showApp() {
 // ═══════════════════════════════════════════════
 let _driveFiles = {}; // {dataset key: fileId}
 
+async function fetchJson(path) {
+  const resp = await fetch(path, {cache:'no-cache'});
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+  if (!path.split('?')[0].endsWith('.gz')) return resp.json();
+  if (!('DecompressionStream' in window) || !resp.body) {
+    throw new Error('gzip JSON is not supported by this browser');
+  }
+  const stream = resp.body.pipeThrough(new DecompressionStream('gzip'));
+  return new Response(stream).json();
+}
+
+async function loadCurrentDataJson() {
+  const stamp = Date.now();
+  const errors = [];
+  for (const path of [`data.json.gz?t=${stamp}`, `data.json?t=${stamp}`]) {
+    try {
+      return await fetchJson(path);
+    } catch (error) {
+      errors.push(`${path}: ${error.message}`);
+    }
+  }
+  throw new Error(errors.join(' / '));
+}
+
 async function loadData() {
   try {
-    const resp = await fetch('data.json?t=' + Date.now());
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    DATA = await resp.json();
+    DATA = await loadCurrentDataJson();
     normalizeMetricKeys(DATA);
     const sel = document.getElementById('dataDateSel');
     sel.innerHTML = `<option value="today">${DATA.data_date} (${L('최신','Latest')})</option>`;
@@ -388,8 +410,7 @@ async function loadHistoricalData() {
     // Reload current data
     document.getElementById('loading').style.display = 'block';
     document.getElementById('loading').textContent = L('최신 데이터 로딩...','Loading latest...');
-    const resp = await fetch('data.json?t=' + Date.now());
-    DATA = await resp.json();
+    DATA = await loadCurrentDataJson();
     normalizeMetricKeys(DATA);
     document.getElementById('loading').style.display = 'none';
     initFilters(); render();
