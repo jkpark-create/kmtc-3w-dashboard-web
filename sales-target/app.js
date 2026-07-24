@@ -1174,24 +1174,39 @@ function kpiOfRow(r, quarter, kpiKey) {
 // Aggregate KPI across multiple rows (for filter scope summary cards).
 // The sheet's Team Total row is a true ratio-of-sums (∑w3 / ∑BSA, etc.) and is
 // always the correct number when the user is looking at a whole origin. Averaging
-// the individual salesperson rows weighted by account count gives a *different*
-// value because mean(x_i/y_i) ≠ Σx_i / Σy_i.
+// the individual salesperson rows gives a *different* value because
+// mean(x_i/y_i) ≠ Σx_i / Σy_i.
 //
 // Rule:
 //   - If any TOTAL row is in the filtered set, aggregate only over the TOTALs
-//     (single origin → exact match with the table's Team Total; multiple origins
-//     → account-weighted blend of the Team Totals, which is the closest we can
-//     get without underlying TEU numerators/denominators in index.json).
-//   - Otherwise (sales-specific selection drops the TOTALs) fall back to the
-//     account-weighted average of the SALES rows.
+//     (single origin → exact match with the table's Team Total).
+//   - Otherwise (sales-specific selection drops the TOTALs) aggregate the SALES rows.
+//   - Weights: each row's DENOMINATOR TEU for the quarter (booking → allocated BSA,
+//     lifting/high-profit → WOS-3 FST) from row.quarter_metrics, which makes the
+//     blend an exact ratio-of-sums and keeps it consistent with the -3W dashboard.
+//     A ratio row with a structurally tiny denominator (e.g. ID-IDO: outport BSA
+//     is registered at the mother port, so its own rate can exceed 300%) then
+//     contributes proportionally to its size instead of exploding the average.
+//   - Fallback (older index.json without quarter_metrics): account-count weights.
+function kpiDenominatorWeight(row, quarter, kpiKey) {
+  const m = row.quarter_metrics?.[quarter];
+  if (!m) return null;
+  const w = kpiKey === 'booking' ? m.bsa : m.w3f;
+  return (typeof w === 'number' && isFinite(w) && w > 0) ? w : null;
+}
+
 function aggregateKpi(rows, quarter, kpiKey) {
   const performKey = performKeyForQuarter(quarter);
   const totals = rows.filter(r => r.row_type === 'TOTAL');
   const pool = totals.length ? totals : rows.filter(r => r.row_type === 'SALES');
+  const useTeu = pool.some(r => kpiDenominatorWeight(r, quarter, kpiKey) !== null);
   let tw = 0, pw = 0, gw = 0, targetW = 0, performW = 0, gapW = 0;
   pool.forEach(r => {
     const k = kpiOfRow(r, quarter, kpiKey);
-    const weight = Math.max(1, r.accounts?.total || 1);
+    const weight = useTeu
+      ? (kpiDenominatorWeight(r, quarter, kpiKey) || 0)
+      : Math.max(1, r.accounts?.total || 1);
+    if (!weight) return;
     if (k.target !== null && k.target !== undefined) { tw += k.target * weight; targetW += weight; }
     if (k[performKey] !== null && k[performKey] !== undefined) { pw += k[performKey] * weight; performW += weight; }
     if (k.gap !== null && k.gap !== undefined) { gw += k.gap * weight; gapW += weight; }
