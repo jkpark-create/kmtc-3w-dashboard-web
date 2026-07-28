@@ -209,7 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <li>메인 대시보드 ②부킹 트렌드 → 영업사원별 표의 우측 "→" — 해당 영업사원으로 자동 드릴</li>
 </ul>
 <div class="tip"><strong>🔐 로그인:</strong> 이 화면은 메인 대시보드와 동일한 <strong>회사 Google 계정(@ekmtc.com)</strong> 로그인이 필요합니다. 로그인되어 있지 않거나 외부 도메인 계정이면 자동으로 메인 대시보드의 로그인 화면으로 이동했다가 로그인 후 다시 돌아옵니다.</div>
-<div class="tip"><strong>📊 시트 권한과 무관:</strong> 대시보드 데이터는 매일 빌드되어 정적 JSON 파일로 배포됩니다 (<code>index.json</code> / <code>manifest.json</code> / <code>data/*.json</code>). 사용자 본인이 Target 워크북에 권한이 없어도 데이터는 정상 표시됩니다. 단, 헤더의 <strong>Target Workbook ↗</strong> 직접 링크는 시트 view 권한이 있는 ekmtc 계정만 열립니다 (기본적으로 모든 ekmtc 직원은 view 권한 보유).</div>
+<div class="tip"><strong>📊 회사 계정으로 Drive 조회:</strong> 대시보드 데이터는 매일 빌드되어 Google Drive의 <code>Sales Target</code> 폴더에 동기화됩니다 (<code>index.json</code> / <code>manifest.json</code> / <code>base2025.json</code> / <code>data/*.json</code>). 로그인한 ekmtc 계정의 읽기 전용 Drive 권한으로 조회하며, 헤더의 <strong>Target Workbook ↗</strong> 직접 링크는 해당 시트 view 권한이 있어야 열립니다.</div>
 </div>
 <div class="card en" style="display:none">
 <ul>
@@ -218,7 +218,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <li>The "→" link in the bySales table of the main dashboard's ② Booking Trends tab — auto-drills to that salesperson.</li>
 </ul>
 <div class="tip"><strong>🔐 Login:</strong> Same company Google sign-in (@ekmtc.com) as the main dashboard. Without a session you're redirected to the main login and bounced back here after authenticating.</div>
-<div class="tip"><strong>📊 Sheet permission is not required for viewing:</strong> the dashboard reads pre-built static JSON files (<code>index.json</code>, <code>manifest.json</code>, <code>data/*.json</code>), so users without write/view access to the Target workbook still see the dashboard correctly. The header's <strong>Target Workbook ↗</strong> direct link only opens for ekmtc accounts (every ekmtc user has view access by default).</div>
+<div class="tip"><strong>📊 Drive-backed data:</strong> the dashboard reads pre-built JSON from the Google Drive <code>Sales Target</code> folder (<code>index.json</code>, <code>manifest.json</code>, <code>base2025.json</code>, and <code>data/*.json</code>) using the signed-in ekmtc account's read-only Drive permission. The <strong>Target Workbook ↗</strong> link still requires view access to that Sheet.</div>
 </div>
 
 <!-- 3. HEADER -->
@@ -681,7 +681,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <li><b>Tableau 다운로드</b> → 부킹 스냅샷 (booking_snapshot_result_*.csv)</li>
 <li><b>대시보드 빌드</b> (dashboard_summary_*.json) → salesman.csv로 영업사원 remap → dist/data.json</li>
 <li><b>Sales Target 빌드</b> — 메인 대시보드와 같은 <code>booking_snapshot_result_YYYYMMDD.csv</code> + Summary_All 집계 → index.json + manifest.json + 1700여 chunks</li>
-<li><b>GitHub Pages push</b> → ~1시간 내 라이브</li>
+<li><b>Google Drive 동기화</b> → Sales Target 폴더의 기존 파일 ID를 유지한 채 갱신</li>
 </ol>
 <h4>출력 파일</h4>
 <ul>
@@ -704,7 +704,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <li><b>Tableau download</b> → booking_snapshot_result_*.csv</li>
 <li><b>Dashboard build</b> (dashboard_summary_*.json) → salesman.csv remap → dist/data.json</li>
 <li><b>Sales target build</b> — same <code>booking_snapshot_result_YYYYMMDD.csv</code> as the main dashboard + Summary_All rollup → index.json + manifest.json + ~1,700 chunks</li>
-<li><b>GitHub Pages push</b> → live within ~1 hour</li>
+<li><b>Google Drive sync</b> → update the Sales Target folder while preserving file IDs</li>
 </ol>
 <h4>Output</h4>
 <ul>

@@ -394,7 +394,75 @@ function gradeBadge(grade) {
 }
 
 // ─── Loaders ──────────────────────────────────────────────────────
+const DRIVE_CONFIG = window.DASHBOARD_DRIVE_CONFIG || {};
+const DRIVE_FOLDER_LISTS = new Map();
+
+function driveToken() {
+  return localStorage.getItem('gtoken') || sessionStorage.getItem('gtoken') || '';
+}
+
+function localPreview() {
+  return ['localhost', '127.0.0.1'].includes(location.hostname);
+}
+
+async function listDriveFolderFiles(folderId) {
+  if (DRIVE_FOLDER_LISTS.has(folderId)) return DRIVE_FOLDER_LISTS.get(folderId);
+  const pending = (async () => {
+    const token = driveToken();
+    if (!token) throw new Error('Google Drive token is missing');
+    const byName = new Map();
+    let pageToken = '';
+    do {
+      const params = new URLSearchParams({
+        q: `'${folderId}' in parents and trashed=false`,
+        fields: 'nextPageToken,files(id,name,size,modifiedTime)',
+        pageSize: '1000'
+      });
+      if (pageToken) params.set('pageToken', pageToken);
+      const response = await fetch(`https://www.googleapis.com/drive/v3/files?${params}`, {
+        cache: 'no-cache',
+        headers: {Authorization: 'Bearer ' + token}
+      });
+      if (!response.ok) throw new Error(`Google Drive list HTTP ${response.status}`);
+      const payload = await response.json();
+      (payload.files || []).forEach(file => byName.set(file.name, file));
+      pageToken = payload.nextPageToken || '';
+    } while (pageToken);
+    return byName;
+  })();
+  DRIVE_FOLDER_LISTS.set(folderId, pending);
+  return pending;
+}
+
+async function loadDriveJson(folderId, fileName) {
+  const token = driveToken();
+  const files = await listDriveFolderFiles(folderId);
+  const file = files.get(fileName);
+  if (!file) throw new Error(`Google Drive file not found: ${fileName}`);
+  const response = await fetch(
+    `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(file.id)}?alt=media&t=${Date.now()}`,
+    {
+      cache: 'no-cache',
+      headers: {Authorization: 'Bearer ' + token}
+    }
+  );
+  if (!response.ok) throw new Error(`Google Drive ${fileName}: HTTP ${response.status}`);
+  return response.json();
+}
+
 async function loadJson(url) {
+  const token = driveToken();
+  if (token && DRIVE_CONFIG.salesFolderId && DRIVE_CONFIG.salesDataFolderId) {
+    const clean = String(url || '').replace(/^\.\//, '');
+    if (clean.startsWith('data/')) {
+      return loadDriveJson(DRIVE_CONFIG.salesDataFolderId, clean.slice('data/'.length));
+    }
+    if (['index.json', 'manifest.json', 'base2025.json'].includes(clean)) {
+      return loadDriveJson(DRIVE_CONFIG.salesFolderId, clean);
+    }
+  } else if (!localPreview()) {
+    throw new Error('Google Drive data configuration or token is missing');
+  }
   const resp = await fetch(url, { cache: 'no-cache' });
   if (!resp.ok) throw new Error(`Failed to load ${url}: HTTP ${resp.status}`);
   return resp.json();

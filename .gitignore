@@ -1,2 +1,8 @@
 /data.json
 /obt-exception-monitor/history.json
+/data.json.gz
+/obt-exception-monitor/history.json.gz
+/sales-target/index.json
+/sales-target/manifest.json
+/sales-target/base2025.json
+/sales-target/data/

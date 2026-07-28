@@ -198,6 +198,7 @@
     logout,
     doLogin,
     refreshUser,
+    getToken: () => localStorage.getItem(AUTH_TOKEN_KEY) || sessionStorage.getItem(AUTH_TOKEN_KEY) || "",
     getUser: () => currentUser
   };
 })();

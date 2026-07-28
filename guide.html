@@ -340,8 +340,8 @@ document.addEventListener('DOMContentLoaded', function() {
   <h3>동작 방식</h3>
   <table>
     <tr><th>선택</th><th>데이터 소스</th><th>설명</th></tr>
-    <tr><td>최신 (기본)</td><td>GitHub Pages <code>data.json</code></td><td>매일 10:00 KST 자동 업데이트된 최신 스냅샷</td></tr>
-    <tr><td>과거 날짜</td><td>Google Drive</td><td>해당 날짜에 생성된 <code>dashboard_summary_YYYYMMDD.json</code> 파일</td></tr>
+    <tr><td>최신 (기본)</td><td>Google Drive <code>Main Dashboard/data.json.gz</code></td><td>매일 10:00 KST 자동 업데이트된 최신 스냅샷</td></tr>
+    <tr><td>과거 날짜</td><td>Google Drive <code>Main Dashboard/History</code></td><td>해당 날짜에 생성된 <code>dashboard_summary_YYYYMMDD.json</code> 파일</td></tr>
   </table>
   <div class="tip"><strong>활용 예시:</strong> 지난주와 이번주의 BSA활용률 변화를 비교하거나, 특정 시점의 부킹 현황을 확인할 때 유용합니다. 최대 30개의 과거 날짜가 표시됩니다.</div>
 </div>
@@ -357,8 +357,8 @@ document.addEventListener('DOMContentLoaded', function() {
   <h3>How It Works</h3>
   <table>
     <tr><th>Selection</th><th>Data Source</th><th>Description</th></tr>
-    <tr><td>Latest (default)</td><td>GitHub Pages <code>data.json</code></td><td>Latest snapshot, auto-updated daily at 10:00 KST</td></tr>
-    <tr><td>Past date</td><td>Google Drive</td><td><code>dashboard_summary_YYYYMMDD.json</code> from that date</td></tr>
+    <tr><td>Latest (default)</td><td>Google Drive <code>Main Dashboard/data.json.gz</code></td><td>Latest snapshot, auto-updated daily at 10:00 KST</td></tr>
+    <tr><td>Past date</td><td>Google Drive <code>Main Dashboard/History</code></td><td><code>dashboard_summary_YYYYMMDD.json</code> from that date</td></tr>
   </table>
   <div class="tip"><strong>Use case:</strong> Compare this week's occupancy vs last week, or review booking status at a specific point in time. Up to 30 past dates are shown.</div>
 </div>
@@ -975,15 +975,15 @@ document.addEventListener('DOMContentLoaded', function() {
   <ol>
     <li>Tableau에서 1.csv + 2.csv + BSA + grade(분기별) 다운로드</li>
     <li>Booking Snapshot 처리 (수식, 필터, 등급, 구간수익분류)</li>
-    <li>JSON 생성 → Google Drive 업로드 + dist/data.json 복사</li>
+    <li>JSON 생성 → Google Drive의 대시보드별 폴더로 동기화</li>
     <li>salesman.csv 기준 영업사원 remap (메인 대시보드 + sales-target chunks)</li>
-    <li><strong>GitHub Pages 자동 push</strong> → 웹 배포 완료</li>
+    <li>GitHub Pages에는 앱 코드만 배포하고 운영 데이터는 Google Drive에서 직접 조회</li>
   </ol>
   <h3>수동 재실행</h3>
   <p>Tableau 원천 extract가 늦게 갱신된 날은 아래 명령으로 같은 날짜의 업데이트를 다시 실행합니다. 실행하면 기존 당일 로그는 <code>logs/run_YYYYMMDD_HHMMSS_previous.log</code>로 보관되고, 새 로그가 <code>logs/run_YYYYMMDD.log</code>에 기록됩니다.</p>
   <pre><code>cd /d "C:\Users\JKPARK\OneDrive\Documents\Claude\-3W bkg dashboard"
 run_daily.bat</code></pre>
-  <p>재실행 범위는 Tableau 다운로드, Snapshot 처리, <code>dist/data.json</code>, OBT history, sales-target chunks, GitHub Pages push까지입니다. 메일 알림은 마지막 단계이며, 알림 토큰 문제로 실패해도 데이터 배포가 이미 성공했으면 대시보드에는 영향이 없습니다.</p>
+  <p>재실행 범위는 Tableau 다운로드, Snapshot 처리, 메인 데이터, OBT history, sales-target chunks 생성과 Google Drive 동기화까지입니다. 메일 알림은 마지막 단계이며, 알림 토큰 문제로 실패해도 Drive 동기화가 이미 성공했으면 대시보드에는 영향이 없습니다.</p>
   <h3>데이터 범위</h3>
   <table>
     <tr><th>파일</th><th>범위</th></tr>
@@ -997,15 +997,15 @@ run_daily.bat</code></pre>
   <ol>
     <li>Download from Tableau (1.csv + 2.csv + BSA + grade quarterly)</li>
     <li>Process booking snapshot (formulas, filters, grades, profit tags)</li>
-    <li>Generate JSON → Google Drive + dist/data.json</li>
+    <li>Generate JSON → sync to each dashboard's Google Drive folder</li>
     <li>Re-attribute Salesman_POR via salesman.csv (main dashboard + sales-target chunks)</li>
-    <li><strong>Auto push to GitHub Pages</strong></li>
+    <li>Deploy app code to GitHub Pages; load runtime data directly from Google Drive</li>
   </ol>
   <h3>Manual Re-run</h3>
   <p>If the Tableau source extract is refreshed late, rerun the same-day update with the command below. The previous same-day log is archived as <code>logs/run_YYYYMMDD_HHMMSS_previous.log</code>, and the new run writes <code>logs/run_YYYYMMDD.log</code>.</p>
   <pre><code>cd /d "C:\Users\JKPARK\OneDrive\Documents\Claude\-3W bkg dashboard"
 run_daily.bat</code></pre>
-  <p>The rerun covers Tableau download, snapshot processing, <code>dist/data.json</code>, OBT history, sales-target chunks, and GitHub Pages push. Email notification is the final step; if it fails due to an alert-token issue after data push, the deployed dashboard is already updated.</p>
+  <p>The rerun covers Tableau download, snapshot processing, main data, OBT history, sales-target chunks, and Google Drive synchronization. Email notification is the final step; if it fails after Drive sync, the dashboard data is already updated.</p>
   <h3>Data Range</h3>
   <p>1.csv: 2025-12-28 ~ current week +4 weeks | 2.csv: Full | BSA: 2025-2027 all months</p>
 </div>
@@ -1025,10 +1025,10 @@ run_daily.bat</code></pre>
   <h3>실행 순서 (3W_BKG_Dashboard_Daily)</h3>
   <ol>
     <li>캐시 정리 (<code>_cache_*.parquet</code>, <code>dashboard_summary_*.json</code>)</li>
-    <li><code>daily_3w_dashboard.py</code> 실행 (Tableau → 처리 → GDrive → dist/data.json)</li>
+    <li><code>daily_3w_dashboard.py</code> 실행 (Tableau → 처리 → 로컬 런타임 산출물 생성)</li>
     <li><code>scripts/remap_dashboard_salesman.py</code> 실행 (salesman.csv 기준 영업사원 재할당 + OBT salesman set 주입)</li>
     <li><code>scripts/build_sales_target_drill_data.py</code> 실행 (sales-target index/manifest/chunks 생성)</li>
-    <li><code>dist/</code> git push (data.json 또는 sales-target 변경 시)</li>
+    <li><code>scripts/sync_dashboard_data_to_gdrive.py</code> 실행 (대시보드별 Drive 폴더 동기화)</li>
     <li><code>send_notification.py</code> 이메일 알림 (성공/실패 무관)</li>
   </ol>
   <h3>로그 확인</h3>
@@ -1047,10 +1047,10 @@ run_daily.bat</code></pre>
   <h3>Execution Flow (3W_BKG_Dashboard_Daily)</h3>
   <ol>
     <li>Clean cache (<code>_cache_*.parquet</code>, <code>dashboard_summary_*.json</code>)</li>
-    <li>Run <code>daily_3w_dashboard.py</code> (Tableau → Process → GDrive → dist/data.json)</li>
+    <li>Run <code>daily_3w_dashboard.py</code> (Tableau → process → local runtime artifacts)</li>
     <li>Run <code>scripts/remap_dashboard_salesman.py</code> (re-attribute Salesman_POR via salesman.csv + inject OBT salesman set)</li>
     <li>Run <code>scripts/build_sales_target_drill_data.py</code> (sales-target index / manifest / chunks)</li>
-    <li><code>dist/</code> git push (when data.json or sales-target changed)</li>
+    <li>Run <code>scripts/sync_dashboard_data_to_gdrive.py</code> (sync each dashboard's Drive folder)</li>
     <li><code>send_notification.py</code> email alert (runs regardless of success/failure)</li>
   </ol>
   <h3>Log Files</h3>
