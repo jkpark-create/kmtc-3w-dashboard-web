@@ -396,6 +396,10 @@ function gradeBadge(grade) {
 // ─── Loaders ──────────────────────────────────────────────────────
 const DRIVE_CONFIG = window.DASHBOARD_DRIVE_CONFIG || {};
 const DRIVE_FOLDER_LISTS = new Map();
+const DRIVE_MAX_PARALLEL_DOWNLOADS = 6;
+const DRIVE_FETCH_ATTEMPTS = 4;
+let driveActiveDownloads = 0;
+const driveDownloadWaiters = [];
 
 function driveToken() {
   return localStorage.getItem('gtoken') || sessionStorage.getItem('gtoken') || '';
@@ -422,6 +426,46 @@ function driveAuthError(status) {
   return error;
 }
 
+function wait(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function withDriveDownloadSlot(task) {
+  if (driveActiveDownloads >= DRIVE_MAX_PARALLEL_DOWNLOADS) {
+    await new Promise(resolve => driveDownloadWaiters.push(resolve));
+  }
+  driveActiveDownloads += 1;
+  try {
+    return await task();
+  } finally {
+    driveActiveDownloads -= 1;
+    const next = driveDownloadWaiters.shift();
+    if (next) next();
+  }
+}
+
+async function fetchDriveWithRetry(url, options, label) {
+  let lastError = null;
+  for (let attempt = 0; attempt < DRIVE_FETCH_ATTEMPTS; attempt += 1) {
+    try {
+      const response = await fetch(url, options);
+      if ([401, 403].includes(response.status)) throw driveAuthError(response.status);
+      if (response.ok) return response;
+      const retryable = response.status === 408 || response.status === 429 || response.status >= 500;
+      const error = new Error(`${label}: HTTP ${response.status}`);
+      if (!retryable) throw error;
+      lastError = error;
+    } catch (error) {
+      if (error && error.code === 'DRIVE_AUTH') throw error;
+      lastError = error;
+    }
+    if (attempt + 1 < DRIVE_FETCH_ATTEMPTS) {
+      await wait(250 * (2 ** attempt) + Math.floor(Math.random() * 100));
+    }
+  }
+  throw lastError || new Error(`${label}: request failed`);
+}
+
 async function listDriveFolderFiles(folderId) {
   if (DRIVE_FOLDER_LISTS.has(folderId)) return DRIVE_FOLDER_LISTS.get(folderId);
   const pending = (async () => {
@@ -436,12 +480,14 @@ async function listDriveFolderFiles(folderId) {
         pageSize: '1000'
       });
       if (pageToken) params.set('pageToken', pageToken);
-      const response = await fetch(`https://www.googleapis.com/drive/v3/files?${params}`, {
-        cache: 'no-cache',
-        headers: {Authorization: 'Bearer ' + token}
-      });
-      if ([401, 403].includes(response.status)) throw driveAuthError(response.status);
-      if (!response.ok) throw new Error(`Google Drive list HTTP ${response.status}`);
+      const response = await fetchDriveWithRetry(
+        `https://www.googleapis.com/drive/v3/files?${params}`,
+        {
+          cache: 'no-cache',
+          headers: {Authorization: 'Bearer ' + token}
+        },
+        'Google Drive list'
+      );
       const payload = await response.json();
       (payload.files || []).forEach(file => byName.set(file.name, file));
       pageToken = payload.nextPageToken || '';
@@ -449,6 +495,9 @@ async function listDriveFolderFiles(folderId) {
     return byName;
   })();
   DRIVE_FOLDER_LISTS.set(folderId, pending);
+  pending.catch(() => {
+    if (DRIVE_FOLDER_LISTS.get(folderId) === pending) DRIVE_FOLDER_LISTS.delete(folderId);
+  });
   return pending;
 }
 
@@ -457,15 +506,16 @@ async function loadDriveJson(folderId, fileName) {
   const files = await listDriveFolderFiles(folderId);
   const file = files.get(fileName);
   if (!file) throw new Error(`Google Drive file not found: ${fileName}`);
-  const response = await fetch(
-    `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(file.id)}?alt=media&t=${Date.now()}`,
-    {
-      cache: 'no-cache',
-      headers: {Authorization: 'Bearer ' + token}
-    }
+  const response = await withDriveDownloadSlot(() =>
+    fetchDriveWithRetry(
+      `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(file.id)}?alt=media&t=${Date.now()}`,
+      {
+        cache: 'no-cache',
+        headers: {Authorization: 'Bearer ' + token}
+      },
+      `Google Drive ${fileName}`
+    )
   );
-  if ([401, 403].includes(response.status)) throw driveAuthError(response.status);
-  if (!response.ok) throw new Error(`Google Drive ${fileName}: HTTP ${response.status}`);
   return response.json();
 }
 
