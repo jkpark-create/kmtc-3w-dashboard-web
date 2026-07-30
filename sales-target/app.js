@@ -405,6 +405,23 @@ function localPreview() {
   return ['localhost', '127.0.0.1'].includes(location.hostname);
 }
 
+function driveAuthError(status) {
+  try {
+    localStorage.removeItem('gtoken');
+    sessionStorage.removeItem('gtoken');
+    sessionStorage.setItem('obtReturnPath', location.pathname + location.search);
+  } catch (_) {}
+  const error = new Error(
+    STATE.lang === 'en'
+      ? 'Your Google Drive session has expired. Please sign in again.'
+      : 'Google Drive 로그인 세션이 만료되었습니다. 다시 로그인해 주세요.'
+  );
+  error.code = 'DRIVE_AUTH';
+  error.status = status;
+  if (!localPreview()) location.replace('../');
+  return error;
+}
+
 async function listDriveFolderFiles(folderId) {
   if (DRIVE_FOLDER_LISTS.has(folderId)) return DRIVE_FOLDER_LISTS.get(folderId);
   const pending = (async () => {
@@ -423,6 +440,7 @@ async function listDriveFolderFiles(folderId) {
         cache: 'no-cache',
         headers: {Authorization: 'Bearer ' + token}
       });
+      if ([401, 403].includes(response.status)) throw driveAuthError(response.status);
       if (!response.ok) throw new Error(`Google Drive list HTTP ${response.status}`);
       const payload = await response.json();
       (payload.files || []).forEach(file => byName.set(file.name, file));
@@ -446,6 +464,7 @@ async function loadDriveJson(folderId, fileName) {
       headers: {Authorization: 'Bearer ' + token}
     }
   );
+  if ([401, 403].includes(response.status)) throw driveAuthError(response.status);
   if (!response.ok) throw new Error(`Google Drive ${fileName}: HTTP ${response.status}`);
   return response.json();
 }
@@ -494,7 +513,19 @@ async function init() {
     if (link) link.href = index.workbook_url || '#';
   } catch (err) {
     console.error(err);
-    showError(`초기 로딩 실패: ${err.message}. 먼저 \`py -3 scripts/build_sales_target_drill_data.py\` 를 실행해 index.json / manifest.json 을 생성해 주세요.`);
+    if (err.code === 'DRIVE_AUTH') {
+      showError(err.message);
+      return;
+    }
+    if (localPreview()) {
+      showError(`초기 로딩 실패: ${err.message}. 먼저 \`py -3 scripts/build_sales_target_drill_data.py\` 를 실행해 index.json / manifest.json 을 생성해 주세요.`);
+      return;
+    }
+    showError(
+      STATE.lang === 'en'
+        ? `Failed to load data: ${err.message}. Refresh the page; if the issue continues, check the Google Drive data sync.`
+        : `데이터 로딩 실패: ${err.message}. 새로고침 후에도 계속되면 Google Drive 데이터 동기화 상태를 확인해 주세요.`
+    );
   }
 }
 

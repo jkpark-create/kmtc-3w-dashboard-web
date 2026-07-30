@@ -12,7 +12,7 @@
 // since GitHub Pages serves both screens from the same origin, we just verify
 // the stored credentials here. If missing/invalid, bounce to the main login
 // page and remember where to return.
-(function authGate() {
+(async function authGate() {
   const ALLOWED_DOMAINS = ['ekmtc.com'];
   const AUTH_TOKEN_KEY = 'gtoken';
   const AUTH_USER_KEY = 'guser';
@@ -29,6 +29,12 @@
     // Append a query so the user gets a hint if needed.
     location.replace('../');
   }
+  function clearToken() {
+    try {
+      localStorage.removeItem(AUTH_TOKEN_KEY);
+      sessionStorage.removeItem(AUTH_TOKEN_KEY);
+    } catch (_) {}
+  }
   if (!token || !user) {
     bounceToLogin('no-session');
     return;
@@ -42,6 +48,24 @@
       sessionStorage.removeItem(AUTH_USER_KEY);
     } catch (_) {}
     bounceToLogin('bad-domain');
+    return;
+  }
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+    const response = await fetch(
+      'https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=' + encodeURIComponent(token),
+      {cache: 'no-cache', signal: controller.signal}
+    );
+    clearTimeout(timeoutId);
+    if (!response.ok) {
+      clearToken();
+      bounceToLogin('expired-session');
+      return;
+    }
+  } catch (_) {
+    clearToken();
+    bounceToLogin('session-check-failed');
     return;
   }
   try {
@@ -171,6 +195,6 @@
 </div>
 
 <script src="../drive-config.js"></script>
-<script src="app.js?v=20260728-gdrive-data"></script>
+<script src="app.js?v=20260730-gdrive-auth-fix"></script>
 </body>
 </html>
