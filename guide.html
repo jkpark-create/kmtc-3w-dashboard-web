@@ -34,6 +34,8 @@ li{margin:4px 0}
 .tag-hi{background:#e6f4ea;color:#137333}
 .tag-lo{background:#fce8e6;color:#c5221f}
 .anchor{display:block}
+.table-scroll{width:100%;max-width:100%;min-width:0;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.table-scroll table{min-width:760px}
 
 /* Side TOC */
 .side-toc{position:fixed;top:60px;right:16px;width:210px;max-height:calc(100vh - 76px);overflow-y:auto;background:#fff;border-radius:8px;box-shadow:0 1px 6px rgba(0,0,0,.12);padding:14px 16px;font-size:12.5px;z-index:50;opacity:0;pointer-events:none;transition:opacity .25s}
@@ -45,6 +47,15 @@ li{margin:4px 0}
 .side-toc a:hover{color:#1a73e8}
 .side-toc a.active{color:#1a73e8;border-left-color:#1a73e8;font-weight:600}
 @media(max-width:1199px){.side-toc{display:none}}
+@media(max-width:600px){
+  .header{padding:10px 14px;gap:8px}
+  .header h1{font-size:16px}
+  .container{padding:16px 12px}
+  .card{padding:16px;min-width:0;overflow:hidden}
+  .card .table-scroll{overflow-x:auto}
+  .card>table{width:100%;max-width:100%;table-layout:fixed}
+  .card>table th,.card>table td{overflow-wrap:anywhere;word-break:break-word}
+}
 </style>
 </head>
 <body>
@@ -76,6 +87,7 @@ li{margin:4px 0}
     <li><a href="#wos" data-id="wos">WOS 상세</a></li>
     <li><a href="#profit" data-id="profit">고수익 분류</a></li>
     <li><a href="#data" data-id="data">데이터 기준</a></li>
+    <li><a href="#source-extraction" data-id="source-extraction">원천 추출·완료 기준</a></li>
     <li><a href="#update" data-id="update">자동 업데이트</a></li>
     <li><a href="#scheduler" data-id="scheduler">스케줄러</a></li>
     <li><a href="#sales-target-link" data-id="sales-target-link">🎯 Sales Target</a></li>
@@ -93,6 +105,7 @@ li{margin:4px 0}
     <li><a href="#wos" data-id="wos">WOS Details</a></li>
     <li><a href="#profit" data-id="profit">Profit Class</a></li>
     <li><a href="#data" data-id="data">Data Defs</a></li>
+    <li><a href="#source-extraction" data-id="source-extraction">Source &amp; Completion</a></li>
     <li><a href="#update" data-id="update">Auto Updates</a></li>
     <li><a href="#scheduler" data-id="scheduler">Scheduler</a></li>
     <li><a href="#sales-target-link" data-id="sales-target-link">🎯 Sales Target</a></li>
@@ -131,7 +144,7 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   // Section IDs for scroll spy
-  var sectionIds = ['overview','filters','history','week-rule','tab1','tab2','tab3','tab4','tab5','tab6','wos','profit','data','update','scheduler'];
+  var sectionIds = ['overview','filters','history','week-rule','tab1','tab2','tab3','tab4','tab5','tab6','wos','profit','data','source-extraction','update','scheduler'];
   var sideToc = document.getElementById('sideToc');
   var mainTocs = document.querySelectorAll('.container > .toc');
 
@@ -178,6 +191,7 @@ document.addEventListener('DOMContentLoaded', function() {
   <li><a href="#wos">WOS 상세 설명</a></li>
   <li><a href="#profit">구간별 고수익 부킹분류</a></li>
   <li><a href="#data">데이터 기준</a></li>
+  <li><a href="#source-extraction">원천데이터 추출·완료 기준</a></li>
   <li><a href="#update">자동 업데이트</a></li>
   <li><a href="#scheduler">Windows 스케줄러 작업</a></li>
 </ul></div>
@@ -195,6 +209,7 @@ document.addEventListener('DOMContentLoaded', function() {
   <li><a href="#wos">WOS Details</a></li>
   <li><a href="#profit">Route Profit Classification</a></li>
   <li><a href="#data">Data Definitions</a></li>
+  <li><a href="#source-extraction">Source Extraction &amp; Completion</a></li>
   <li><a href="#update">Auto Updates</a></li>
   <li><a href="#scheduler">Windows Scheduler Tasks</a></li>
 </ul></div>
@@ -967,6 +982,99 @@ document.addEventListener('DOMContentLoaded', function() {
   <p>BSA uses Tableau's source <code>Sales Team</code> field as the team basis. Booking teams are calculated from origin/destination, while BSA is linked by the same team field used in the Tableau view.</p>
 </div>
 
+<!-- SOURCE EXTRACTION & COMPLETION -->
+<span class="anchor" id="source-extraction"></span>
+<h2 class="ko">원천데이터 추출·완료 기준</h2><h2 class="en" style="display:none">Source Extraction &amp; Completion Criteria</h2>
+<div class="card ko">
+  <p>아래 기준은 매일 10:00 KST에 실행되는 <code>3W_BKG_Dashboard_Daily</code>의 실제 처리 로직입니다. 화면의 데이터 날짜를 확인할 때는 단순히 Tableau 다운로드가 끝났는지가 아니라, 모든 산출물이 같은 날짜로 생성되고 Google Drive 검증까지 통과했는지를 기준으로 봅니다.</p>
+
+  <h3>원천별 추출 기준</h3>
+  <p style="color:#5f6368;font-size:12px">모바일에서는 표를 좌우로 스크롤해 세부 설명을 확인하세요.</p>
+  <div class="table-scroll">
+  <table>
+    <tr><th>원천</th><th>추출 범위·필터</th><th>사용 목적과 주의사항</th></tr>
+    <tr><td><strong>1.csv</strong><br>Booking_schedule View</td><td>2025-12-28부터 <strong>금주 일요일 +4주 토요일</strong>까지. Tableau 부하를 줄이기 위해 최대 5주 단위로 나누어 추출한 뒤 병합합니다.</td><td>화주, 부킹일, 부킹 스케줄, Cancel 일자, FST_TEU 등 부킹 상세를 보충합니다. 같은 날 재실행하면 이미 완료된 정상 조각은 재사용할 수 있습니다.</td></tr>
+    <tr><td><strong>2.csv</strong><br>Date_vsl View</td><td>데이터 기준연도 1월부터 1.csv 종료일이 속한 <strong>445 월(YYYYMM)</strong>까지를 명시적으로 선택합니다.</td><td>최종 부킹 목록의 기준(base)입니다. 최신 상태, LST_TEU, CM1, 실제 출항일, Route/VSL/VOY를 제공합니다. 1.csv 범위 밖이어도 2.csv에 있으면 포함됩니다.</td></tr>
+    <tr><td><strong>BSA raw</strong></td><td>기준연도 전년·당년·다음연도의 전체 월을 <strong>OBT/EST/IST/JBT</strong> 팀별로 추출합니다.</td><td>Tableau의 <code>Sales Team</code>을 팀 기준으로 사용하고 <code>TEU_BSA (Actual)</code>을 집계합니다. POR/DLY 국가·항구·YYYYMM·WW 단위이며, 합산 BSA가 0인 행은 제외됩니다.</td></tr>
+    <tr><td><strong>Grade View</strong></td><td>현재 분기의 시작 월을 YYYYMM으로 사용합니다: Q1=01, Q2=04, Q3=07, Q4=10.</td><td>화주 코드를 A+B 또는 C+D로 매핑합니다. 당일 신규 추출이 원칙이며, 추출 실패 시 오래된 등급을 자동 사용하지 않습니다.</td></tr>
+    <tr><td><strong>salesman.csv</strong><br>고객 담당 영업사원</td><td>데이터 날짜가 <code>SALES_START_DATE</code>~<code>SALES_END_DATE</code> 안에 있는 활성 행만 사용합니다.</td><td>국가+항구+고객 → 국가+고객 → 공통 고객 → 고객 단일 담당 순으로 매칭합니다. 원천에만 있는 신규 단일 ID는 최근 45일 내 3건 이상일 때 임시 신규 영업사원으로 보존합니다.</td></tr>
+    <tr><td><strong>Sales Target Google Sheet</strong></td><td>Summary_All의 목표값과 같은 날짜의 booking snapshot을 결합합니다. 고객 담당 roster는 KMTC Global Network 기준으로 먼저 갱신합니다.</td><td>Target 원천 단위는 <strong>선적지 × 영업사원</strong>입니다. 도착지·등급 필터는 Perform과 차이를 바꾸지만 원천 Target 자체를 세분화하지는 않습니다.</td></tr>
+  </table>
+  </div>
+
+  <h3>병합·정제·제외 규칙</h3>
+  <ul>
+    <li><strong>2.csv를 base, 1.csv를 supplement</strong>로 사용하고 Tableau Total 행을 제거한 뒤 <code>BKG_NO</code> 기준으로 중복을 정리합니다.</li>
+    <li>1.csv에 없는 부킹은 Booking_schedule과 Booking_date를 Date_vsl로 보완하고, FST_TEU가 없으면 LST_TEU를 사용합니다.</li>
+    <li>2.csv에 없고 1.csv에만 있는 Cancel 부킹은 실제 출항일을 확인할 수 있을 때만 복구 후보로 사용합니다.</li>
+    <li><strong>즉시 Cancel 제외:</strong> Cancel_date - Booking_date가 3일 이하인 Cancel 부킹.</li>
+    <li><strong>조기부킹 후 빠른 Cancel 제외:</strong> 실제 출항일 - Booking_date가 21일 이상이고, Cancel_date - Booking_date가 7일 이하인 Cancel 부킹.</li>
+    <li>LST_Status가 비어 있는 행과 기준연도 1월보다 이전 445 월은 최종 대시보드 범위에서 제외합니다.</li>
+  </ul>
+
+  <h3>업데이트 완료 판정</h3>
+  <ol>
+    <li>메인 요약, 당일 cache, 당일 BSA 파일의 <strong>YYYYMMDD가 모두 같아야</strong> 업로드를 시작합니다. 날짜가 섞이면 동기화를 중단합니다.</li>
+    <li>메인 대시보드, 과거 요약, 원천 cache/BSA, OBT history, Sales Target index/manifest/base2025/chunks를 각 Google Drive 폴더에 동기화합니다.</li>
+    <li>모든 파일을 Drive에서 다시 조회하여 <strong>파일 ID, 파일명 중복, 크기, MD5</strong>가 일치해야 완료로 판정합니다.</li>
+    <li>검증이 모두 끝난 뒤에만 LocalAppData의 CSV·JSON·parquet·감사 파일을 정리합니다. 따라서 완료 메일의 <code>audit cleaned after verified sync</code>는 누락이 아니라 정상 정리 상태입니다.</li>
+  </ol>
+  <div class="tip"><strong>완료 상태 읽기:</strong> 메일에 Tableau 재시도 경고가 있어도 마지막 상태가 SUCCESS이고 데이터 날짜가 Expected와 같으며 Drive 검증이 완료되었다면 최종 데이터는 정상입니다. 반대로 날짜 불일치, Drive 검증 실패, Missing runtime data는 완료로 보지 않습니다.</div>
+
+  <h3>운영 시 추가 확인사항</h3>
+  <ul>
+    <li>Tableau extract가 늦게 갱신된 날은 당일 작업을 재실행하고, 화면의 데이터 날짜가 당일인지 다시 확인합니다.</li>
+    <li>Drive 동기화가 일부라도 실패하면 로컬 staging을 수동 삭제하지 않습니다. 전체 동기화를 다시 실행해 모든 폴더가 같은 날짜로 수렴한 뒤 정리합니다.</li>
+    <li>445 캘린더는 현재 2025~2027 일정이 코드에 등록되어 있습니다. 2028년 운영 전 새 회계주차 일정을 추가해야 합니다.</li>
+    <li><code>Unmatched owner rows</code>는 고객 담당 원천과 목표 roster 간 미매칭 감사 건수이며, 그 자체가 Google Sheet 갱신 실패를 뜻하지는 않습니다.</li>
+  </ul>
+</div>
+
+<div class="card en" style="display:none">
+  <p>The rules below reflect the actual <code>3W_BKG_Dashboard_Daily</code> pipeline that runs at 10:00 KST. Data is considered current only after every artifact has the same dataset date and the Google Drive verification has passed—not merely when the Tableau downloads finish.</p>
+
+  <h3>Extraction Rules by Source</h3>
+  <p style="color:#5f6368;font-size:12px">On mobile, scroll the table horizontally to view all details.</p>
+  <div class="table-scroll">
+  <table>
+    <tr><th>Source</th><th>Range / Filter</th><th>Purpose and Notes</th></tr>
+    <tr><td><strong>1.csv</strong><br>Booking_schedule View</td><td>From 2025-12-28 through the Saturday four weeks after the current week's Sunday. Exported in chunks of at most five weeks, then merged.</td><td>Supplies shipper, booking date/schedule, cancel date, FST_TEU, and other booking details. Valid same-day chunks may be reused during a rerun.</td></tr>
+    <tr><td><strong>2.csv</strong><br>Date_vsl View</td><td>Explicit YYYYMM members from January of the dataset year through the 445 month containing the 1.csv end date.</td><td>The base booking population. Supplies latest status, LST_TEU, CM1, actual departure, Route/VSL/VOY. A booking remains included when it exists in 2.csv even if it falls outside the 1.csv range.</td></tr>
+    <tr><td><strong>BSA raw</strong></td><td>All months for the prior, current, and following year, exported separately for OBT/EST/IST/JBT.</td><td>Uses Tableau's <code>Sales Team</code> and aggregates <code>TEU_BSA (Actual)</code> by POR/DLY country and port, YYYYMM, and WW. Zero-capacity aggregates are omitted.</td></tr>
+    <tr><td><strong>Grade View</strong></td><td>The first month of the current quarter: Q1=01, Q2=04, Q3=07, Q4=10.</td><td>Maps shipper codes to A+B or C+D. A fresh export is required; a stale grade file is not silently reused.</td></tr>
+    <tr><td><strong>salesman.csv</strong><br>Customer Ownership</td><td>Only rows active on the dataset date, based on <code>SALES_START_DATE</code> and <code>SALES_END_DATE</code>.</td><td>Match order: country+port+customer, country+customer, generic customer, then unique customer owner. A new single raw ID is provisionally retained when it appears on at least three recent rows within 45 days.</td></tr>
+    <tr><td><strong>Sales Target Google Sheet</strong></td><td>Combines Summary_All targets with the same-day booking snapshot. The customer-owner roster is refreshed from KMTC Global Network first.</td><td>Source target grain is <strong>origin × salesperson</strong>. Destination and grade filters change Perform and variance, but do not subdivide the source Target.</td></tr>
+  </table>
+  </div>
+
+  <h3>Merge, Cleaning, and Exclusions</h3>
+  <ul>
+    <li><strong>2.csv is the base and 1.csv is the supplement.</strong> Tableau total rows are removed and duplicate <code>BKG_NO</code> values are resolved.</li>
+    <li>When 1.csv detail is unavailable, Booking_schedule and Booking_date fall back to Date_vsl; missing FST_TEU falls back to LST_TEU.</li>
+    <li>A cancelled booking found only in 1.csv is considered for recovery only when an actual departure date is available.</li>
+    <li><strong>Immediate cancel exclusion:</strong> Cancel_date - Booking_date is three days or less.</li>
+    <li><strong>Early-booking/quick-cancel exclusion:</strong> actual departure - Booking_date is at least 21 days and Cancel_date - Booking_date is seven days or less.</li>
+    <li>Rows with blank LST_Status and 445 months before January of the dataset year are excluded from the final dashboard.</li>
+  </ul>
+
+  <h3>Completion Criteria</h3>
+  <ol>
+    <li>The main summary, current cache, and current BSA filenames must carry the same <strong>YYYYMMDD</strong>. Mixed dates stop the sync.</li>
+    <li>Main data, history, source cache/BSA, OBT history, and Sales Target index/manifest/base2025/chunks are synchronized to their Drive folders.</li>
+    <li>Every expected Drive file is read back and checked for <strong>file ID, duplicate name, size, and MD5</strong>.</li>
+    <li>Local CSV, JSON, parquet, and audit staging files are cleaned only after all checks pass. Therefore <code>audit cleaned after verified sync</code> is a normal completion state, not a missing-file error.</li>
+  </ol>
+  <div class="tip"><strong>Reading completion status:</strong> Tableau retry warnings may appear in a successful email. If the final status is SUCCESS, the data date matches Expected, and Drive verification completed, the final dataset is current. A date mismatch, Drive verification failure, or Missing runtime data is not a completed update.</div>
+
+  <h3>Additional Operational Notes</h3>
+  <ul>
+    <li>When the Tableau extract is refreshed late, rerun the same-day task and confirm the displayed data date again.</li>
+    <li>Do not manually delete local staging after any partial Drive failure. Rerun the full sync until every folder converges on the same dataset date.</li>
+    <li>The 445 calendar currently contains schedules for 2025–2027. Add the 2028 fiscal calendar before 2028 operations begin.</li>
+    <li><code>Unmatched owner rows</code> is an audit count between the customer-owner source and target roster; it does not by itself mean the Google Sheet refresh failed.</li>
+  </ul>
+</div>
+
 <!-- UPDATE -->
 <span class="anchor" id="update"></span>
 <h2 class="ko">자동 업데이트</h2><h2 class="en" style="display:none">Auto Updates</h2>
@@ -988,8 +1096,9 @@ run_daily.bat</code></pre>
   <table>
     <tr><th>파일</th><th>범위</th></tr>
     <tr><td>1.csv (Booking_schedule)</td><td>2025-12-28 ~ 현재 주 +4주</td></tr>
-    <tr><td>2.csv (Date_vsl)</td><td>전체</td></tr>
-    <tr><td>BSA</td><td>YYYY 2025~2027, YYYYMM 전체</td></tr>
+    <tr><td>2.csv (Date_vsl)</td><td>기준연도 1월 ~ 1.csv 종료일이 속한 445 월</td></tr>
+    <tr><td>BSA</td><td>기준연도 전년·당년·다음연도, YYYYMM 전체</td></tr>
+    <tr><td>Grade</td><td>현재 분기 시작 월 (01/04/07/10)</td></tr>
   </table>
 </div>
 <div class="card en" style="display:none">
@@ -1007,7 +1116,7 @@ run_daily.bat</code></pre>
 run_daily.bat</code></pre>
   <p>The rerun covers Tableau download, snapshot processing, main data, OBT history, sales-target chunks, and Google Drive synchronization. Email notification is the final step; if it fails after Drive sync, the dashboard data is already updated.</p>
   <h3>Data Range</h3>
-  <p>1.csv: 2025-12-28 ~ current week +4 weeks | 2.csv: Full | BSA: 2025-2027 all months</p>
+  <p>1.csv: 2025-12-28 through current week +4 weeks | 2.csv: dataset-year January through the 445 month containing the 1.csv end date | BSA: prior/current/following year, all months | Grade: current quarter start month</p>
 </div>
 
 <!-- SCHEDULER -->
@@ -1120,7 +1229,7 @@ run_daily.bat</code></pre>
 </div>
 
 <div style="text-align:center;padding:40px;color:#5f6368;font-size:12px">
-  -3W Booking Dashboard Guide | Last updated: 2026-05-27
+  -3W Booking Dashboard Guide | Last updated: 2026-08-14
 </div>
 
 </div>
