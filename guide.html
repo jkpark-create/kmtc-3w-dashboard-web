@@ -819,10 +819,10 @@ document.addEventListener('DOMContentLoaded', function() {
   <h3>주차 그룹 vs WOS 분류 — 날짜 기준 차이</h3>
   <table>
     <tr><th>항목</th><th>날짜 기준</th><th>용도</th></tr>
-    <tr><td><strong>주차 그룹 (행)</strong></td><td>Actual_Departure_schedule (Date_vsl, 실제 출항일)</td><td>월별/주차별 테이블의 행 그룹핑</td></tr>
+    <tr><td><strong>주차 그룹 (행)</strong></td><td>2026-07부터 통합 대시보드 Single/individual 대표 POL 출항일<br>(이전 기간은 Date_vsl)</td><td>월별/주차별 테이블의 행 그룹핑과 대상 모선 배정</td></tr>
     <tr><td><strong>WOS 분류 (열)</strong></td><td>Booking_schedule (예정 출항일)</td><td>WOS-3/2/1/WOS 리드타임 단계</td></tr>
   </table>
-  <p>즉, 한 부킹의 <strong>주차 배정</strong>은 실제 출항일(Date_vsl) 기준이고, <strong>리드타임(WOS) 분류</strong>는 Booking_schedule 기준입니다.</p>
+  <p>즉, 2026-07부터 한 부킹의 <strong>주차·대상 모선 배정</strong>은 통합 대시보드의 Single/individual 대표 구간 기준이고, <strong>리드타임(WOS) 분류</strong>는 기존과 동일하게 Booking_schedule 기준입니다.</p>
 
   <div class="tip"><strong>WOS-3 비중이 높을수록 좋습니다.</strong> 조기 부킹 = 선복 계획 안정 + 캔슬 위험 감소 + 높은 수익성</div>
   <div class="tip"><strong>Booking_schedule을 사용하는 이유:</strong> Booking_schedule은 부킹 접수 시점에 확정된 예정 출항일로, 부킹 의사결정 시점의 리드타임을 정확히 반영합니다. 실제 출항일(Date_vsl)은 이후 변경될 수 있어 사후적 관점이 됩니다.</div>
@@ -851,10 +851,10 @@ document.addEventListener('DOMContentLoaded', function() {
   <h3>Week Grouping vs WOS Classification — Different Date Bases</h3>
   <table>
     <tr><th>Item</th><th>Date Basis</th><th>Purpose</th></tr>
-    <tr><td><strong>Week Group (rows)</strong></td><td>Actual_Departure_schedule (Date_vsl)</td><td>Row grouping in monthly/weekly tables</td></tr>
+    <tr><td><strong>Week Group (rows)</strong></td><td>Integrated dashboard Single/individual representative POL departure from 2026-07<br>(legacy Date_vsl before cutover)</td><td>Row grouping and target-vessel assignment</td></tr>
     <tr><td><strong>WOS Stage (columns)</strong></td><td>Booking_schedule (planned departure)</td><td>WOS-3/2/1/WOS lead time classification</td></tr>
   </table>
-  <p>In other words, a booking's <strong>week assignment</strong> is based on actual departure (Date_vsl), while the <strong>lead time (WOS) stage</strong> is based on Booking_schedule.</p>
+  <p>From 2026-07, a booking's <strong>week and target-vessel assignment</strong> follows the Integrated dashboard Single/individual segment, while the <strong>lead time (WOS) stage</strong> continues to use Booking_schedule.</p>
 
   <div class="tip"><strong>Higher WOS-3 = better.</strong> Early bookings → stable capacity + lower cancel risk + higher profitability</div>
   <div class="tip"><strong>Why Booking_schedule?</strong> Booking_schedule is the planned departure date fixed at booking time, accurately reflecting the lead time at the point of booking decision. Actual departure (Date_vsl) may change later and represents a retrospective view.</div>
@@ -994,8 +994,8 @@ document.addEventListener('DOMContentLoaded', function() {
   <table>
     <tr><th>원천</th><th>추출 범위·필터</th><th>사용 목적과 주의사항</th></tr>
     <tr><td><strong>1.csv</strong><br>Booking_schedule View</td><td>2025-12-28부터 <strong>금주 일요일 +4주 토요일</strong>까지. Tableau 부하를 줄이기 위해 최대 5주 단위로 나누어 추출한 뒤 병합합니다.</td><td>화주, 부킹일, 부킹 스케줄, Cancel 일자, FST_TEU 등 부킹 상세를 보충합니다. 같은 날 재실행하면 이미 완료된 정상 조각은 재사용할 수 있습니다.</td></tr>
-    <tr><td><strong>2.csv</strong><br>Date_vsl View</td><td>데이터 기준연도 1월부터 1.csv 종료일이 속한 <strong>445 월(YYYYMM)</strong>까지를 명시적으로 선택합니다.</td><td>최종 부킹 목록의 기준(base)입니다. 최신 상태, LST_TEU, CM1, 실제 출항일, Route/VSL/VOY를 제공합니다. 1.csv 범위 밖이어도 2.csv에 있으면 포함됩니다.</td></tr>
-    <tr><td><strong>BSA raw</strong></td><td>기준연도 전년·당년·다음연도의 전체 월을 <strong>OBT/EST/IST/JBT</strong> 팀별로 추출합니다.</td><td>Tableau의 <code>Sales Team</code>을 팀 기준으로 사용하고 <code>TEU_BSA (Actual)</code>을 집계합니다. POR/DLY 국가·항구·YYYYMM·WW 단위이며, 합산 BSA가 0인 행은 제외됩니다.</td></tr>
+    <tr><td><strong>2.csv</strong><br>Date_vsl View</td><td>데이터 기준연도 1월부터 1.csv 종료일이 속한 <strong>445 월(YYYYMM)</strong>까지를 명시적으로 선택합니다.</td><td>부킹 이력과 WOS 계산의 base입니다. 2026-07 이후 Booking/B/L 실적의 주차·Route/VSL/VOY는 통합 대시보드 Single/individual 대표 구간으로 대체하며, 통합 범위에만 있는 부킹은 WOS 일정이 없는 실적 전용 행으로 보강합니다.</td></tr>
+    <tr><td><strong>BSA raw</strong></td><td>2026-06까지는 기존 Tableau, <strong>2026-07부터는 통합 대시보드</strong> 기준을 사용합니다.</td><td>2026-07부터 LOCAL first-vessel, 유효 Original round, 확정 SPOT의 bound별 Original 대체, skip/국내 T/S 중복 제외 기준을 적용합니다. 변경된 BSA는 영업사원별 BSA 배분, Sales Target, OBT 모니터에도 공통 반영됩니다.</td></tr>
     <tr><td><strong>Grade View</strong></td><td>현재 분기의 시작 월을 YYYYMM으로 사용합니다: Q1=01, Q2=04, Q3=07, Q4=10.</td><td>화주 코드를 A+B 또는 C+D로 매핑합니다. 당일 신규 추출이 원칙이며, 추출 실패 시 오래된 등급을 자동 사용하지 않습니다.</td></tr>
     <tr><td><strong>salesman.csv</strong><br>고객 담당 영업사원</td><td>데이터 날짜가 <code>SALES_START_DATE</code>~<code>SALES_END_DATE</code> 안에 있는 활성 행만 사용합니다.</td><td>국가+항구+고객 → 국가+고객 → 공통 고객 → 고객 단일 담당 순으로 매칭합니다. 원천에만 있는 신규 단일 ID는 최근 45일 내 3건 이상일 때 임시 신규 영업사원으로 보존합니다.</td></tr>
     <tr><td><strong>Sales Target Google Sheet</strong></td><td>Summary_All의 목표값과 같은 날짜의 booking snapshot을 결합합니다. 고객 담당 roster는 KMTC Global Network 기준으로 먼저 갱신합니다.</td><td>Target 원천 단위는 <strong>선적지 × 영업사원</strong>입니다. 도착지·등급 필터는 Perform과 차이를 바꾸지만 원천 Target 자체를 세분화하지는 않습니다.</td></tr>
@@ -1039,8 +1039,8 @@ document.addEventListener('DOMContentLoaded', function() {
   <table>
     <tr><th>Source</th><th>Range / Filter</th><th>Purpose and Notes</th></tr>
     <tr><td><strong>1.csv</strong><br>Booking_schedule View</td><td>From 2025-12-28 through the Saturday four weeks after the current week's Sunday. Exported in chunks of at most five weeks, then merged.</td><td>Supplies shipper, booking date/schedule, cancel date, FST_TEU, and other booking details. Valid same-day chunks may be reused during a rerun.</td></tr>
-    <tr><td><strong>2.csv</strong><br>Date_vsl View</td><td>Explicit YYYYMM members from January of the dataset year through the 445 month containing the 1.csv end date.</td><td>The base booking population. Supplies latest status, LST_TEU, CM1, actual departure, Route/VSL/VOY. A booking remains included when it exists in 2.csv even if it falls outside the 1.csv range.</td></tr>
-    <tr><td><strong>BSA raw</strong></td><td>All months for the prior, current, and following year, exported separately for OBT/EST/IST/JBT.</td><td>Uses Tableau's <code>Sales Team</code> and aggregates <code>TEU_BSA (Actual)</code> by POR/DLY country and port, YYYYMM, and WW. Zero-capacity aggregates are omitted.</td></tr>
+    <tr><td><strong>2.csv</strong><br>Date_vsl View</td><td>Explicit YYYYMM members from January of the dataset year through the 445 month containing the 1.csv end date.</td><td>Base for booking history and WOS calculations. From 2026-07, Booking/B/L performance week and Route/VSL/VOY are replaced by the Integrated dashboard Single/individual segment; canonical bookings absent from Tableau are added as performance-only rows without a WOS schedule.</td></tr>
+    <tr><td><strong>BSA raw</strong></td><td>Legacy Tableau through 2026-06; <strong>Integrated dashboard contract from 2026-07</strong>.</td><td>Uses LOCAL first-vessel, valid Original round, confirmed Spot replacement by bound, skipped-call exclusion, and domestic T/S de-duplication. The same BSA feeds salesperson allocation, Sales Target, and the OBT monitor.</td></tr>
     <tr><td><strong>Grade View</strong></td><td>The first month of the current quarter: Q1=01, Q2=04, Q3=07, Q4=10.</td><td>Maps shipper codes to A+B or C+D. A fresh export is required; a stale grade file is not silently reused.</td></tr>
     <tr><td><strong>salesman.csv</strong><br>Customer Ownership</td><td>Only rows active on the dataset date, based on <code>SALES_START_DATE</code> and <code>SALES_END_DATE</code>.</td><td>Match order: country+port+customer, country+customer, generic customer, then unique customer owner. A new single raw ID is provisionally retained when it appears on at least three recent rows within 45 days.</td></tr>
     <tr><td><strong>Sales Target Google Sheet</strong></td><td>Combines Summary_All targets with the same-day booking snapshot. The customer-owner roster is refreshed from KMTC Global Network first.</td><td>Source target grain is <strong>origin × salesperson</strong>. Destination and grade filters change Perform and variance, but do not subdivide the source Target.</td></tr>

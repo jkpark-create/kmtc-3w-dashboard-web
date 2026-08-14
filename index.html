@@ -2957,7 +2957,7 @@ function renderTab6() {
   const totalPotential = Math.max(0, total.w3 - total.w3Hi);
 
   let html = `<div class="chart-card" style="margin-bottom:12px;padding:10px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-    <span class="sub">${L('고/저 분류는 CM1/TEU 구간 기준. · WOS-3 TEU·전체 TEU(BKG) = 부킹예측(FST), WOS-3 실선적·고수익 실선적·전체 TEU(B/L)·전체 고수익 = 실선적 B/L(LST) 기준. · 마감월은 B/L=KMTC 실측, 진행월은 미출항분 포함.','High/low by CM1/TEU route. · WOS-3 TEU & Total(BKG) = booking forecast (FST); WOS-3 LFT, Hi LFT, Total(B/L) & Total Hi = lifted B/L (LST). Closed months: B/L matches KMTC actuals; open months include not-yet-sailed.')}</span>
+    <span class="sub">${L('고/저 분류는 CM1/TEU 구간 기준. · WOS-3 계산은 기존 Booking_schedule/FST 기준. · 2026-07부터 BSA와 B/L 실적 주차·모선은 통합 대시보드 Single/individual 기준.','High/low by CM1/TEU route. · WOS-3 keeps the existing Booking_schedule/FST basis. · From 2026-07, BSA and B/L performance week/vessel follow the Integrated dashboard Single/individual contract.')}</span>
   </div>
   <div class="row">
     ${kpi(`WOS-3 ${ctx.unit}`, fmt(total.w3), '#1a73e8')}
