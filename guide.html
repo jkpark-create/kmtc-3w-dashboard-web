@@ -227,7 +227,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <li><strong>⑤ 부킹 패턴</strong> — WOS 단계별 부킹 접수 시점 분석</li>
     <li><strong>⑥ BL 고수익</strong> — B/L에 연결된 CM1/TEU 구간분류로 WOS-3와 전체기간 고수익 비중 모니터링</li>
   </ul>
-  <p>기본 필터: <strong>현재 주 +3주 후의 월 및 해당 주차</strong>로 자동 설정됩니다.</p>
+  <p>기본 필터: <strong>오늘 날짜가 속한 월 및 전체 주차</strong>로 자동 설정됩니다.</p>
   <h3>이 대시보드가 답하는 질문</h3>
   <table>
     <tr><th>질문</th><th>먼저 볼 화면</th><th>판단 포인트</th></tr>
@@ -258,7 +258,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <li><strong>⑤ Patterns</strong> — WOS stage booking timing analysis</li>
     <li><strong>⑥ BL High-Profit</strong> — WOS-3 and full-period high-profit share using B/L-linked CM1/TEU route classification</li>
   </ul>
-  <p>Default filter: automatically set to <strong>the month &amp; week of current week + 3 weeks ahead</strong>.</p>
+  <p>Default filter: automatically set to <strong>the current calendar month and all weeks</strong>.</p>
   <h3>Questions This Dashboard Answers</h3>
   <table>
     <tr><th>Question</th><th>Start Here</th><th>What to Check</th></tr>
@@ -290,8 +290,8 @@ document.addEventListener('DOMContentLoaded', function() {
     <tr><td>선적지 / 선적포트</td><td>출발 국가 + 포트 (POR), 검색 및 복수 선택 가능</td><td>전체</td></tr>
     <tr><td>도착지 / 도착포트</td><td>도착 국가 + 포트 (DLY), 검색 및 복수 선택 가능. 도착지는 그룹이 아닌 국가 단위로 표시</td><td>전체</td></tr>
     <tr><td>보기</td><td>도착지별 / 선적지별 뷰 전환</td><td>도착지별</td></tr>
-    <tr><td>월</td><td>조회 월 (445 캘린더)</td><td>현재 주 +3주 후</td></tr>
-    <tr><td>주차</td><td>특정 주차 선택</td><td>+3주 후 해당 주차</td></tr>
+    <tr><td>월</td><td>조회 월 (445 캘린더)</td><td>오늘 날짜가 속한 월</td></tr>
+    <tr><td>주차</td><td>특정 주차 선택</td><td>전체</td></tr>
     <tr><td>구간수익</td><td>구간별고수익 / 구간별저수익 (루트별 고/저 기준)</td><td>전체</td></tr>
     <tr><td>등급</td><td>A+B(대형화주) / C+D(중소화주)</td><td>전체</td></tr>
     <tr><td>영업사원</td><td>특정 영업사원 필터</td><td>전체</td></tr>
@@ -318,8 +318,8 @@ document.addEventListener('DOMContentLoaded', function() {
     <tr><td>Origin / Port</td><td>POR country + port, searchable multi-select supported</td><td>All</td></tr>
     <tr><td>Dest / Port</td><td>DLY country + port, searchable multi-select supported. Destinations are shown by country, not grouped region</td><td>All</td></tr>
     <tr><td>View</td><td>By Destination / By Origin</td><td>By Dest</td></tr>
-    <tr><td>Month</td><td>445 calendar month</td><td>Current +3 weeks</td></tr>
-    <tr><td>Week</td><td>Specific week selection</td><td>+3 weeks target week</td></tr>
+    <tr><td>Month</td><td>445 calendar month</td><td>Current calendar month</td></tr>
+    <tr><td>Week</td><td>Specific week selection</td><td>All</td></tr>
     <tr><td>Route Profit</td><td>Route High / Route Low (by route profitability)</td><td>All</td></tr>
     <tr><td>Grade</td><td>A+B (large shippers) / C+D (SME)</td><td>All</td></tr>
     <tr><td>Salesperson</td><td>Filter by salesperson</td><td>All</td></tr>

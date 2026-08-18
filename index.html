@@ -588,11 +588,9 @@ function initFilters() {
   _monthWeeksCache = new Map();
   const teams = [...new Set(DATA.monthly.map(r=>r.team))].sort();
   fillSelect('fTeam', teams);
-  // 기본 월: 현재 주 + 3주 후의 월
+  // 기본 월: 오늘 날짜가 속한 월
   const _now = new Date();
-  const _sun = new Date(_now); _sun.setDate(_now.getDate() - _now.getDay()); // 이번주 일요일
-  const _target = new Date(_sun); _target.setDate(_sun.getDate() + 21); // +3주
-  const _defMonth = `${_target.getFullYear()}${String(_target.getMonth()+1).padStart(2,'0')}`;
+  const _defMonth = `${_now.getFullYear()}${String(_now.getMonth()+1).padStart(2,'0')}`;
   const defMonth = DATA.months.includes(_defMonth) ? _defMonth : DATA.months[DATA.months.length-1];
   fillSelect('fMonth', DATA.months, defMonth);
   bindMultiSelectClose();
