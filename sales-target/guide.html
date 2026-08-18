@@ -248,8 +248,8 @@ document.addEventListener('DOMContentLoaded', () => {
 <tr><th width="14%">필터</th><th>역할</th></tr>
 <tr><td><b>분기</b></td><td>1Q 2026, 2Q 2026, 3Q 2026</td></tr>
 <tr><td><b>월(상세)</b></td><td>분기 합산 또는 단일 월. 상단 KPI 카드, ① Target 요약, ② / ③ view에 적용</td></tr>
-<tr><td><b>선적국가</b></td><td>다중선택. 화이트리스트 11개 국가만 노출</td></tr>
-<tr><td><b>선적포트</b></td><td>다중선택. 위 국가에 속한 포트로 좁아짐. 화이트리스트 23개 포트만 노출</td></tr>
+<tr><td><b>선적국가</b></td><td>다중선택. 화이트리스트 12개 국가만 노출 (일본은 2Q부터)</td></tr>
+<tr><td><b>선적포트</b></td><td>다중선택. 위 국가에 속한 포트로 좁아짐. 화이트리스트 26개 선적지 그룹만 노출</td></tr>
 <tr><td><b>영업사원</b></td><td>다중선택. 위 선적지 범위 안의 영업사원만 옵션으로 노출</td></tr>
 <tr><td><b>도착국가</b></td><td>다중선택. BKG의 POD 국가 기준으로 카드 / ① / ② / ③ 모두 필터</td></tr>
 <tr><td><b>도착포트</b></td><td>다중선택. 위 도착국가에 속한 항구만 보이며 카드 / ① / ② / ③ 모두 필터</td></tr>
@@ -266,8 +266,8 @@ document.addEventListener('DOMContentLoaded', () => {
 <tr><th width="14%">Filter</th><th>Effect</th></tr>
 <tr><td><b>Quarter</b></td><td>1Q 2026, 2Q 2026, or 3Q 2026</td></tr>
 <tr><td><b>Month</b></td><td>Quarter total or a single YYYYMM. Applies to KPI cards, ① Target Summary, ② Drill, and ③ Pivot.</td></tr>
-<tr><td><b>Origin country</b></td><td>Multi-select. 11 whitelisted countries.</td></tr>
-<tr><td><b>Origin port</b></td><td>Multi-select. Narrowed by country. 23 whitelisted ports.</td></tr>
+<tr><td><b>Origin country</b></td><td>Multi-select. 12 whitelisted countries (Japan from Q2 onward).</td></tr>
+<tr><td><b>Origin port</b></td><td>Multi-select. Narrowed by country. 26 whitelisted origin groups.</td></tr>
 <tr><td><b>Salesperson</b></td><td>Multi-select. Only salespeople in the current origin scope.</td></tr>
 <tr><td><b>Dest country</b></td><td>Multi-select. Filters KPI cards and all three views by booking POD country.</td></tr>
 <tr><td><b>Dest port</b></td><td>Multi-select. Narrowed by dest country; filters KPI cards and all three views.</td></tr>
@@ -290,12 +290,13 @@ document.addEventListener('DOMContentLoaded', () => {
 <li>패널 바깥 클릭 → 닫힘</li>
 <li>0개 선택 = 전체 동일</li>
 </ol>
-<h3>화이트리스트 — 선적국가 / 포트 (11 / 24)</h3>
+<h3>화이트리스트 — 선적국가 / 선적지 그룹 (12 / 26)</h3>
 <table>
 <tr><th>국가</th><th>설명</th><th>포트</th></tr>
 <tr><td>CN</td><td>중국</td><td>CN_SHA, CN_NKG, CN_NBO, CN_TAO, CN_XGG, CN_DLC, CN_LYG, CN_SHK_DCB, CN_XMN, CN_NNS</td></tr>
 <tr><td>HK</td><td>홍콩</td><td>HK</td></tr>
 <tr><td>TW</td><td>대만</td><td>TW</td></tr>
+<tr><td>JP</td><td>일본 (2Q부터)</td><td>JP</td></tr>
 <tr><td>TH</td><td>태국</td><td>TH</td></tr>
 <tr><td>VN</td><td>베트남</td><td>VN_SGN_CMP, VN_HPH</td></tr>
 <tr><td>PH</td><td>필리핀</td><td>PH</td></tr>
@@ -315,12 +316,13 @@ document.addEventListener('DOMContentLoaded', () => {
 <li>Click outside to close</li>
 <li>Zero checks = "all" (no filter)</li>
 </ol>
-<h3>Whitelist — origin country / port (11 / 24)</h3>
+<h3>Whitelist — origin country / origin group (12 / 26)</h3>
 <table>
 <tr><th>Country</th><th>Name</th><th>Ports</th></tr>
 <tr><td>CN</td><td>China</td><td>CN_SHA, CN_NKG, CN_NBO, CN_TAO, CN_XGG, CN_DLC, CN_LYG, CN_SHK_DCB, CN_XMN, CN_NNS</td></tr>
 <tr><td>HK</td><td>Hong Kong</td><td>HK</td></tr>
 <tr><td>TW</td><td>Taiwan</td><td>TW</td></tr>
+<tr><td>JP</td><td>Japan (from Q2)</td><td>JP</td></tr>
 <tr><td>TH</td><td>Thailand</td><td>TH</td></tr>
 <tr><td>VN</td><td>Vietnam</td><td>VN_SGN_CMP, VN_HPH</td></tr>
 <tr><td>PH</td><td>Philippines</td><td>PH</td></tr>

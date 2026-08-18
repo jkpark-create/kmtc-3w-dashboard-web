@@ -11,6 +11,7 @@ const WHITELIST_ORIGINS = [
   { country: 'CN', label: { ko: '중국 / China', en: 'China' }, ports: ['CN_SHA','CN_NKG','CN_NBO','CN_TAO','CN_XGG','CN_DLC','CN_LYG','CN_SHK_DCB','CN_XMN','CN_NNS'] },
   { country: 'HK', label: { ko: '홍콩 / Hong Kong', en: 'Hong Kong' }, ports: ['HK'] },
   { country: 'TW', label: { ko: '대만 / Taiwan', en: 'Taiwan' }, ports: ['TW'] },
+  { country: 'JP', label: { ko: '일본 / Japan', en: 'Japan' }, ports: ['JP'] },
   { country: 'TH', label: { ko: '태국 / Thailand', en: 'Thailand' }, ports: ['TH'] },
   { country: 'VN', label: { ko: '베트남 / Vietnam', en: 'Vietnam' }, ports: ['VN_SGN_CMP','VN_HPH'] },
   { country: 'PH', label: { ko: '필리핀 / Philippines', en: 'Philippines' }, ports: ['PH'] },
@@ -26,6 +27,8 @@ const COUNTRY_OF_PORT = (() => {
   return m;
 })();
 const ALL_WHITELIST_PORTS = WHITELIST_ORIGINS.flatMap(c => c.ports);
+const ORIGIN_START_QUARTER = { JP: 'q2' };
+const QUARTER_RANK = { q1: 1, q2: 2, q3: 3 };
 
 const STATE = {
   index: null,
@@ -67,7 +70,7 @@ const STATE = {
 // Effective origin scope: ports the user wants to see, intersected with whitelist.
 function effectiveOrigins() {
   const { countries, origins } = STATE.filters;
-  let allowed = ALL_WHITELIST_PORTS;
+  let allowed = ALL_WHITELIST_PORTS.filter(p => originAvailableInQuarter(p));
   if (countries.length) {
     const c = new Set(countries);
     allowed = allowed.filter(p => c.has(COUNTRY_OF_PORT.get(p)));
@@ -77,6 +80,11 @@ function effectiveOrigins() {
     allowed = allowed.filter(p => o.has(p));
   }
   return new Set(allowed);
+}
+
+function originAvailableInQuarter(origin, quarter = STATE.filters.quarter) {
+  const first = ORIGIN_START_QUARTER[origin];
+  return !first || (QUARTER_RANK[quarter] || 0) >= QUARTER_RANK[first];
 }
 
 const I18N = {
@@ -854,10 +862,7 @@ function makeOption(value, label) {
 // ─── Filter setup ────────────────────────────────────────────────
 function setupFilters() {
   // Country options: only whitelist countries that have any data in manifest.
-  const manifestOrigins = new Set(STATE.manifest.origins || []);
-  const countryOpts = WHITELIST_ORIGINS
-    .filter(c => c.ports.some(p => manifestOrigins.has(p)))
-    .map(c => ({ value: c.country, label: `${c.country} — ${c.label[STATE.lang] || c.label.ko}` }));
+  const countryOpts = countryOptionsForCurrentQuarter();
   buildMultiSelect('msCountry', {
     options: countryOpts,
     selected: STATE.filters.countries,
@@ -874,6 +879,24 @@ function setupFilters() {
   refreshMonthOptions();
   setupDestFilters();
   scheduleFilterOptionRefresh(0);
+}
+
+function countryOptionsForCurrentQuarter() {
+  const manifestOrigins = new Set(STATE.manifest.origins || []);
+  return WHITELIST_ORIGINS
+    .filter(c => c.ports.some(p => manifestOrigins.has(p) && originAvailableInQuarter(p)))
+    .map(c => ({ value: c.country, label: `${c.country} — ${c.label[STATE.lang] || c.label.ko}` }));
+}
+
+function refreshCountryOptions() {
+  const existing = STATE.multiSelect.msCountry;
+  if (!existing) return;
+  const options = countryOptionsForCurrentQuarter();
+  const valid = new Set(options.map(o => o.value));
+  const preserved = (STATE.filters.countries || []).filter(value => valid.has(value));
+  existing.setOptions(options);
+  existing.setSelected(preserved);
+  STATE.filters.countries = preserved;
 }
 
 function setupDestFilters() {
@@ -932,7 +955,7 @@ function refreshPortOptions() {
   WHITELIST_ORIGINS.forEach(c => {
     if (!countries.has(c.country)) return;
     c.ports.forEach(p => {
-      if (!manifestOrigins.has(p)) return;
+      if (!manifestOrigins.has(p) || !originAvailableInQuarter(p)) return;
       portOpts.push({ value: p, label: displayOrigin(p), group: c.country, groupLabel: c.label[STATE.lang] || c.label.ko });
     });
   });
@@ -1235,6 +1258,9 @@ function setupListeners() {
   document.getElementById('fQuarter').addEventListener('change', e => {
     STATE.filters.quarter = e.target.value;
     STATE.filters.month = 'ALL';
+    refreshCountryOptions();
+    refreshPortOptions();
+    refreshSalesOptions();
     refreshMonthOptions();
     render();
     scheduleFilterOptionRefresh();
