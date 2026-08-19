@@ -35,6 +35,7 @@ const STATE = {
   manifest: null,
   base2025: null,     // {tab: {salesman: {num:[...], bsa:[...]}}} for filter-linked '25/Target columns
   chunkCache: new Map(),
+  ownerAdditions: null,
   view: 'summary',
   expandedKey: null,  // "<origin>||<salesman>" for drill view
   expandedShipperKey: null,
@@ -128,6 +129,12 @@ const I18N = {
     noChunks: '선택한 분기에 해당하는 월 데이터가 없습니다.',
     noMatches: '필터 조건에 맞는 데이터가 없습니다.',
     noShipper: '필터 조건에 맞는 화주가 없습니다. (등급/고수익 필터를 확인하세요)',
+    ownerAdditionsTitle: '영업사원 누락 체크',
+    ownerAdditionsLoading: '누락 체크 파일을 로딩 중입니다...',
+    ownerAdditionsMissing: '누락 건 없음',
+    ownerAdditionsUnavailable: '누락 체크 파일을 가져오지 못했습니다.',
+    ownerAdditionsLabel: (total, newCount) => `확인 대상: 총 ${total}건 / 신규 ${newCount}건`,
+    ownerAdditionsNoRows: '신규 누락 없음',
     loadingDetail: '상세 데이터 로딩 중...',
     panelAllBkg: '조건에 맞는 전체 BKG_NO 보기',
     btnCsv: 'CSV 내보내기', btnClose: '닫기',
@@ -193,6 +200,12 @@ const I18N = {
     noChunks: 'No monthly data for the selected quarter.',
     noMatches: 'No data matches the filters.',
     noShipper: 'No shippers match the filters. (Check Grade / High-profit.)',
+    ownerAdditionsTitle: 'Salesperson Missing Check',
+    ownerAdditionsLoading: 'Loading salesperson missing check...',
+    ownerAdditionsMissing: 'No missing owners',
+    ownerAdditionsUnavailable: 'Missing-owner check file is not available.',
+    ownerAdditionsLabel: (total, newCount) => `Total: ${total} rows / New: ${newCount}`,
+    ownerAdditionsNoRows: 'No newly added owners',
     loadingDetail: 'Loading detail...',
     panelAllBkg: 'All matching BKG_NO',
     btnCsv: 'Export CSV', btnClose: 'Close',
@@ -267,6 +280,7 @@ function applyLang() {
   }
   updatePerformanceLabels(STATE.filters.quarter);
   updateDataInfo();
+  renderOwnerAdditionsPanel();
 }
 
 const QUARTER_MONTHS = {
@@ -534,7 +548,7 @@ async function loadJson(url) {
     if (clean.startsWith('data/')) {
       return loadDriveJson(DRIVE_CONFIG.salesDataFolderId, clean.slice('data/'.length));
     }
-    if (['index.json', 'manifest.json', 'base2025.json'].includes(clean)) {
+    if (['index.json', 'manifest.json', 'base2025.json', 'current_customer_owner_addition_check.json'].includes(clean)) {
       return loadDriveJson(DRIVE_CONFIG.salesFolderId, clean);
     }
   } else if (!localPreview()) {
@@ -549,14 +563,16 @@ async function init() {
   try {
     try { STATE.lang = localStorage.getItem('sales_target_lang') || 'ko'; } catch {}
     applyLang();
-    const [index, manifest, base2025] = await Promise.all([
+    const [index, manifest, base2025, ownerAdditions] = await Promise.all([
       loadJson('index.json'),
       loadJson('manifest.json'),
       loadJson('base2025.json').catch(() => null),  // optional: filter-linked '25/Target columns
+      loadJson('current_customer_owner_addition_check.json').catch(() => null), // optional, tracked daily
     ]);
     STATE.index = index;
     STATE.manifest = manifest;
     STATE.base2025 = base2025 && base2025.base ? base2025.base : null;
+    STATE.ownerAdditions = ownerAdditions;
     STATE.initialUrlParams = readUrlParams();
     // Land on the current 해당주차's quarter+month by default (overridden by URL params).
     const defPeriod = defaultPeriodFromData();
@@ -567,6 +583,7 @@ async function init() {
     applyLang();
     render();
     updateDataInfo();
+    renderOwnerAdditionsPanel();
     const link = document.getElementById('workbookLink');
     if (link) link.href = index.workbook_url || '#';
   } catch (err) {
@@ -603,6 +620,30 @@ function updateDataInfo() {
   const chunks = (STATE.manifest.chunk_count || 0).toLocaleString();
   const bkgRows = (STATE.manifest.bkg_rows || 0).toLocaleString();
   el.textContent = I18N[STATE.lang].dataInfo(date, chunks, bkgRows);
+}
+
+function renderOwnerAdditionsPanel() {
+  const card = document.getElementById('ownerAdditionsBody');
+  if (!card) return;
+  const dict = I18N[STATE.lang];
+  if (!STATE.ownerAdditions) {
+    card.innerHTML = `<div class="muted">${dict.ownerAdditionsUnavailable}</div>`;
+    return;
+  }
+  const total = Number(STATE.ownerAdditions.verified_missing_active_sales_count || 0);
+  const newCount = Number(STATE.ownerAdditions.new_verified_missing_sales_count || 0);
+  const newRows = STATE.ownerAdditions.new_verified_missing_sales || [];
+  const recent = Array.isArray(newRows)
+    ? newRows.slice(0, 5).map(item => `${item.target_tab || ''} / ${item.resolved_sales || item.input_name || ''}`)
+    : [];
+  const lines = recent.length
+    ? recent.map(item => `<li>${escapeHtml(item.target_tab || '')}: ${escapeHtml(item.resolved_sales || item.input_name || '')}</li>`).join('')
+    : `<li>${dict.ownerAdditionsNoRows}</li>`;
+  card.innerHTML = `
+    <div class="owner-additions-stats">${dict.ownerAdditionsLabel(total, newCount)}</div>
+    <ul class="owner-additions-list">${lines}</ul>
+    <div class="muted">${(STATE.ownerAdditions.generated_at || '').replace('T', ' ').slice(0, 19)}</div>
+  `;
 }
 
 function showError(msg) {

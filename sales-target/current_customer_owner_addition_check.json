@@ -1,0 +1,194 @@
+{
+  "generated_at": "2026-08-19T12:08:08",
+  "dataset": "20260818",
+  "previous_dataset": null,
+  "verified_missing_active_sales_count": 9,
+  "new_verified_missing_sales_count": 9,
+  "verified_missing_active_sales": [
+    {
+      "target_tab": "CN_TAO",
+      "origin": "CN_TAO",
+      "input_name": "TIGER",
+      "resolved_sales": "TIGER",
+      "source_type": "verified_missing_active_sales",
+      "source_cell": "verified 2026-08-18 missing-owner audit",
+      "customer_count": 549
+    },
+    {
+      "target_tab": "CN_SHK_DCB",
+      "origin": "CN_SHK_DCB",
+      "input_name": "TOMSONG",
+      "resolved_sales": "TOMSONG",
+      "source_type": "verified_missing_active_sales",
+      "source_cell": "verified 2026-08-18 missing-owner audit",
+      "customer_count": 547
+    },
+    {
+      "target_tab": "TW",
+      "origin": "TW",
+      "input_name": "JACKY",
+      "resolved_sales": "JACKY",
+      "source_type": "verified_missing_active_sales",
+      "source_cell": "verified 2026-08-18 missing-owner audit",
+      "customer_count": 422
+    },
+    {
+      "target_tab": "TH",
+      "origin": "TH",
+      "input_name": "THATCHA",
+      "resolved_sales": "THATCHA",
+      "source_type": "verified_missing_active_sales",
+      "source_cell": "verified 2026-08-18 missing-owner audit",
+      "customer_count": 197
+    },
+    {
+      "target_tab": "VN_SGN_CMP",
+      "origin": "VN_SGN_CMP",
+      "input_name": "SGNIB",
+      "resolved_sales": "SGNIB",
+      "source_type": "verified_missing_active_sales",
+      "source_cell": "verified 2026-08-18 missing-owner audit",
+      "customer_count": 5
+    },
+    {
+      "target_tab": "JKT",
+      "origin": "JKT",
+      "input_name": "MUMPUNI",
+      "resolved_sales": "MUMPUNI",
+      "source_type": "verified_missing_active_sales",
+      "source_cell": "verified 2026-08-18 missing-owner audit",
+      "customer_count": 247
+    },
+    {
+      "target_tab": "IN",
+      "origin": "IN",
+      "input_name": "SHRIDHAR",
+      "resolved_sales": "SHRIDHAR",
+      "source_type": "verified_missing_active_sales",
+      "source_cell": "verified 2026-08-18 missing-owner audit",
+      "customer_count": 47
+    },
+    {
+      "target_tab": "IN",
+      "origin": "IN",
+      "input_name": "VIGNESH",
+      "resolved_sales": "VIGNESH",
+      "source_type": "verified_missing_active_sales",
+      "source_cell": "verified 2026-08-18 missing-owner audit",
+      "customer_count": 48
+    },
+    {
+      "target_tab": "BH",
+      "origin": "BH",
+      "input_name": "NELSON",
+      "resolved_sales": "NELSON",
+      "source_type": "verified_missing_active_sales",
+      "source_cell": "verified 2026-08-18 missing-owner audit",
+      "customer_count": 3
+    }
+  ],
+  "provisional_sales_count": 3,
+  "provisional_sales": [
+    {
+      "target_tab": "CN_SHA",
+      "resolved_sales": "TOMHUANG",
+      "source_cell": "recent booking customer ownership",
+      "customer_count": 15
+    },
+    {
+      "target_tab": "TW",
+      "resolved_sales": "JASONLIN",
+      "source_cell": "recent booking customer ownership",
+      "customer_count": 4
+    },
+    {
+      "target_tab": "TH",
+      "resolved_sales": "PHANARINN",
+      "source_cell": "recent booking customer ownership",
+      "customer_count": 90
+    }
+  ],
+  "new_verified_missing_sales": [
+    {
+      "target_tab": "CN_TAO",
+      "origin": "CN_TAO",
+      "input_name": "TIGER",
+      "resolved_sales": "TIGER",
+      "source_type": "verified_missing_active_sales",
+      "source_cell": "verified 2026-08-18 missing-owner audit",
+      "customer_count": 549
+    },
+    {
+      "target_tab": "CN_SHK_DCB",
+      "origin": "CN_SHK_DCB",
+      "input_name": "TOMSONG",
+      "resolved_sales": "TOMSONG",
+      "source_type": "verified_missing_active_sales",
+      "source_cell": "verified 2026-08-18 missing-owner audit",
+      "customer_count": 547
+    },
+    {
+      "target_tab": "TW",
+      "origin": "TW",
+      "input_name": "JACKY",
+      "resolved_sales": "JACKY",
+      "source_type": "verified_missing_active_sales",
+      "source_cell": "verified 2026-08-18 missing-owner audit",
+      "customer_count": 422
+    },
+    {
+      "target_tab": "TH",
+      "origin": "TH",
+      "input_name": "THATCHA",
+      "resolved_sales": "THATCHA",
+      "source_type": "verified_missing_active_sales",
+      "source_cell": "verified 2026-08-18 missing-owner audit",
+      "customer_count": 197
+    },
+    {
+      "target_tab": "VN_SGN_CMP",
+      "origin": "VN_SGN_CMP",
+      "input_name": "SGNIB",
+      "resolved_sales": "SGNIB",
+      "source_type": "verified_missing_active_sales",
+      "source_cell": "verified 2026-08-18 missing-owner audit",
+      "customer_count": 5
+    },
+    {
+      "target_tab": "JKT",
+      "origin": "JKT",
+      "input_name": "MUMPUNI",
+      "resolved_sales": "MUMPUNI",
+      "source_type": "verified_missing_active_sales",
+      "source_cell": "verified 2026-08-18 missing-owner audit",
+      "customer_count": 247
+    },
+    {
+      "target_tab": "IN",
+      "origin": "IN",
+      "input_name": "SHRIDHAR",
+      "resolved_sales": "SHRIDHAR",
+      "source_type": "verified_missing_active_sales",
+      "source_cell": "verified 2026-08-18 missing-owner audit",
+      "customer_count": 47
+    },
+    {
+      "target_tab": "IN",
+      "origin": "IN",
+      "input_name": "VIGNESH",
+      "resolved_sales": "VIGNESH",
+      "source_type": "verified_missing_active_sales",
+      "source_cell": "verified 2026-08-18 missing-owner audit",
+      "customer_count": 48
+    },
+    {
+      "target_tab": "BH",
+      "origin": "BH",
+      "input_name": "NELSON",
+      "resolved_sales": "NELSON",
+      "source_type": "verified_missing_active_sales",
+      "source_cell": "verified 2026-08-18 missing-owner audit",
+      "customer_count": 3
+    }
+  ]
+}

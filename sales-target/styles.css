@@ -97,6 +97,10 @@ table.dt .lst-status-캔슬{color:#d93025;font-weight:600}
 .detail-row td{padding:0;border-top:none}
 .detail-box{padding:10px 12px}
 .detail-box h4{font-size:12px;color:#5f6368;margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:.3px}
+.muted{color:#5f6368;font-size:12px;line-height:1.5}
+.owner-additions-stats{margin-bottom:6px;font-size:12px;font-weight:600;color:#3c4043}
+.owner-additions-list{margin:6px 0 0 0;padding-left:18px;line-height:1.45}
+.owner-additions-list li{font-size:12px;list-style-type:disc;margin:2px 0}
 .error-banner{background:#fce8e6;color:#a50e0e;padding:10px 14px;border-radius:6px;margin-bottom:12px;font-size:13px}
 .legend{display:flex;gap:14px;align-items:center;font-size:11px;color:#5f6368;margin-left:auto}
 .legend .swatch{display:inline-block;width:10px;height:10px;border-radius:2px;vertical-align:middle;margin-right:4px}
