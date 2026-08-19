@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-19T12:08:08",
+  "generated_at": "2026-08-19T14:33:29",
   "dataset": "20260818",
   "previous_dataset": null,
   "verified_missing_active_sales_count": 9,
@@ -10,6 +10,7 @@
       "origin": "CN_TAO",
       "input_name": "TIGER",
       "resolved_sales": "TIGER",
+      "sales_key": "TIGER",
       "source_type": "verified_missing_active_sales",
       "source_cell": "verified 2026-08-18 missing-owner audit",
       "customer_count": 549
@@ -19,6 +20,7 @@
       "origin": "CN_SHK_DCB",
       "input_name": "TOMSONG",
       "resolved_sales": "TOMSONG",
+      "sales_key": "TOMSONG",
       "source_type": "verified_missing_active_sales",
       "source_cell": "verified 2026-08-18 missing-owner audit",
       "customer_count": 547
@@ -28,6 +30,7 @@
       "origin": "TW",
       "input_name": "JACKY",
       "resolved_sales": "JACKY",
+      "sales_key": "JACKY",
       "source_type": "verified_missing_active_sales",
       "source_cell": "verified 2026-08-18 missing-owner audit",
       "customer_count": 422
@@ -37,6 +40,7 @@
       "origin": "TH",
       "input_name": "THATCHA",
       "resolved_sales": "THATCHA",
+      "sales_key": "THATCHA",
       "source_type": "verified_missing_active_sales",
       "source_cell": "verified 2026-08-18 missing-owner audit",
       "customer_count": 197
@@ -46,6 +50,7 @@
       "origin": "VN_SGN_CMP",
       "input_name": "SGNIB",
       "resolved_sales": "SGNIB",
+      "sales_key": "SGNIB",
       "source_type": "verified_missing_active_sales",
       "source_cell": "verified 2026-08-18 missing-owner audit",
       "customer_count": 5
@@ -55,6 +60,7 @@
       "origin": "JKT",
       "input_name": "MUMPUNI",
       "resolved_sales": "MUMPUNI",
+      "sales_key": "MUMPUNI",
       "source_type": "verified_missing_active_sales",
       "source_cell": "verified 2026-08-18 missing-owner audit",
       "customer_count": 247
@@ -64,6 +70,7 @@
       "origin": "IN",
       "input_name": "SHRIDHAR",
       "resolved_sales": "SHRIDHAR",
+      "sales_key": "SHRIDHAR",
       "source_type": "verified_missing_active_sales",
       "source_cell": "verified 2026-08-18 missing-owner audit",
       "customer_count": 47
@@ -73,6 +80,7 @@
       "origin": "IN",
       "input_name": "VIGNESH",
       "resolved_sales": "VIGNESH",
+      "sales_key": "VIGNESH",
       "source_type": "verified_missing_active_sales",
       "source_cell": "verified 2026-08-18 missing-owner audit",
       "customer_count": 48
@@ -82,6 +90,7 @@
       "origin": "BH",
       "input_name": "NELSON",
       "resolved_sales": "NELSON",
+      "sales_key": "NELSON",
       "source_type": "verified_missing_active_sales",
       "source_cell": "verified 2026-08-18 missing-owner audit",
       "customer_count": 3
@@ -114,6 +123,7 @@
       "origin": "CN_TAO",
       "input_name": "TIGER",
       "resolved_sales": "TIGER",
+      "sales_key": "TIGER",
       "source_type": "verified_missing_active_sales",
       "source_cell": "verified 2026-08-18 missing-owner audit",
       "customer_count": 549
@@ -123,6 +133,7 @@
       "origin": "CN_SHK_DCB",
       "input_name": "TOMSONG",
       "resolved_sales": "TOMSONG",
+      "sales_key": "TOMSONG",
       "source_type": "verified_missing_active_sales",
       "source_cell": "verified 2026-08-18 missing-owner audit",
       "customer_count": 547
@@ -132,6 +143,7 @@
       "origin": "TW",
       "input_name": "JACKY",
       "resolved_sales": "JACKY",
+      "sales_key": "JACKY",
       "source_type": "verified_missing_active_sales",
       "source_cell": "verified 2026-08-18 missing-owner audit",
       "customer_count": 422
@@ -141,6 +153,7 @@
       "origin": "TH",
       "input_name": "THATCHA",
       "resolved_sales": "THATCHA",
+      "sales_key": "THATCHA",
       "source_type": "verified_missing_active_sales",
       "source_cell": "verified 2026-08-18 missing-owner audit",
       "customer_count": 197
@@ -150,6 +163,7 @@
       "origin": "VN_SGN_CMP",
       "input_name": "SGNIB",
       "resolved_sales": "SGNIB",
+      "sales_key": "SGNIB",
       "source_type": "verified_missing_active_sales",
       "source_cell": "verified 2026-08-18 missing-owner audit",
       "customer_count": 5
@@ -159,6 +173,7 @@
       "origin": "JKT",
       "input_name": "MUMPUNI",
       "resolved_sales": "MUMPUNI",
+      "sales_key": "MUMPUNI",
       "source_type": "verified_missing_active_sales",
       "source_cell": "verified 2026-08-18 missing-owner audit",
       "customer_count": 247
@@ -168,6 +183,7 @@
       "origin": "IN",
       "input_name": "SHRIDHAR",
       "resolved_sales": "SHRIDHAR",
+      "sales_key": "SHRIDHAR",
       "source_type": "verified_missing_active_sales",
       "source_cell": "verified 2026-08-18 missing-owner audit",
       "customer_count": 47
@@ -177,6 +193,7 @@
       "origin": "IN",
       "input_name": "VIGNESH",
       "resolved_sales": "VIGNESH",
+      "sales_key": "VIGNESH",
       "source_type": "verified_missing_active_sales",
       "source_cell": "verified 2026-08-18 missing-owner audit",
       "customer_count": 48
@@ -186,6 +203,7 @@
       "origin": "BH",
       "input_name": "NELSON",
       "resolved_sales": "NELSON",
+      "sales_key": "NELSON",
       "source_type": "verified_missing_active_sales",
       "source_cell": "verified 2026-08-18 missing-owner audit",
       "customer_count": 3
