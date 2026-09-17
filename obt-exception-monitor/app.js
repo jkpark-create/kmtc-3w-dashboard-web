@@ -5372,10 +5372,9 @@ function weekToMonth(week) {
 }
 
 function weekToBsaWW(week) {
-  const month = weekToMonth(week);
-  if (!month) return "";
-  const index = weeksForMonth(month).indexOf(week);
-  return index >= 0 ? String(index + 1) : "";
+  // BSA WW is the continuous 4-4-5 fiscal-week number, matching the main
+  // dashboard and the canonical Integrated payload (for example Sep W5 = 39).
+  return weekToWW(week);
 }
 
 function weekToWW(week) {
