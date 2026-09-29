@@ -1219,6 +1219,7 @@ function normalizeSpaceRows(rows) {
       bookingTeu: toNumber(row.booking_teu),
       ownGapTeu: toNumber(row.own_gap_teu),
       priorUnusedBsaTeu: toNumber(row.prior_unused_bsa_teu),
+      priorCalls: Array.isArray(row.prior_calls) ? row.prior_calls : [],
       physicalUnusedTeu: toNumber(row.physical_unused_teu),
       reusableTeu: toNumber(row.reusable_teu),
       robOccupancy: toNumber(row.rob_occupancy),
@@ -1599,7 +1600,52 @@ function arrayMatchesFilter(values, key) {
   return values.some((value) => selected.includes(value));
 }
 
+// Port-wide proxy: history has origin/POL/destination grain, not voyage grain.
+// Use only observed port-week samples, never missing-as-zero or final-period fallback.
+function assessSpacePace(row) {
+  const latest = parseDataDate(state.raw?.data_date);
+  const offset = latest ? weekLeadOffset(row.weekStart, latest) : NaN;
+  if (!latest || offset < 1 || offset > 3 || !Number.isFinite(offset) || !row.priorCalls?.length) return null;
+  const snapshots = state.history?.snapshots || [];
+  const samples = snapshots.filter(snapshot => {
+    const date = parseDataDate(snapshot.data_date);
+    return date && date < latest && date.getDay() === latest.getDay()
+      && diffDays(date, latest) <= 91;
+  });
+  let expected = 0, booking = 0, bsa = 0, sampleCount = Infinity;
+  for (const call of row.priorCalls) {
+    if (!(call.bsa_teu > 0)) { booking += toNumber(call.booking_teu); continue; }
+    const ratios = [];
+    for (const snapshot of samples) {
+      const weeks = new Set(weeksForSnapshotOffsets(snapshot.data_date, [offset]));
+      let sampleBsa = 0, sampleBooking = 0;
+      for (const item of snapshot.routes || []) {
+        if (!weeks.has(item[1]) || String(item[0]).split('|')[1] !== call.port) continue;
+        sampleBooking += toNumber(item[2]);
+        sampleBsa += toNumber(item[6]);
+      }
+      if (sampleBsa > 0) ratios.push(sampleBooking / sampleBsa);
+    }
+    if (ratios.length < 3) return null;
+    sampleCount = Math.min(sampleCount, ratios.length);
+    expected += call.bsa_teu * ratios.reduce((a, b) => a + b, 0) / ratios.length;
+    booking += toNumber(call.booking_teu);
+    bsa += call.bsa_teu;
+  }
+  if (!bsa) return null;
+  return { currentRatio: booking / bsa, averageRatio: expected / bsa,
+    lagTeu: Math.max(0, expected - booking), sampleCount, offset };
+}
+
 function summarizeSpaceOpportunities(rows, period) {
+  const assessed = rows.filter(row => row.reusableTeu >= 30).map(row => ({ ...row, pace: assessSpacePace(row) }));
+  const unavailableCount = assessed.filter(row => !row.pace).length;
+  rows = assessed.filter(row => row.pace && row.pace.lagTeu > 1e-6);
+  const voyages = new Map();
+  rows.forEach(row => {
+    const key = [row.week, row.route, row.vesselCode, row.voyageNo, row.bound].join('|');
+    voyages.set(key, Math.max(voyages.get(key) || 0, row.reusableTeu));
+  });
   const weeklyMeta = Object.entries(state.spaceMeta?.coverageByWeek || {})
     .filter(([week, item]) => {
       if (period?.weekSet?.size) return period.weekSet.has(clean(item.weekStart));
@@ -1620,7 +1666,9 @@ function summarizeSpaceOpportunities(rows, period) {
   return {
     rows: [...rows].sort((a, b) => b.reusableTeu - a.reusableTeu || a.departureDate.localeCompare(b.departureDate)),
     count: rows.length,
-    reusableTeu: rows.reduce((sum, row) => sum + row.reusableTeu, 0),
+    reusableTeu: [...voyages.values()].reduce((sum, value) => sum + value, 0),
+    voyageCount: voyages.size,
+    unavailableCount,
     hiddenBySales: state.filters.sales !== "ALL",
     meta: selectedMeta
   };
@@ -4173,8 +4221,8 @@ function renderKpis(analysis) {
       note: space.hiddenBySales
         ? (state.lang === "en" ? "Salesperson BSA allocation unavailable" : "영업사원별 BSA 배분 기준 없음")
         : state.lang === "en"
-          ? `${fmt(space.count)} voyages · ROB match ${rpct(spaceCoverage)}`
-          : `${fmt(space.count)}항차 · ROB 매칭 ${rpct(spaceCoverage)}`,
+          ? `${fmt(space.count)} calls / ${fmt(space.voyageCount)} voyages · ROB match ${rpct(spaceCoverage)}`
+          : `${fmt(space.count)}건 / ${fmt(space.voyageCount)}항차 · ROB 매칭 ${rpct(spaceCoverage)}`,
       tone: space.count ? "warn" : "pos"
     },
     {
@@ -4227,7 +4275,7 @@ function renderKpis(analysis) {
 
 function renderSpaceOpportunities(space) {
   if (!els.spaceOpportunity) return;
-  if (!space || !space.rows.length) {
+  if (!space || space.hiddenBySales) {
     els.spaceOpportunity.innerHTML = "";
     els.spaceOpportunity.classList.add("hidden");
     return;
@@ -4235,17 +4283,19 @@ function renderSpaceOpportunities(space) {
   const en = state.lang === "en";
   const meta = space.meta || {};
   const coverage = toNumber(meta.matchCoverage);
-  const cards = space.rows.slice(0, 6).map((row) => `
+  const cards = space.rows.map((row) => `
     <article class="space-opportunity-card">
       <div class="space-opportunity-card-head">
         <strong>${escapeHtml(row.route)} ${escapeHtml(row.vesselCode)} / ${escapeHtml(row.voyageNo)}</strong>
-        <span>${fmt(row.reusableTeu)} TEU</span>
+        <span>${en ? "Current available" : "현재 가용"} ${fmt(row.reusableTeu)} TEU</span>
       </div>
       <div class="space-opportunity-flow">
         <b>${escapeHtml(row.previousPort)}</b><span>→</span><b>${escapeHtml(row.currentPort)}</b>
         <small>${escapeHtml(row.weekLabel || row.week)} · ${formatDataDate(row.departureDate)}</small>
       </div>
       <div class="space-opportunity-metrics">
+        <span>${en ? "Prior-port booking/BSA" : "이전 포트 부킹/BSA"} <b>${rpct(row.pace.currentRatio)}</b> / ${en ? "average" : "평균"} <b>${rpct(row.pace.averageRatio)}</b></span>
+        <span>${en ? "Behind average" : "평균대비 접수 부족"} <b>${fmt(row.pace.lagTeu)} TEU</b> · W+${row.pace.offset} · ${row.pace.sampleCount}${en ? " samples" : "회 표본"}</span>
         <span>${en ? "Prior BSA free" : "이전 BSA 미사용"} <b>${fmt(row.priorUnusedBsaTeu)}</b></span>
         <span>${en ? "Physical free" : "물리 여유"} <b>${fmt(row.physicalUnusedTeu)}</b></span>
         <span>${en ? "Current own gap" : "현재 자체 Gap"} <b>${fmt(row.ownGapTeu)}</b></span>
@@ -4258,14 +4308,15 @@ function renderSpaceOpportunities(space) {
   els.spaceOpportunity.innerHTML = `
     <div class="space-opportunity-head">
       <div>
-        <h3>${en ? "Previous-port BSA reuse opportunities" : "이전 포트 미사용 BSA 활용 기회"}</h3>
+        <h3>${en ? "Previous-port BSA underuse risk candidates" : "이전 포트 미사용 우려 BSA 활용 후보"}</h3>
         <p>${en
-          ? "One strongest later-port action per voyage; BSA and physical ROB capacity remain separate facts."
-          : "항차별 가장 큰 후속 포트 기회 1건만 표시하며, BSA 여유와 물리 ROB 여유를 분리해 판단합니다."}</p>
+          ? "All calls with ≥30 TEU currently available and booking/BSA below the prior 13-week same-weekday, same-lead-week average (at least 3 samples per prior port). Port-wide proxy, not a voyage forecast. Availability is current, not predicted final unused space; voyage totals use the maximum call."
+          : "현재 가용 30TEU 이상 중 이전 포트 부킹/BSA가 최근 13주 같은 요일·출항 잔여 주차 평균보다 낮은 모든 건입니다(포트별 최소 3회). 포트 전체 평균을 대용 지표로 사용하며, 가용량은 확정 미사용 예측이 아닌 현재 여유입니다. 합계는 항차별 최대값만 반영합니다."}</p>
       </div>
       <span>${sourceLabel} · ${en ? "match" : "매칭"} ${rpct(coverage)} (${fmt(meta.matchedGroups || 0)}/${fmt(meta.eligibleGroups || 0)})</span>
     </div>
-    <div class="space-opportunity-grid">${cards}</div>
+    <p>${en ? "Action calls" : "대응 후보"} ${fmt(space.count)} · ${en ? "Pace unavailable" : "속도 판단 불가"} ${fmt(space.unavailableCount || 0)}${en ? " calls (excluded)" : "건(제외)"}</p>
+    <div class="space-opportunity-grid">${cards || `<p>${en ? "No qualifying opportunities with sufficient pace evidence." : "속도 비교 근거와 가용량 기준을 충족하는 후보가 없습니다."}</p>`}</div>
   `;
   els.spaceOpportunity.classList.remove("hidden");
 }
@@ -5667,7 +5718,7 @@ function kpiHelp(key) {
     bsaUtil: "현재 선택된 주차/월 조건의 전체 BKG(fst)를 같은 기간 BSA TEU로 나눈 비율입니다.",
     paceRisk: "현재 선택 조건에서 확인이 필요한 Route 수입니다. BKG 진행 부족은 같은 W+시점/도착포트 기준보다 전체 BKG 성숙도가 낮은 구간이고, BSA속도 부족은 최근 일별 pickup으로 남은 BSA Gap을 채우기 어려운 구간입니다. 3W부족은 W+3/BSA 선행확보율이 기준보다 낮거나 절대 확보율이 낮은 구간입니다.",
     p1Routes: "오늘 먼저 원인을 확인해야 하는 P1 Route 수입니다. P1 조치 건수에는 구간 이슈와 화주 Action 후보가 함께 포함됩니다.",
-    spaceReuse: "이전 포트까지 누적된 미사용 OBT BSA와 현재 포트의 MAX ROB 물리 여유 중 작은 값입니다. 항차별 중복을 제거해 가장 큰 후속 포트 기회 1건만 합산하며, ROB 미매칭 구간은 0이 아니라 계산 제외로 처리합니다.",
+    spaceReuse: "이전 포트까지 누적된 미사용 OBT BSA와 현재 포트의 MAX ROB 물리 여유 중 작은 값입니다. 동일 시점 포트 평균보다 부킹이 늦고 현재 가용량이 30TEU 이상인 모든 후보를 표시하되 항차별 최대값만 합산하며, ROB 미매칭 구간은 0이 아니라 계산 제외로 처리합니다.",
     w3Teu: "shipper.w3_fst 기반 3주전 선행 부킹 TEU 합계입니다.",
     w3TeuNotCancel: "미래 3주전 선행 부킹에서 취소 전환분을 제외한 값입니다. 계산식: w3_fst − w3_canc_fst. 미래 주차에는 LST 실적이 아직 없어 0이 될 수 있으므로 Booking/FST 기준을 사용합니다.",
     w3Bsa: "3W Booking TEU를 같은 선택기간 BSA로 나눈 비율입니다.",
@@ -5680,7 +5731,7 @@ function kpiHelp(key) {
     bsaUtil: "Current total BKG (fst) divided by BSA TEU for the same selected week or month period.",
     paceRisk: "Number of routes that need checking under the current filters. BKG status means total BKG maturity is behind the same W+ stage and destination-port benchmark; BSA pace means recent BSA-gap pickup is unlikely to close the remaining BSA gap. W+3 low means W+3/BSA advance coverage is below the reference or absolutely low.",
     p1Routes: "Number of priority routes to check first today. P1 actions include both route issues and customer action candidates.",
-    spaceReuse: "The smaller of cumulative unused OBT BSA at prior ports and physical MAX ROB space at the current port. Only the strongest later-port candidate per voyage is counted; unmatched ROB rows are excluded rather than treated as zero.",
+    spaceReuse: "The smaller of cumulative unused OBT BSA at prior ports and physical MAX ROB space at the current port. All calls with slower same-stage port booking and at least 30 TEU currently available are shown; totals use the maximum per voyage; unmatched ROB rows are excluded rather than treated as zero.",
     w3Teu: "Sum of 3W advance-booked TEU from shipper.w3_fst.",
     w3TeuNotCancel: "Advance booking volume after removing cancellations. Formula: w3_fst − w3_canc_fst. Future W+3 weeks use the Booking/FST basis because LST actuals are not yet available.",
     w3Bsa: "3W booking TEU divided by BSA for the same selected period.",
