@@ -1637,64 +1637,63 @@ function assessSpacePace(row) {
     lagTeu: Math.max(0, expected - booking), sampleCount, offset };
 }
 
-// Assess all lane/weeks independently of physical ROB coverage. BSA residual
+// Assess all origin/voyage calls independently of physical ROB coverage. BSA residual
 // is an allocation risk, not confirmed vessel space or a final unused forecast.
 function buildBsaPaceRisks(period) {
-  const result = { rows: [], unavailableCount: 0, excludedSmall: 0 };
+  const result = { rows: [], unavailableCount: 0, excludedSmall: 0, missingVoyageData: !state.raw?.voyage_risk_calls };
   const latest = parseDataDate(state.raw?.data_date);
   if (!latest || state.filters.sales !== "ALL") return result;
-  const snapshots = (state.history?.snapshots || []).filter(snapshot => {
+  const weeks = new Set(periodWeeks(period));
+  const samples = (state.history?.snapshots || []).filter(snapshot => {
     const date = parseDataDate(snapshot.data_date);
     return date && date < latest && date.getDay() === latest.getDay() && diffDays(date, latest) <= 91;
   });
-  for (const week of periodWeeks(period)) {
-    const offset = weekLeadOffset(week, latest);
-    const scoped = { weeks: [week], weekSet: new Set([week]) };
-    const lanes = new Map();
-    for (const row of filterBsaForPeriod(scoped)) {
-      const lane = lanes.get(row.routeKey) || { ...row, bsaTeu: 0, bookingTeu: 0 };
-      lane.bsaTeu += row.bsaTeu;
-      lanes.set(row.routeKey, lane);
-    }
-    // Search must not remove customers from a lane's booking numerator.
-    for (const row of state.rows) {
-      if (row.week === week && lanes.has(row.routeKey)) lanes.get(row.routeKey).bookingTeu += row.teu;
-    }
-    const benchmarks = new Map();
-    if (offset >= 1 && offset <= 3) for (const snapshot of snapshots) {
-      const sampleWeeks = weeksForSnapshotOffsets(snapshot.data_date, [offset]);
-      for (const [key, sample] of aggregateHistoryRoutes(snapshot, sampleWeeks)) {
-        if (!(sample.bsaTeu > 0)) continue;
-        const rates = benchmarks.get(key) || [];
-        rates.push(sample.teu / sample.bsaTeu);
-        benchmarks.set(key, rates);
+  const benchmarkCache = new Map();
+  for (const fact of toRecordArray(state.raw?.voyage_risk_calls)) {
+    const week = clean(fact.week_start), origin = clean(fact.origin), port = clean(fact.port);
+    if (!weeks.has(week) || !matchesFilter(origin,"origin") || !matchesFilter(port,"pol")) continue;
+    const route = clean(fact.route), vesselCode = clean(fact.vessel_code), vesselName = clean(fact.vessel_name), voyageNo = clean(fact.voyage_no);
+    if (state.filters.query && ![origin,port,route,vesselCode,vesselName,voyageNo].join(' ').toLowerCase().includes(state.filters.query)) continue;
+    const bsaTeu = toNumber(fact.bsa_teu), bookingTeu = toNumber(fact.booking_teu);
+    const remainingTeu = Math.max(0,bsaTeu-bookingTeu), offset = weekLeadOffset(week,latest);
+    if (remainingTeu < 30) { result.excludedSmall++; continue; }
+    if (!(offset>=1 && offset<=3)) { result.unavailableCount++; continue; }
+    const cacheKey = `${offset}|${origin}|${port}`;
+    if (!benchmarkCache.has(cacheKey)) {
+      const rates=[];
+      for (const snapshot of samples) {
+        const sampleWeeks=new Set(weeksForSnapshotOffsets(snapshot.data_date,[offset]));
+        let bsa=0,booking=0;
+        for (const row of snapshot.routes || []) {
+          const dims=String(row[0]).split('|');
+          if (!sampleWeeks.has(row[1]) || dims[0]!==origin || dims[1]!==port) continue;
+          booking+=toNumber(row[2]); bsa+=toNumber(row[6]);
+        }
+        if (bsa>0) rates.push(booking/bsa);
       }
+      benchmarkCache.set(cacheKey,rates);
     }
-    for (const lane of lanes.values()) {
-      if (state.filters.query && ![lane.origin,lane.pol,lane.dest,lane.dst].join(' ').toLowerCase().includes(state.filters.query)) continue;
-      const remainingTeu = Math.max(0, lane.bsaTeu - lane.bookingTeu);
-      if (remainingTeu < 30) { result.excludedSmall++; continue; }
-      const rates = benchmarks.get(lane.routeKey) || [];
-      if (rates.length < 3) { result.unavailableCount++; continue; }
-      const averageRatio = rates.reduce((a,b) => a+b,0) / rates.length;
-      const currentRatio = lane.bookingTeu / lane.bsaTeu;
-      if (currentRatio + 1e-9 >= averageRatio) continue;
-      result.rows.push({ ...lane, week, offset, remainingTeu, averageRatio, currentRatio,
-        lagTeu: (averageRatio-currentRatio)*lane.bsaTeu, sampleCount: rates.length });
-    }
+    const rates=benchmarkCache.get(cacheKey);
+    if (rates.length<3) { result.unavailableCount++; continue; }
+    const averageRatio=rates.reduce((a,b)=>a+b,0)/rates.length, currentRatio=bookingTeu/bsaTeu;
+    if (currentRatio+1e-9>=averageRatio) continue;
+    result.rows.push({origin,pol:port,route,vesselCode,vesselName,voyageNo,bound:clean(fact.bound),
+      departureDate:clean(fact.departure_date),week,offset,bsaTeu,bookingTeu,remainingTeu,averageRatio,currentRatio,
+      lagTeu:(averageRatio-currentRatio)*bsaTeu,sampleCount:rates.length,
+      routeKey:[week,origin,port,route,vesselCode,voyageNo,clean(fact.bound)].join('|')});
   }
-  result.rows.sort((a,b) => b.lagTeu-a.lagTeu || b.remainingTeu-a.remainingTeu || a.routeKey.localeCompare(b.routeKey));
+  result.rows.sort((a,b)=>a.origin.localeCompare(b.origin) || a.pol.localeCompare(b.pol) || b.lagTeu-a.lagTeu || a.routeKey.localeCompare(b.routeKey));
   return result;
 }
 
 function renderBsaPaceRiskCards(risk) {
-  const en = state.lang === "en";
-  return risk.rows.map(row => `<article class="space-opportunity-card bsa-pace-risk-card">
-    <div class="space-opportunity-card-head"><strong>${escapeHtml(row.origin)} ${escapeHtml(row.pol)} → ${escapeHtml(row.dest)} ${escapeHtml(row.dst)}</strong><span>${en ? "BSA remaining" : "BSA 잔여"} ${fmt(row.remainingTeu)} TEU</span></div>
-    <div class="space-opportunity-flow"><b>W+${row.offset} · ${escapeHtml(row.week)}</b></div>
+  const en=state.lang==="en";
+  return risk.rows.map(row=>`<article class="space-opportunity-card bsa-pace-risk-card">
+    <div class="space-opportunity-card-head"><strong>${escapeHtml(row.origin)} ${escapeHtml(row.pol)} · ${escapeHtml(row.route)}</strong><span>${en ? "BSA remaining" : "BSA 잔여"} ${fmt(row.remainingTeu)} TEU</span></div>
+    <div class="space-opportunity-flow"><b>${escapeHtml(row.vesselName || row.vesselCode)}${row.vesselName ? ` (${escapeHtml(row.vesselCode)})` : ''} / ${escapeHtml(row.voyageNo)} ${escapeHtml(row.bound)}</b><small>W+${row.offset} · ${formatDataDate(row.departureDate)}</small></div>
     <div class="space-opportunity-metrics">
       <span>BKG / BSA <b>${fmt(row.bookingTeu)} / ${fmt(row.bsaTeu)} TEU</b></span>
-      <span>${en ? "Same-stage booking/BSA" : "동일 시점 부킹/BSA"} <b>${rpct(row.currentRatio)}</b> / ${en ? "average" : "평균"} <b>${rpct(row.averageRatio)}</b></span>
+      <span>${en ? "Booking/BSA · origin-port same-stage average" : "부킹/BSA · 선적지 동일시점 평균"} <b>${rpct(row.currentRatio)}</b> / <b>${rpct(row.averageRatio)}</b></span>
       <span>${en ? "Behind average" : "평균대비 접수 부족"} <b>${fmt(row.lagTeu)} TEU</b> · ${row.sampleCount}${en ? " samples" : "회 표본"}</span>
       <span>${en ? "Physical space: confirmation required" : "물리 선복: 별도 확인 필요"}</span>
     </div></article>`).join("");
@@ -4286,8 +4285,8 @@ function renderKpis(analysis) {
       note: space.hiddenBySales
         ? (state.lang === "en" ? "Salesperson BSA allocation unavailable" : "영업사원별 BSA 배분 기준 없음")
         : state.lang === "en"
-          ? `${fmt(space.risk?.rows.length || 0)} lane/weeks · physical reuse ${fmt(space.count)} calls`
-          : `${fmt(space.risk?.rows.length || 0)}개 구간·주차 · ROB 활용 후보 ${fmt(space.count)}건`,
+          ? `${fmt(space.risk?.rows.length || 0)} origin/voyage calls · physical reuse ${fmt(space.count)} calls`
+          : `${fmt(space.risk?.rows.length || 0)}개 선적지·항차 · ROB 활용 후보 ${fmt(space.count)}건`,
       tone: space.risk?.rows.length ? "warn" : "pos"
     },
     {
@@ -4374,10 +4373,10 @@ function renderSpaceOpportunities(space) {
   els.spaceOpportunity.innerHTML = `
     <div class="space-opportunity-head"><div>
       <h3>${en ? "BSA underuse risk · delayed bookings" : "BSA 미사용 우려 · 부킹 접수 지연"}</h3>
-      <p>${en ? "All origin/destination lane-weeks with at least 30 TEU BSA remaining and booking/BSA below the prior 13-week average at the same weekday and lead week (minimum 3 samples). ROB matching does not exclude risks. BSA remaining is not confirmed physical space or predicted final unused volume." : "BSA 잔여 30TEU 이상이고 최근 13주 같은 요일·출항 잔여 주차의 평균보다 부킹/BSA가 낮은 모든 선적지→도착지 구간·주차입니다(최소 3회 표본). ROB 미매칭도 포함합니다. BSA 잔여는 물리 가용 선복 또는 최종 미사용 예측량과 다릅니다."}</p>
-    </div><span>${en ? "Risk candidates" : "대응 후보"} ${fmt(risk.rows.length)}${en ? " lane/weeks" : "개 구간·주차"}</span></div>
+      <p>${en ? "Origin port × service × vessel × voyage × week, summed across all destinations. At least 30 TEU BSA residual and booking/BSA below the prior 13-week same-weekday/lead-week origin-port average (minimum 3 samples). Destination filters do not apply here. Service-level history is unavailable; physical space needs confirmation." : "선적지별 항로·선명(코드)·항차로 도착지 물량을 모두 합산합니다. BSA 잔여 30TEU 이상이며 최근 13주 같은 요일·출항 잔여 주차의 선적지 평균보다 부킹/BSA가 낮은 후보입니다(최소 3회 표본). 도착지 필터는 이 목록에 적용하지 않습니다. 항로별 과거 이력이 없어 선적지 평균을 사용하며, 물리 선복은 별도 확인합니다."}</p>
+    </div><span>${en ? "Risk candidates" : "대응 후보"} ${fmt(risk.rows.length)}${en ? " origin/voyage calls" : "개 선적지·항차"}</span></div>
     <p>${en ? "Insufficient pace samples" : "속도 표본 부족"} ${fmt(risk.unavailableCount)}${en ? " (excluded)" : "건(판단 제외)"}</p>
-    <div class="space-opportunity-grid">${renderBsaPaceRiskCards(risk) || `<p>${en ? "No qualifying lane/weeks." : "해당 조건을 충족하는 구간·주차가 없습니다."}</p>`}</div>
+    <div class="space-opportunity-grid">${risk.missingVoyageData ? `<p>${en ? "Voyage facts pending in source update." : "원천 갱신에서 항로·선명·항차 데이터 수신 대기 중입니다."}</p>` : renderBsaPaceRiskCards(risk) || `<p>${en ? "No qualifying origin/voyage calls." : "해당 조건을 충족하는 선적지·항차가 없습니다."}</p>`}</div>
     <details style="margin-top:16px"><summary>${en ? "Physical ROB reuse candidates (separate, not additive)" : "물리 ROB 활용 후보 상세(별도 지표·합산 제외)"} · ${fmt(space.count)}${en ? " calls" : "건"}</summary>
     <div class="space-opportunity-head">
       <div>
@@ -5791,7 +5790,7 @@ function kpiHelp(key) {
     bsaUtil: "현재 선택된 주차/월 조건의 전체 BKG(fst)를 같은 기간 BSA TEU로 나눈 비율입니다.",
     paceRisk: "현재 선택 조건에서 확인이 필요한 Route 수입니다. BKG 진행 부족은 같은 W+시점/도착포트 기준보다 전체 BKG 성숙도가 낮은 구간이고, BSA속도 부족은 최근 일별 pickup으로 남은 BSA Gap을 채우기 어려운 구간입니다. 3W부족은 W+3/BSA 선행확보율이 기준보다 낮거나 절대 확보율이 낮은 구간입니다.",
     p1Routes: "오늘 먼저 원인을 확인해야 하는 P1 Route 수입니다. P1 조치 건수에는 구간 이슈와 화주 Action 후보가 함께 포함됩니다.",
-    spaceReuse: "BSA 잔여가 30TEU 이상이고 최근 13주 동일 요일·출항 잔여 주차 평균보다 부킹/BSA가 낮은 선적지→도착지 구간·주차 수입니다. ROB 미매칭도 포함하며 물리 선복은 별도 확인합니다. 최소 3회 표본이 필요합니다.",
+    spaceReuse: "BSA 잔여가 30TEU 이상이고 최근 13주 동일 요일·출항 잔여 주차 평균보다 부킹/BSA가 낮은 선적지·항로·선명·항차 수입니다. ROB 미매칭도 포함하며 물리 선복은 별도 확인합니다. 최소 3회 표본이 필요합니다.",
     w3Teu: "shipper.w3_fst 기반 3주전 선행 부킹 TEU 합계입니다.",
     w3TeuNotCancel: "미래 3주전 선행 부킹에서 취소 전환분을 제외한 값입니다. 계산식: w3_fst − w3_canc_fst. 미래 주차에는 LST 실적이 아직 없어 0이 될 수 있으므로 Booking/FST 기준을 사용합니다.",
     w3Bsa: "3W Booking TEU를 같은 선택기간 BSA로 나눈 비율입니다.",
@@ -5804,7 +5803,7 @@ function kpiHelp(key) {
     bsaUtil: "Current total BKG (fst) divided by BSA TEU for the same selected week or month period.",
     paceRisk: "Number of routes that need checking under the current filters. BKG status means total BKG maturity is behind the same W+ stage and destination-port benchmark; BSA pace means recent BSA-gap pickup is unlikely to close the remaining BSA gap. W+3 low means W+3/BSA advance coverage is below the reference or absolutely low.",
     p1Routes: "Number of priority routes to check first today. P1 actions include both route issues and customer action candidates.",
-    spaceReuse: "Count of lane/weeks with at least 30 TEU BSA residual and booking/BSA below the prior 13-week same-weekday, same-lead-week average, with at least 3 samples. ROB matching is not required; physical space needs separate confirmation.",
+    spaceReuse: "Count of origin/voyage calls with at least 30 TEU BSA residual and booking/BSA below the prior 13-week same-weekday, same-lead-week average, with at least 3 samples. ROB matching is not required; physical space needs separate confirmation.",
     w3Teu: "Sum of 3W advance-booked TEU from shipper.w3_fst.",
     w3TeuNotCancel: "Advance booking volume after removing cancellations. Formula: w3_fst − w3_canc_fst. Future W+3 weeks use the Booking/FST basis because LST actuals are not yet available.",
     w3Bsa: "3W booking TEU divided by BSA for the same selected period.",
