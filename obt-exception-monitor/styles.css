@@ -549,6 +549,19 @@ select {
   font-weight: 900;
 }
 
+.bsa-pace-risk-card > summary { cursor: pointer; list-style: none; }
+.bsa-pace-risk-card > summary::-webkit-details-marker { display: none; }
+.bsa-pace-risk-card > summary:focus-visible { outline: 3px solid var(--primary, #1a73e8); outline-offset: 4px; border-radius: 4px; }
+.bsa-detail-toggle { display: block; margin-top: 10px; color: var(--primary, #1a73e8); font-size: 12px; }
+.bsa-destination-scroll { overflow-x: auto; margin-top: 12px; max-width: 100%; }
+.bsa-destination-table { width: 100%; min-width: 350px; font-size: 12px; border-collapse: collapse; }
+.bsa-destination-table caption { text-align: left; padding: 5px 0; }
+.bsa-destination-table th, .bsa-destination-table td { padding: 7px 5px; text-align: right; border-bottom: 1px solid #dde4ec; white-space: nowrap; }
+.bsa-destination-table th:first-child { text-align: left; }
+.bsa-destination-table tfoot { font-weight: 700; }
+.bsa-detail-note { margin: 8px 0 0; font-size: 11px; line-height: 1.5; color: var(--muted, #5f6368); }
+.bsa-pace-risk-card { min-width: 0; }
+
 .space-opportunity-flow {
   margin-top: 8px;
   font-size: 13px;

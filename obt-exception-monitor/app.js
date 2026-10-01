@@ -960,6 +960,9 @@ function guideHtmlEn() {
 async function loadData(force = false) {
   showLoading(true);
   try {
+    // Both inputs are required for a complete first query; overlap their IO.
+    if (force) DRIVE_FILE_CACHE.clear();
+    const historyPromise = loadHistory(force);
     let data = null;
     let loadedPath = "";
     if (OBTAuth.getToken() && DRIVE_CONFIG.mainFolderId) {
@@ -984,7 +987,7 @@ async function loadData(force = false) {
     state.bsaRows = normalizeBsaRows(toRecordArray(data.bsa));
     state.spaceRows = normalizeSpaceRows(toRecordArray(data.space_opportunity));
     state.spaceMeta = data.scope_source?.space_opportunity || {};
-    state.history = await loadHistory(force);
+    state.history = await historyPromise;
     state.months = Array.from(new Set(state.rows.map((row) => row.month))).sort();
 
     const targetMonth = defaultTargetMonth(data.data_date);
@@ -1649,12 +1652,20 @@ function buildBsaPaceRisks(period) {
     return date && date < latest && date.getDay() === latest.getDay() && diffDays(date, latest) <= 91;
   });
   const benchmarkCache = new Map();
+  const seenCalls = new Map();
   for (const fact of toRecordArray(state.raw?.voyage_risk_calls)) {
     const week = clean(fact.week_start), origin = clean(fact.origin), port = clean(fact.port);
     if (!weeks.has(week) || !matchesFilter(origin,"origin") || !matchesFilter(port,"pol")) continue;
     const route = clean(fact.route), vesselCode = clean(fact.vessel_code), vesselName = clean(fact.vessel_name), voyageNo = clean(fact.voyage_no);
     if (state.filters.query && ![origin,port,route,vesselCode,vesselName,voyageNo].join(' ').toLowerCase().includes(state.filters.query)) continue;
     const bsaTeu = toNumber(fact.bsa_teu), bookingTeu = toNumber(fact.booking_teu);
+    const callKey = JSON.stringify([week,origin,port,route,vesselCode,voyageNo,clean(fact.bound)]);
+    const callValue = JSON.stringify([bsaTeu,bookingTeu,fact.destinations ?? null]);
+    if (seenCalls.has(callKey)) {
+      if (seenCalls.get(callKey) !== callValue) return { ...result, rows: [], invalidVoyageData: true };
+      continue; // The same source call must never double its BSA or cards.
+    }
+    seenCalls.set(callKey,callValue);
     const remainingTeu = Math.max(0,bsaTeu-bookingTeu), offset = weekLeadOffset(week,latest);
     if (remainingTeu < 30) { result.excludedSmall++; continue; }
     if (!(offset>=1 && offset<=3)) { result.unavailableCount++; continue; }
@@ -1680,6 +1691,7 @@ function buildBsaPaceRisks(period) {
     result.rows.push({origin,pol:port,route,vesselCode,vesselName,voyageNo,bound:clean(fact.bound),
       departureDate:clean(fact.departure_date),week,offset,bsaTeu,bookingTeu,remainingTeu,averageRatio,currentRatio,
       lagTeu:(averageRatio-currentRatio)*bsaTeu,sampleCount:rates.length,
+      destinations:fact.destinations,destinationDetailVersion:fact.destination_detail_version,
       routeKey:[week,origin,port,route,vesselCode,voyageNo,clean(fact.bound)].join('|')});
   }
   result.rows.sort((a,b)=>a.origin.localeCompare(b.origin) || a.pol.localeCompare(b.pol) || b.lagTeu-a.lagTeu || a.routeKey.localeCompare(b.routeKey));
@@ -1688,15 +1700,38 @@ function buildBsaPaceRisks(period) {
 
 function renderBsaPaceRiskCards(risk) {
   const en=state.lang==="en";
-  return risk.rows.map(row=>`<article class="space-opportunity-card bsa-pace-risk-card">
-    <div class="space-opportunity-card-head"><strong>${escapeHtml(row.origin)} ${escapeHtml(row.pol)} · ${escapeHtml(row.route)}</strong><span>${en ? "BSA remaining" : "BSA 잔여"} ${fmt(row.remainingTeu)} TEU</span></div>
-    <div class="space-opportunity-flow"><b>${escapeHtml(row.vesselName || row.vesselCode)}${row.vesselName ? ` (${escapeHtml(row.vesselCode)})` : ''} / ${escapeHtml(row.voyageNo)} ${escapeHtml(row.bound)}</b><small>W+${row.offset} · ${formatDataDate(row.departureDate)}</small></div>
-    <div class="space-opportunity-metrics">
+  return risk.rows.map(row=>`<details class="space-opportunity-card bsa-pace-risk-card" data-voyage-key="${escapeAttr(row.routeKey)}">
+    <summary aria-label="${escapeAttr(`${row.origin} ${row.pol} ${row.route} ${row.vesselCode} ${row.voyageNo} ${en ? 'destination details' : '도착지 상세'}`)}">
+    <span class="space-opportunity-card-head"><strong>${escapeHtml(row.origin)} ${escapeHtml(row.pol)} · ${escapeHtml(row.route)}</strong><span>${en ? "BSA remaining" : "BSA 잔여"} ${fmt(row.remainingTeu)} TEU</span></span>
+    <span class="space-opportunity-flow"><b>${escapeHtml(row.vesselName || row.vesselCode)}${row.vesselName ? ` (${escapeHtml(row.vesselCode)})` : ''} / ${escapeHtml(row.voyageNo)} ${escapeHtml(row.bound)}</b><small>W+${row.offset} · ${formatDataDate(row.departureDate)}</small></span>
+    <span class="space-opportunity-metrics">
       <span>BKG / BSA <b>${fmt(row.bookingTeu)} / ${fmt(row.bsaTeu)} TEU</b></span>
       <span>${en ? "Booking/BSA · origin-port same-stage average" : "부킹/BSA · 선적지 동일시점 평균"} <b>${rpct(row.currentRatio)}</b> / <b>${rpct(row.averageRatio)}</b></span>
       <span>${en ? "Behind average" : "평균대비 접수 부족"} <b>${fmt(row.lagTeu)} TEU</b> · ${row.sampleCount}${en ? " samples" : "회 표본"}</span>
       <span>${en ? "Physical space: confirmation required" : "물리 선복: 별도 확인 필요"}</span>
-    </div></article>`).join("");
+    </span><span class="bsa-detail-toggle">${en ? "Destination details · open / close" : "도착지별 상세 · 펼치기 / 닫기"}</span></summary>
+    ${renderVoyageDestinationDetails(row,en)}</details>`).join("");
+}
+
+function voyageDestinationDetails(row) {
+  if (row.destinationDetailVersion !== 1 || !Array.isArray(row.destinations) || !row.destinations.length) return { available:false };
+  const seen = new Set(); let bsa=0,booking=0;
+  for (const destination of row.destinations) {
+    const key=JSON.stringify([destination.dest,destination.port]);
+    if (seen.has(key) || !Number.isFinite(Number(destination.bsa_teu)) || !Number.isFinite(Number(destination.booking_teu))) return { available:false, mismatch:true };
+    seen.add(key); bsa+=Number(destination.bsa_teu); booking+=Number(destination.booking_teu);
+  }
+  if (Math.abs(bsa-row.bsaTeu)>1e-6 || Math.abs(booking-row.bookingTeu)>1e-6) return { available:false, mismatch:true };
+  return { available:true, rows:row.destinations, bsa,booking,remaining:bsa-booking };
+}
+
+function renderVoyageDestinationDetails(row,en) {
+  const detail=voyageDestinationDetails(row);
+  if (!detail.available) return `<p class="bsa-detail-note">${detail.mismatch
+    ? (en ? "Destination totals do not match the voyage. Refresh the source." : "도착지 합계가 항차 총계와 일치하지 않습니다. 원천 갱신이 필요합니다.")
+    : (en ? "Destination details will be available after the source update." : "원천 갱신 후 도착지 상세를 제공할 수 있습니다.")}</p>`;
+  const rows=detail.rows.map(destination=>{const bsa=Number(destination.bsa_teu),booking=Number(destination.booking_teu);return `<tr><th scope="row">${escapeHtml(destination.dest || '-')} ${escapeHtml(destination.port || '-')}</th><td>${fmt(bsa)}</td><td>${fmt(booking)}</td><td>${bsa>0?rpct(booking/bsa):'-'}</td><td>${fmt(bsa-booking)}</td></tr>`}).join('');
+  return `<div class="bsa-destination-scroll"><table class="bsa-destination-table"><caption>${en ? 'All destinations on this voyage · TEU' : '동일 항차의 모든 도착지 합계 · TEU'}</caption><thead><tr><th scope="col">${en?'Destination':'도착지'}</th><th scope="col">BSA</th><th scope="col">${en?'Booking':'부킹'}</th><th scope="col">${en?'Booking/BSA':'달성률'}</th><th scope="col">${en?'Remaining / excess':'잔여 / 초과'}</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><th scope="row">${en?'Voyage total':'항차 총계'}</th><td>${fmt(detail.bsa)}</td><td>${fmt(detail.booking)}</td><td>${rpct(detail.booking/detail.bsa)}</td><td>${fmt(detail.remaining)}</td></tr></tfoot></table></div><p class="bsa-detail-note">${en?'Negative remaining means bookings exceed BSA. Signed values reconcile to the voyage total.':'잔여가 음수이면 BSA 초과 부킹입니다. 도착지별 증감을 합산하면 항차 총계와 일치합니다.'}</p>`;
 }
 
 function summarizeSpaceOpportunities(rows, period) {
@@ -4376,7 +4411,7 @@ function renderSpaceOpportunities(space) {
       <p>${en ? "Origin port × service × vessel × voyage × week, summed across all destinations. At least 30 TEU BSA residual and booking/BSA below the prior 13-week same-weekday/lead-week origin-port average (minimum 3 samples). Destination filters do not apply here. Service-level history is unavailable; physical space needs confirmation." : "선적지별 항로·선명(코드)·항차로 도착지 물량을 모두 합산합니다. BSA 잔여 30TEU 이상이며 최근 13주 같은 요일·출항 잔여 주차의 선적지 평균보다 부킹/BSA가 낮은 후보입니다(최소 3회 표본). 도착지 필터는 이 목록에 적용하지 않습니다. 항로별 과거 이력이 없어 선적지 평균을 사용하며, 물리 선복은 별도 확인합니다."}</p>
     </div><span>${en ? "Risk candidates" : "대응 후보"} ${fmt(risk.rows.length)}${en ? " origin/voyage calls" : "개 선적지·항차"}</span></div>
     <p>${en ? "Insufficient pace samples" : "속도 표본 부족"} ${fmt(risk.unavailableCount)}${en ? " (excluded)" : "건(판단 제외)"}</p>
-    <div class="space-opportunity-grid">${risk.missingVoyageData ? `<p>${en ? "Voyage facts pending in source update." : "원천 갱신에서 항로·선명·항차 데이터 수신 대기 중입니다."}</p>` : renderBsaPaceRiskCards(risk) || `<p>${en ? "No qualifying origin/voyage calls." : "해당 조건을 충족하는 선적지·항차가 없습니다."}</p>`}</div>
+    <div class="space-opportunity-grid" data-card-grain="origin-service-vessel-voyage">${risk.invalidVoyageData ? `<p>${en ? "Conflicting voyage totals. Refresh the source." : "동일 항차 총계가 중복·불일치합니다. 원천 갱신이 필요합니다."}</p>` : risk.missingVoyageData ? `<p>${en ? "Voyage facts pending in source update." : "원천 갱신에서 항로·선명·항차 데이터 수신 대기 중입니다."}</p>` : renderBsaPaceRiskCards(risk) || `<p>${en ? "No qualifying origin/voyage calls." : "해당 조건을 충족하는 선적지·항차가 없습니다."}</p>`}</div>
     <details style="margin-top:16px"><summary>${en ? "Physical ROB reuse candidates (separate, not additive)" : "물리 ROB 활용 후보 상세(별도 지표·합산 제외)"} · ${fmt(space.count)}${en ? " calls" : "건"}</summary>
     <div class="space-opportunity-head">
       <div>
