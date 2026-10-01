@@ -511,18 +511,17 @@ function expandCompactData(data) {
     const rows = packed.r || packed.rows;
     const dicts = packed.d || packed.dicts || {};
     if (!Array.isArray(columns) || !Array.isArray(rows)) return;
+    const columnDicts = columns.map(key => Array.isArray(dicts[key]) ? dicts[key] : null);
     data[section] = rows.map(row => {
       const out = {};
-      columns.forEach((key, idx) => {
-        if (idx < row.length && row[idx] !== null && row[idx] !== undefined) {
-          const dict = dicts[key];
-          let value = row[idx];
-          if (Array.isArray(dict) && Number.isInteger(value) && value >= 0 && value < dict.length) {
-            value = dict[value];
-          }
-          out[key] = value;
-        }
-      });
+      const limit = Math.min(columns.length, row.length);
+      for (let idx = 0; idx < limit; idx++) {
+        if (!(idx in columns) || row[idx] === null || row[idx] === undefined) continue;
+        const key = columns[idx], dict = columnDicts[idx];
+        let value = row[idx];
+        if (dict && Number.isInteger(value) && value >= 0 && value < dict.length) value = dict[value];
+        out[key] = value;
+      }
       return out;
     });
   });
@@ -541,6 +540,7 @@ function normalizeMetricKeys(data) {
     w1_norm_fst: 'w1_norm_lst',
     wos_norm_fst: 'wos_norm_lst'
   };
+  const renameEntries = Object.entries(renameMap);
   ['monthly', 'weekly', 'shipper'].forEach(section => {
     (data[section] || []).forEach(row => {
       if (row.week !== undefined && row.week_start_date === undefined) row.week_start_date = row.week;
@@ -549,7 +549,7 @@ function normalizeMetricKeys(data) {
       if (row.route_hi_fst === undefined && row.route_hi_bl !== undefined && row.fst !== undefined) {
         row.route_hi_fst = (row.route_hi_bl || 0) > 0 ? (row.fst || 0) : 0;
       }
-      Object.entries(renameMap).forEach(([oldKey, newKey]) => {
+      renameEntries.forEach(([oldKey, newKey]) => {
         if (Object.prototype.hasOwnProperty.call(row, oldKey)) {
           if (!Object.prototype.hasOwnProperty.call(row, newKey)) row[newKey] = row[oldKey];
           delete row[oldKey];
