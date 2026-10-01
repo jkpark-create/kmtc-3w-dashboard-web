@@ -983,8 +983,8 @@ async function loadData(force = false) {
 
     state.raw = data;
     state.loadedPath = loadedPath;
-    state.rows = normalizeRows(toRecordArray(data.shipper));
-    state.bsaRows = normalizeBsaRows(toRecordArray(data.bsa));
+    state.rows = normalizeRows(toTeamRecordArray(data.shipper, "OBT"));
+    state.bsaRows = normalizeBsaRows(toTeamRecordArray(data.bsa, "OBT"));
     state.spaceRows = normalizeSpaceRows(toRecordArray(data.space_opportunity));
     state.spaceMeta = data.scope_source?.space_opportunity || {};
     state.history = await historyPromise;
@@ -1025,6 +1025,24 @@ async function loadHistory(force = false) {
     }
   }
   return null;
+}
+
+function toTeamRecordArray(value, team) {
+  // Filter compact rows before allocating records; legacy formats keep the existing decoder.
+  if (!value || !Array.isArray(value.c) || !Array.isArray(value.r)) return toRecordArray(value);
+  const teamColumns = value.c.map((column, index) => String(column || "").trim() === "team" ? index : -1).filter(index => index >= 0);
+  if (teamColumns.length !== 1) return toRecordArray(value);
+  const index = teamColumns[0];
+  const dicts = value.d && typeof value.d === "object" ? value.d : value.dicts && typeof value.dicts === "object" ? value.dicts : {};
+  const dictionary = dicts.team;
+  const rows = value.r.filter(row => {
+    if (isRecord(row)) return row.team === team;
+    if (!Array.isArray(row)) return false;
+    let code = row[index];
+    if (Array.isArray(dictionary) && Number.isInteger(code) && code >= 0 && code < dictionary.length) code = dictionary[code];
+    return code === team;
+  });
+  return rowsToRecords(rows, value.c, dicts);
 }
 
 function toRecordArray(value) {
