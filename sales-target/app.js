@@ -28,7 +28,7 @@ const COUNTRY_OF_PORT = (() => {
 })();
 const ALL_WHITELIST_PORTS = WHITELIST_ORIGINS.flatMap(c => c.ports);
 const ORIGIN_START_QUARTER = { JP: 'q2' };
-const QUARTER_RANK = { q1: 1, q2: 2, q3: 3 };
+const QUARTER_RANK = { q1: 1, q2: 2, q3: 3, q4: 4 };
 
 const STATE = {
   index: null,
@@ -146,7 +146,7 @@ const I18N = {
       w3bkgCnt: 'WOS-3 BKG건', w3share: '3주전 부킹 비중',
       fstTeu: '부킹시 TEU', lstTeu: 'LST TEU', w3fst: 'WOS-3 부킹시', w3lst: 'WOS-3 LST',
       lstRate: '실선적률(W3)', hiShare: '고수익 비중(W3)', cm1: 'CM1',
-      bkgNo: 'BKG_NO', month: '월', polPod: 'POL→POD', vslVoy: 'VSL/VOY',
+      bkgNo: 'BKG / B/L', month: '월', polPod: 'POL→POD', vslVoy: 'VSL/VOY',
       booking: 'Booking', wos: 'WOS', hi: '고수익', status: '상태', cm1PerTeu: 'CM1/TEU',
       totalLabel: '합계',
     },
@@ -211,7 +211,7 @@ const I18N = {
       w3bkgCnt: 'WOS-3 BKG', w3share: 'WOS-3 share',
       fstTeu: 'Booked TEU', lstTeu: 'LST TEU', w3fst: 'WOS-3 Booked', w3lst: 'WOS-3 LST',
       lstRate: 'LFT% (W3)', hiShare: 'Hi-Profit% (W3)', cm1: 'CM1',
-      bkgNo: 'BKG_NO', month: 'Month', polPod: 'POL→POD', vslVoy: 'VSL/VOY',
+      bkgNo: 'BKG / B/L', month: 'Month', polPod: 'POL→POD', vslVoy: 'VSL/VOY',
       booking: 'Booking', wos: 'WOS', hi: 'Hi', status: 'Status', cm1PerTeu: 'CM1/TEU',
       totalLabel: 'Total',
     },
@@ -273,6 +273,7 @@ const QUARTER_MONTHS = {
   q1: ['202601', '202602', '202603'],
   q2: ['202604', '202605', '202606'],
   q3: ['202607', '202608', '202609'],
+  q4: ['202610', '202611', '202612'],
 };
 
 function performKeyForQuarter(q) {
@@ -285,6 +286,10 @@ function performanceLabelForQuarter(q) {
 }
 
 function updatePerformanceLabels(q) {
+  const notice = document.getElementById('targetAvailability');
+  if (notice) notice.textContent = ['q3','q4'].includes(q)
+    ? 'Q3/Q4 목표 미제공 · 실적은 선택 기간 기준 / Q3/Q4 targets unavailable · Performance uses selected period' : '';
+
   document.querySelectorAll('[data-quarter-performance-label]').forEach(el => {
     el.textContent = performanceLabelForQuarter(q);
   });
@@ -377,6 +382,20 @@ function normalLstTeu(b) {
   if (Object.prototype.hasOwnProperty.call(b, 'norm_lst_teu')) return Number(b.norm_lst_teu) || 0;
   const status = String(b.lst_status || '').trim();
   return status === 'Normal' ? (b.lst_teu || 0) : 0;
+}
+function wosNormalLstTeu(b) {
+  if (Object.prototype.hasOwnProperty.call(b, 'wos_norm_lst_teu')) return Number(b.wos_norm_lst_teu) || 0;
+  return normalLstTeu(b);
+}
+function isBookingMetricRow(b) {
+  return String(b.performance_metric_kind || '').trim() !== 'bl';
+}
+function nativeShipmentId(b) {
+  const valid = value => value && String(value).trim() !== '-' ? String(value).trim() : '';
+  return valid(b.bkg_no) || valid(b.bl_no) || '';
+}
+function shipmentLineageTitle(b) {
+  return b.bl_no ? 'B/L ' + b.bl_no + (b.related_booking_no ? '; related Booking ' + b.related_booking_no : '') : 'Booking ' + (b.bkg_no || '');
 }
 function normalCm1(b) {
   if (Object.prototype.hasOwnProperty.call(b, 'norm_cm1')) return Number(b.norm_cm1) || 0;
@@ -554,6 +573,12 @@ async function init() {
       loadJson('manifest.json'),
       loadJson('base2025.json').catch(() => null),  // optional: filter-linked '25/Target columns
     ]);
+    // The audited workbook supplies Q1/Q2 only; Q3 currently copies Q2.
+    // Delete unsupported quarter objects so Number(null) cannot invent 0 targets.
+    (index.rows || []).forEach(row => Object.values(row.kpi || {}).forEach(kpi => {
+      delete kpi.q3;
+      delete kpi.q4;
+    }));
     STATE.index = index;
     STATE.manifest = manifest;
     STATE.base2025 = base2025 && base2025.base ? base2025.base : null;
@@ -665,8 +690,14 @@ function readUrlParams() {
 
 function applyInitialParams() {
   const params = STATE.initialUrlParams || {};
-  if (params.quarter) STATE.filters.quarter = params.quarter;
-  if (params.month) STATE.filters.month = params.month;
+  if (Object.hasOwn(QUARTER_MONTHS, params.quarter)) STATE.filters.quarter = params.quarter;
+  if (/^2026(0[1-9]|1[0-2])$/.test(params.month || '')) {
+    STATE.filters.quarter = 'q' + Math.ceil(Number(params.month.slice(4)) / 3);
+    STATE.filters.month = params.month;
+  } else if (params.month && params.month !== 'ALL') {
+    showError('2026 기간만 지원 / Only 2026 periods are supported');
+    STATE.filters.month = 'ALL';
+  }
   if (params.grade) {
     // Old links may pass A/B/C/D individually; collapse to AB/CD.
     const g = params.grade.toUpperCase();
@@ -696,6 +727,7 @@ function applyInitialParams() {
   if (destPortList.length) STATE.filters.destPorts = destPortList;
   if (params.view && ['summary', 'drill', 'pivot'].includes(params.view)) STATE.view = params.view;
   document.getElementById('fQuarter').value = STATE.filters.quarter;
+  refreshMonthOptions();
   document.getElementById('fMonth').value = STATE.filters.month;
   document.getElementById('fGrade').value = STATE.filters.grade;
   document.getElementById('fProfit').value = STATE.filters.profit;
@@ -1657,7 +1689,7 @@ function detailedCardValues(allBookings, allBsaAllocations, summaryRows, q) {
   const shippers = new Set(countBookings.map(b => b.shipper_no || b.shipper_name).filter(Boolean));
   const totalFst = kpiBookings.reduce((s, b) => s + (b.fst_teu || 0), 0);
   const w3Fst = kpiBookings.reduce((s, b) => s + (b.is_w3 ? (b.fst_teu || 0) : 0), 0);
-  const w3Lst = kpiBookings.reduce((s, b) => s + (b.is_w3 ? normalLstTeu(b) : 0), 0);
+  const w3Lst = kpiBookings.reduce((s, b) => s + (b.is_w3 ? wosNormalLstTeu(b) : 0), 0);
   const w3HiFst = kpiBookings.reduce((s, b) => s + (b.is_w3 && routeHighFlag(b) ? (b.fst_teu || 0) : 0), 0);
 
   // Card targets = volume-weighted blend of each matched salesperson's target.
@@ -1949,7 +1981,7 @@ function detailedSummaryRows(displayRows, targetRows, allBookings, allBsaAllocat
     if (!rowCountBookings.length && !rowKpiBookings.length && !rowBsaAllocations.length) return null;
 
     const w3Fst = rowKpiBookings.reduce((s, b) => s + (b.is_w3 ? (b.fst_teu || 0) : 0), 0);
-    const w3Lst = rowKpiBookings.reduce((s, b) => s + (b.is_w3 ? normalLstTeu(b) : 0), 0);
+    const w3Lst = rowKpiBookings.reduce((s, b) => s + (b.is_w3 ? wosNormalLstTeu(b) : 0), 0);
     const w3HiFst = rowKpiBookings.reduce((s, b) => s + (b.is_w3 && routeHighFlag(b) ? (b.fst_teu || 0) : 0), 0);
     const allocatedBsa = sumAllocatedBsa(rowBsaAllocations);
     const acTotal = uniqueShipperCount(rowCountBookings, false);
@@ -2321,15 +2353,15 @@ function aggregateShippers(bookings, shipperBsa, scopeAllocations) {
       });
     }
     const s = map.get(key);
-    s.bkg_count++;
-    s.bkg_nos.add(b.bkg_no);
+    if (isBookingMetricRow(b)) s.bkg_count++;
+    if (isBookingMetricRow(b) && b.bkg_no) s.bkg_nos.add(b.bkg_no);
     s.fst_teu += b.fst_teu || 0;
     s.lst_teu += normalLstTeu(b);
     s.cm1 += normalCm1(b);
     if (b.is_w3) {
-      s.w3_bkg_nos.add(b.bkg_no);
+      if (isBookingMetricRow(b) && b.bkg_no) s.w3_bkg_nos.add(b.bkg_no);
       s.w3_fst += b.fst_teu || 0;
-      s.w3_lst += normalLstTeu(b);
+      s.w3_lst += wosNormalLstTeu(b);
       if (routeHighFlag(b)) s.hi_w3_fst += b.fst_teu || 0;
     }
     if (b.is_cancel) s.cancel_teu += b.fst_teu || 0;
@@ -2550,7 +2582,7 @@ function buildFlatBkgTable(bookings) {
     const vsl = `${escapeHtml(b.vsl || b.lst_vsl || '')}/${escapeHtml(b.voy || b.lst_voy || '')}`;
     const statusClass = (b.is_cancel ? 'lst-status-캔슬' : (b.is_lifted ? 'lst-status-실선적' : ''));
     h += `<tr>
-      <td><span class="bkg-no">${escapeHtml(b.bkg_no)}</span></td>
+      <td><span class="bkg-no" title="${escapeHtml(shipmentLineageTitle(b))}">${escapeHtml(nativeShipmentId(b))}</span></td>
       <td class="txt">${escapeHtml(displayOrigin(b.__origin))}</td>
       <td class="txt">${escapeHtml(b.__salesman || '')}</td>
       <td>${escapeHtml(b.__yyyymm ? formatMonth(b.__yyyymm) : '')}</td>
@@ -2599,7 +2631,7 @@ function attachAllBkgPanelHandlers(bookings, scopeKey) {
 
 function exportBkgListAsCsv(bookings, filename) {
   const headers = [
-    'BKG_NO','origin','salesman','yyyymm','shipper_no','shipper_name','grade',
+    'BKG_NO','BL_NO','RELATED_BKG_NO','PERFORMANCE_METRIC_KIND','SOURCE_SALESMAN','WOS_NORM_LST_TEU','origin','salesman','yyyymm','shipper_no','shipper_name','grade',
     'pol','pod','dly_plc','vsl','voy','lst_vsl','lst_voy','lst_route',
     'booking_date','booking_schedule','cancel_date','week_start','lead_time_bkg_sche',
     'fst_teu','lst_teu','norm_lst_teu','cm1','norm_cm1','cm1_per_teu','is_w3','is_hi','is_route_hi','is_lifted','is_cancel','lst_status'
@@ -2607,7 +2639,7 @@ function exportBkgListAsCsv(bookings, filename) {
   const lines = [headers.join(',')];
   bookings.forEach(b => {
     const row = [
-      b.bkg_no, b.__origin, b.__salesman, b.__yyyymm, b.shipper_no, b.shipper_name, b.grade,
+      b.bkg_no, b.bl_no || '', b.related_booking_no || '', b.performance_metric_kind || '', b.source_salesman || '', wosNormalLstTeu(b), b.__origin, b.__salesman, b.__yyyymm, b.shipper_no, b.shipper_name, b.grade,
       b.pol, b.pod, b.dly_plc, b.vsl, b.voy, b.lst_vsl, b.lst_voy, b.lst_route,
       b.booking_date, b.booking_schedule, b.cancel_date, b.week_start_date, b.lead_time_bkg_sche,
       b.fst_teu, b.lst_teu, normalLstTeu(b), b.cm1, normalCm1(b), b.cm1_per_teu,
@@ -2647,7 +2679,7 @@ function renderBkgDetail(shipperKey, allBookings) {
     const vsl = `${escapeHtml(b.vsl || b.lst_vsl || '')}/${escapeHtml(b.voy || b.lst_voy || '')}`;
     const statusClass = (b.is_cancel ? 'lst-status-캔슬' : (b.is_lifted ? 'lst-status-실선적' : ''));
     h += `<tr>
-      <td><span class="bkg-no">${escapeHtml(b.bkg_no)}</span></td>
+      <td><span class="bkg-no" title="${escapeHtml(shipmentLineageTitle(b))}">${escapeHtml(nativeShipmentId(b))}</span></td>
       <td class="txt">${route}</td>
       <td class="txt">${vsl}</td>
       <td>${escapeHtml(fmtBookingDate(b.booking_date))}</td>
@@ -2800,12 +2832,12 @@ function pivotAggregate(rows, metric) {
     init.lst += normalLstTeu(b);
     if (b.is_w3) {
       init.w3_fst += b.fst_teu || 0;
-      init.w3_lst += normalLstTeu(b);
+      init.w3_lst += wosNormalLstTeu(b);
       if (routeHighFlag(b)) init.w3_hi_fst += b.fst_teu || 0;
     }
     if (b.is_cancel) init.cancel += b.fst_teu || 0;
-    init.bkg_count++;
-    if (b.bkg_no) init.bkg_no_set.add(b.bkg_no);
+    if (isBookingMetricRow(b)) init.bkg_count++;
+    if (isBookingMetricRow(b) && b.bkg_no) init.bkg_no_set.add(b.bkg_no);
     if (b.shipper_no || b.shipper_name) init.shipper_set.add(b.shipper_no || b.shipper_name);
     init.cm1 += normalCm1(b);
   });

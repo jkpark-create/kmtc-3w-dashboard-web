@@ -200,7 +200,7 @@ let gToken = null, gUser = null, DATA = null;
 
 // Sales-target summary (loaded best-effort from its Google Drive folder)
 // Used by Tab 2 / bySales table to overlay Target / Performance / GAP next to each salesperson.
-const SALES_TARGET = { byName: new Map(), loaded: false, dataDate: null };
+const SALES_TARGET = { byName: new Map(), byIdentity: new Map(), loaded: false, dataDate: null };
 async function loadSalesTargetSummary() {
   try {
     let json = null;
@@ -212,12 +212,17 @@ async function loadSalesTargetSummary() {
       json = response.ok ? await response.json() : null;
     }
       if (!json || !Array.isArray(json.rows)) return;
+      SALES_TARGET.byName.clear();
+      SALES_TARGET.byIdentity.clear();
       json.rows.forEach(row => {
-        if (row.row_type !== 'SALES') return;
-        const existing = SALES_TARGET.byName.get(row.name);
-        if (!existing || (row.accounts?.total || 0) > (existing.accounts?.total || 0)) {
-          SALES_TARGET.byName.set(row.name, row);
-        }
+        if (row.row_type !== 'SALES' || !row.name || !row.tab) return;
+        const key = JSON.stringify([row.tab, row.name]);
+        const bucket = SALES_TARGET.byIdentity.get(key) || [];
+        bucket.push(row);
+        SALES_TARGET.byIdentity.set(key, bucket);
+        const named = SALES_TARGET.byName.get(row.name) || [];
+        named.push(row);
+        SALES_TARGET.byName.set(row.name, named);
       });
       SALES_TARGET.loaded = true;
       SALES_TARGET.dataDate = json.data_date;
@@ -2369,7 +2374,7 @@ function renderShipperTable(month) {
   const tl=rows.reduce((s,r)=>s+r.cm1l,0), tct=tl>0?tc/tl:0;
   h += `<tr class="total"><td class="lbl shipper-col">${L('합계','Total')}</td><td></td><td></td><td>${fmt(tb)}</td><td>${fmt(ts)}</td><td>${pct(ts,tb)}</td>`;
   h += `<td>${fmt(th2)}</td><td>${pct(th2,tb)}</td><td>${fmt(thShip)}</td><td>${pct(thShip,th2)}</td><td>${fmt(Math.round(tc))}</td><td>${fmt(Math.round(tct))}</td><td class="basis-col">${basis ? fmtBasisCm1Teu(basis.cm1, basis.lst) : '-'}</td>`;
-  if (hasTargets) h += `<td colspan="4" style="text-align:center"><a class="tgt-link" href="sales-target/?quarter=${quarter}" target="_blank" rel="noopener">${L('전체 목표 화면','Open Target Screen')} ↗</a></td>`;
+  if (hasTargets) h += `<td colspan="4" style="text-align:center"><a class="tgt-link" href="sales-target/?quarter=${quarter || ''}&month=${encodeURIComponent(month || '')}" target="_blank" rel="noopener">${L('전체 목표 화면','Open Target Screen')} ↗</a></td>`;
   h += '</tr>';
 
   rows.forEach(r => {
@@ -2377,7 +2382,7 @@ function renderShipperTable(month) {
     const gradeStyle = r.grade==='A+B' ? 'color:#1a73e8;font-weight:600' : 'color:#f9ab00';
     h += `<tr><td class="lbl shipper-col">${r.name}</td><td style="${gradeStyle}">${r.grade}</td><td class="sales-col"><span>${r.sales}</span></td><td>${fmt(r.bkg)}</td><td>${fmt(r.ship)}</td><td>${pct(r.ship,r.bkg)}</td>`;
     h += `<td>${fmt(r.hi)}</td><td>${pct(r.hi,r.bkg)}</td><td>${fmt(r.hiShip)}</td><td>${pct(r.hiShip,r.hi)}</td><td>${fmt(Math.round(r.cm1))}</td><td>${fmt(Math.round(ct))}</td><td class="basis-col">${basis ? fmtBasisCm1Teu(r.basisCm1, r.basisLst) : '-'}</td>`;
-    if (hasTargets) h += targetCellsForSalespeople(r.salesArray, quarter, performKey, month);
+    if (hasTargets) h += targetCellsForSalespeople(r.salesArray, quarter, performKey, month, sd.filter(s => (s.BKG_SHPR_CST_ENM || s.BKG_SHPR_CST_NO) === r.name));
     h += '</tr>';
   });
   h += '</table></div>';
@@ -2511,8 +2516,38 @@ function tgtGapClass(gap) {
   return 'neg';
 }
 function targetQuarterForMonth(month) {
-  return (month && month.startsWith('2026') && parseInt(month.slice(4),10) >= 4) ? 'q2' : 'q1';
+  if (!/^2026(0[1-9]|1[0-2])$/.test(month || '')) return null;
+  return 'q' + Math.ceil(Number(month.slice(4)) / 3);
 }
+
+function targetOriginForRecord(record) {
+  const country = record.origin, port = record.ori_port;
+  if (!country) return null;
+  if (['CN','VN','MY','ID'].includes(country) && !port) return null;
+  if (country === 'CN') {
+    const nkg = new Set(['AIA','AQG','CGD','CGS','CKG','CKQ','CSX','CZH','CZX','FLG','HFE','HSI','JIA','JIN','JJG','LUZ','MSN','NCH','NKG','NTG','TAZ','TCG','TOL','WHI','WUH','WUW','WZH','YCH','YYA','YZH','YZR','ZHE','ZJG']);
+    return nkg.has(port) ? 'CN_NKG' : ['SHK','DCB'].includes(port) ? 'CN_SHK_DCB' : 'CN_' + port;
+  }
+  if (country === 'VN') return ['SGN','CMP'].includes(port) ? 'VN_SGN_CMP' : 'VN_' + port;
+  if (country === 'MY') return ['PKG','PKW'].includes(port) ? 'PKG+PKW' : ['PEN','PGU'].includes(port) ? port : 'MY_out';
+  if (country === 'ID') return ['JKT','SUB'].includes(port) ? port : 'ID-IDO';
+  return country;
+}
+function resolveTargetSalesperson(name, records = []) {
+  if (!name || !String(name).trim()) return { reason: '이름 미지정 / Missing name' };
+  const rows = SALES_TARGET.byName.get(name) || [];
+  const relevant = records.filter(r => r.Salesman_POR === name);
+  const mapped = relevant.map(targetOriginForRecord);
+  if (mapped.some(origin => !origin)) return { reason: '지점 정보 없음 / Missing origin context' };
+  const origins = [...new Set(mapped)];
+  if (origins.length > 1) return { reason: '여러 지점 / Multiple origins' };
+  if (origins.length === 1) {
+    const matches = SALES_TARGET.byIdentity.get(JSON.stringify([origins[0], name])) || [];
+    return matches.length === 1 ? { row: matches[0], fallback: false } : { reason: matches.length ? '중복 키 / Duplicate identity' : '지점 연결 없음 / Origin mismatch' };
+  }
+  return rows.length === 1 ? { row: rows[0], fallback: true } : { reason: rows.length ? '동명이인·지점 확인 필요 / Ambiguous identity' : '연결 없음 / No match' };
+}
+
 function targetPerformKey(quarter) {
   return quarter === 'q1' ? 'perform' : 'progress';
 }
@@ -2522,41 +2557,38 @@ function targetHeaderColumnsHtml() {
        <th class="tgt-head">${L('High-Profit','High-Profit')}<br>T / P / ±</th>
        <th class="tgt-head">${L('상세','Drill')}</th>`;
 }
-function emptyTargetCells() {
-  return `<td class="tgt-mini" style="color:#bdc1c6;text-align:center">-</td><td class="tgt-mini" style="color:#bdc1c6;text-align:center">-</td><td class="tgt-mini" style="color:#bdc1c6;text-align:center">-</td><td style="text-align:center;color:#bdc1c6">-</td>`;
+function emptyTargetCells(reason) {
+  return `<td class="tgt-mini" style="color:#bdc1c6;text-align:center">${reason || '-'}</td><td class="tgt-mini" style="color:#bdc1c6;text-align:center">-</td><td class="tgt-mini" style="color:#bdc1c6;text-align:center">-</td><td style="text-align:center;color:#bdc1c6">-</td>`;
 }
-function targetCellsForSalesperson(name, quarter, performKey, month) {
-  const row = SALES_TARGET.byName.get(name);
-  if (!row) {
-    return emptyTargetCells();
-  }
-  // P(rogress) = the SELECTED MONTH's live value (booking=w3f/BSA, lifting=w3l/w3f,
-  // hp=w3h/w3f) so this overlay matches the Sales Target screen for the same month.
-  // ±(gap) is recomputed as P − T. Falls back to the workbook's static quarter
-  // Progress when month_progress is unavailable (e.g. index.json not yet rebuilt).
+function targetCellsForSalesperson(name, quarter, performKey, month, records = []) {
+  if (!quarter) return emptyTargetCells('2026 목표만 제공 / 2026 targets only');
+  const match = resolveTargetSalesperson(name, records);
+  const row = match.row;
+  if (!row) return emptyTargetCells(match.reason);
+  // Monthly P is never replaced by static quarterly progress.
   const mp = (month && row.month_progress) ? row.month_progress[month] : null;
   const kpis = [['booking','b'],['lifting','l'],['high_profit','h']];
   let cells = '';
   kpis.forEach(([k, mk]) => {
     const kpi = row.kpi?.[k]?.[quarter] || {};
-    const target = kpi.target;
-    const progress = (mp && mp[mk] != null) ? mp[mk] : kpi[performKey];
+    const target = ['q1','q2'].includes(quarter) ? kpi.target : null;
+    const progress = (mp && mp[mk] != null) ? mp[mk] : null;
     const gap = (target == null || progress == null) ? null : (progress - target);
     const cls = tgtGapClass(gap);
     cells += `<td class="tgt-mini">
-      <div class="tg-row"><span class="tg-l">T</span><span class="tg-v">${fmtPctFrac(target)}</span></div>
-      <div class="tg-row"><span class="tg-l">P</span><span class="tg-v">${fmtPctFrac(progress)}</span></div>
+      <div class="tg-row"><span class="tg-l">T</span><span class="tg-v">${target == null ? '미제공 / Unavailable' : fmtPctFrac(target)}</span></div>
+      <div class="tg-row"><span class="tg-l">P</span><span class="tg-v">${progress == null ? '월 실적 없음 / No month data' : fmtPctFrac(progress)}</span></div>
       <div class="tg-row tg-gap ${cls}"><span class="tg-l">±</span><span class="tg-v">${fmtPctSignedFrac(gap)}</span></div>
     </td>`;
   });
   const origin = row.tab;
-  const url = `sales-target/?origin=${encodeURIComponent(origin)}&sales=${encodeURIComponent(name)}&quarter=${quarter}&view=drill`;
-  cells += `<td style="text-align:center"><a class="tgt-link" href="${url}" target="_blank" rel="noopener">→</a></td>`;
+  const url = `sales-target/?origin=${encodeURIComponent(origin)}&sales=${encodeURIComponent(name)}&quarter=${quarter}&month=${encodeURIComponent(month || '')}&view=drill`;
+  cells += `<td style="text-align:center"><a class="tgt-link" href="${url}" target="_blank" rel="noopener">${match.fallback ? '이름 fallback / Name fallback →' : '→'}</a></td>`;
   return cells;
 }
-function targetCellsForSalespeople(names, quarter, performKey, month) {
+function targetCellsForSalespeople(names, quarter, performKey, month, records = []) {
   const unique = [...new Set((names || []).filter(Boolean))];
-  return unique.length === 1 ? targetCellsForSalesperson(unique[0], quarter, performKey, month) : emptyTargetCells();
+  return unique.length === 1 ? targetCellsForSalesperson(unique[0], quarter, performKey, month, records) : emptyTargetCells('복수 담당자 / Multiple salespeople');
 }
 
 function renderSalesmanTable(month) {
@@ -2615,20 +2647,20 @@ function renderSalesmanTable(month) {
     return keepNames.has(nm) && r.BKG_SHPR_CST_NO;
   }).map(r=>r.BKG_SHPR_CST_NO)).size;
 
-  let h = `<div class="chart-card"><h3>${L('영업사원별 실적','Salesperson Performance')} (${fmtMonth(month)})${hasTargets ? ` · <span style="font-size:11px;color:#80868b">목표: ${quarter.toUpperCase()} 2026</span>` : ''}</h3>
+  let h = `<div class="chart-card"><h3>${L('영업사원별 실적','Salesperson Performance')} (${fmtMonth(month)})${hasTargets ? ` · <span style="font-size:11px;color:#80868b">목표: ${(quarter ? quarter.toUpperCase() : '미지원 / Unsupported')} 2026</span>` : ''}</h3>
   <table class="summary"><tr><th class="wrap">${L('영업사원','Salesperson')}</th><th>${L('화주수','Shippers')}</th><th>BKG</th><th>${L('실선적','LFT')}</th><th>${L('실선적률','Rate')}</th><th class="hi-head">${L('구간별고수익<br>부킹','Route Hi<br>BKG')}</th><th>${L('구간별고수익%','Route Hi%')}</th><th class="hi-head">${L('구간별고수익<br>실선적','Route Hi<br>LFT')}</th><th class="hi-head">${L('구간별고수익<br>실선적률','Route Hi<br>LFT%')}</th><th>CM1</th><th>CM1/TEU</th>${targetHeaderColumns}</tr>`;
 
   // Total row first (above the data rows) so it's visible without scrolling.
   h += `<tr class="total"><td class="lbl">${L('합계','Total')}</td><td>${tcust}</td><td>${fmt(tb)}</td><td>${fmt(ts)}</td><td>${pct(ts,tb)}</td>`;
   h += `<td>${fmt(th2)}</td><td>${pct(th2,tb)}</td><td>${fmt(thShip)}</td><td>${pct(thShip,th2)}</td><td>${fmt(Math.round(tc))}</td><td>${fmt(Math.round(tct))}</td>`;
-  if (hasTargets) h += `<td colspan="4" style="text-align:center"><a class="tgt-link" href="sales-target/?quarter=${quarter}" target="_blank" rel="noopener">${L('전체 목표 화면','Open Target Screen')} ↗</a></td>`;
+  if (hasTargets) h += `<td colspan="4" style="text-align:center"><a class="tgt-link" href="sales-target/?quarter=${quarter || ''}&month=${encodeURIComponent(month || '')}" target="_blank" rel="noopener">${L('전체 목표 화면','Open Target Screen')} ↗</a></td>`;
   h += '</tr>';
 
   rows.forEach(r => {
     const ct = r.cm1l>0?r.cm1/r.cm1l:0;
     h += `<tr><td class="lbl">${r.name}</td><td>${r.custCnt}</td><td>${fmt(r.bkg)}</td><td>${fmt(r.ship)}</td><td>${pct(r.ship,r.bkg)}</td>`;
     h += `<td>${fmt(r.hi)}</td><td>${pct(r.hi,r.bkg)}</td><td>${fmt(r.hiShip)}</td><td>${pct(r.hiShip,r.hi)}</td><td>${fmt(Math.round(r.cm1))}</td><td>${fmt(Math.round(ct))}</td>`;
-    if (hasTargets) h += targetCellsForSalesperson(r.name, quarter, performKey, month);
+    if (hasTargets) h += targetCellsForSalesperson(r.name, quarter, performKey, month, sd);
     h += '</tr>';
   });
 
