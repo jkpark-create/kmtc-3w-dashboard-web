@@ -546,7 +546,7 @@ async function loadDriveJson(folderId, fileName) {
   const token = driveToken();
   const files = await listDriveFolderFiles(folderId);
   const file = files.get(fileName);
-  if (!file) throw new Error(`Google Drive file not found: ${fileName}`);
+  if (!file) { const error = new Error(`Google Drive file not found: ${fileName}`); error.code = 'FILE_NOT_FOUND'; throw error; }
   const response = await withDriveDownloadSlot(() =>
     fetchDriveWithRetry(
       `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(file.id)}?alt=media&t=${Date.now()}`,
@@ -574,8 +574,16 @@ async function loadJson(url) {
     throw new Error('Google Drive data configuration or token is missing');
   }
   const resp = await fetch(url, { cache: 'no-cache' });
-  if (!resp.ok) throw new Error(`Failed to load ${url}: HTTP ${resp.status}`);
+  if (!resp.ok) { const error = new Error(`Failed to load ${url}: HTTP ${resp.status}`); if (resp.status === 404) error.code = 'FILE_NOT_FOUND'; throw error; }
   return resp.json();
+}
+
+function verifiedReleaseFiles(release) {
+  if (release === null) return null;
+  if (release?._format !== 'sales-target-release-v1' || !/^[0-9A-Za-z-]+$/.test(release.release_id || '') || !/^\d{8}$/.test(release.data_date || '') || !['index', 'manifest', 'base2025'].every(key => release.files?.[key] === `${key}.v${release.release_id}.json`)) {
+    throw new Error('Invalid Sales Target release metadata');
+  }
+  return release.files;
 }
 
 async function init() {
@@ -583,10 +591,10 @@ async function init() {
     try { STATE.lang = localStorage.getItem('sales_target_lang') || 'ko'; } catch {}
     applyLang();
     const release = await loadJson('sales-target-release.json').catch(err => {
-      if (err.code === 'DRIVE_AUTH') throw err;
+      if (err.code !== 'FILE_NOT_FOUND') throw err;
       return null;
     });
-    const immutable = release?._format === 'sales-target-release-v1' ? release.files : null;
+    const immutable = verifiedReleaseFiles(release);
     const [index, manifest, base2025] = await Promise.all([
       loadJson(immutable?.index || 'index.json'),
       loadJson(immutable?.manifest || 'manifest.json'),

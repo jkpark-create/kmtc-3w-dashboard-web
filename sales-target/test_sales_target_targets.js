@@ -99,6 +99,10 @@ run(`priorYearRow.month_targets['202611'].lifting={numerator:null,denominator:nu
 assert.match(run(`targetStateLabel(kpiOfRow(priorYearRow,'q4','lifting'))`),/denominator is zero/);
 assert.equal(run(`kpiOfRow(priorYearRow,'q4','lifting').target`),null);
 run(`STATE.filters.month='ALL'`);
+assert.equal(run('verifiedReleaseFiles(null)'),null);
+assert.throws(() => run(`verifiedReleaseFiles({_format:'bad'})`),/Invalid Sales Target/);
+assert.throws(() => run(`verifiedReleaseFiles({_format:'sales-target-release-v1',release_id:'ok',data_date:'20261012',files:{index:'../index.json'}})`),/Invalid Sales Target/);
+assert.equal(run(`verifiedReleaseFiles({_format:'sales-target-release-v1',release_id:'ok',data_date:'20261012',files:{index:'index.vok.json',manifest:'manifest.vok.json',base2025:'base2025.vok.json'}}).index`),'index.vok.json');
 // Exercise the real loader twice: loaded Q3/Q4 objects must survive refresh.
 run(`
   const inputIndex = {rows: [testRow]};
