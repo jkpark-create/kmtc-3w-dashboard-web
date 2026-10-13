@@ -287,8 +287,22 @@ function performanceLabelForQuarter(q) {
 
 function updatePerformanceLabels(q) {
   const notice = document.getElementById('targetAvailability');
-  if (notice) notice.textContent = ['q3','q4'].includes(q)
-    ? 'Q3/Q4 목표 미제공 · 실적은 선택 기간 기준 / Q3/Q4 targets unavailable · Performance uses selected period' : '';
+  if (notice) {
+    const scopedRows = STATE.index ? filteredSummaryRows() : [];
+    const rows = scopedRows.filter(row => row.row_type !== 'PERFORMANCE_ONLY' && row.target_eligible !== false);
+    const available = rows.some(row => ['booking', 'lifting', 'high_profit']
+      .some(key => finiteTargetOfRow(row, q, key) !== null));
+    const complete = rows.length > 0 && rows.every(row => ['booking', 'lifting', 'high_profit']
+      .every(key => finiteTargetOfRow(row, q, key) !== null));
+    const blankLabels = [...new Set(rows.flatMap(row => ['booking', 'lifting', 'high_profit'].flatMap(key => targetStateLabel(kpiOfRow(row, q, key)).split('; ').filter(Boolean))))];
+    notice.textContent = blankLabels.length ? blankLabels.join(' · ') : STATE.index && !rows.length && scopedRows.some(row => row.row_type === 'PERFORMANCE_ONLY')
+      ? scopedRows.some(row => row.goal_exclusion_reason === 'unassigned_current_owner')
+        ? '담당자 미지정 실적 포함 / 목표 배정 제외 · Unassigned-owner actuals included; excluded from targets'
+        : '신규 업체 실적 포함 / 별도 목표 없음 · New-customer actuals included; no separate target'
+      : !STATE.index || complete ? '' : available
+      ? '일부 목표 미제공 / Some targets unavailable in the selected scope'
+      : '선택 범위 목표 미제공 / Targets unavailable in the selected scope';
+  }
 
   document.querySelectorAll('[data-quarter-performance-label]').forEach(el => {
     el.textContent = performanceLabelForQuarter(q);
@@ -553,7 +567,7 @@ async function loadJson(url) {
     if (clean.startsWith('data/')) {
       return loadDriveJson(DRIVE_CONFIG.salesDataFolderId, clean.slice('data/'.length));
     }
-    if (['index.json', 'manifest.json', 'base2025.json'].includes(clean)) {
+    if (['index.json', 'manifest.json', 'base2025.json', 'sales-target-release.json'].includes(clean) || /^(index|manifest|base2025)\.v[0-9A-Za-z-]+\.json$/.test(clean)) {
       return loadDriveJson(DRIVE_CONFIG.salesFolderId, clean);
     }
   } else if (!localPreview()) {
@@ -568,17 +582,19 @@ async function init() {
   try {
     try { STATE.lang = localStorage.getItem('sales_target_lang') || 'ko'; } catch {}
     applyLang();
+    const release = await loadJson('sales-target-release.json').catch(err => {
+      if (err.code === 'DRIVE_AUTH') throw err;
+      return null;
+    });
+    const immutable = release?._format === 'sales-target-release-v1' ? release.files : null;
     const [index, manifest, base2025] = await Promise.all([
-      loadJson('index.json'),
-      loadJson('manifest.json'),
-      loadJson('base2025.json').catch(() => null),  // optional: filter-linked '25/Target columns
+      loadJson(immutable?.index || 'index.json'),
+      loadJson(immutable?.manifest || 'manifest.json'),
+      loadJson(immutable?.base2025 || 'base2025.json').catch(err => { if (immutable) throw err; return null; }),
     ]);
-    // The audited workbook supplies Q1/Q2 only; Q3 currently copies Q2.
-    // Delete unsupported quarter objects so Number(null) cannot invent 0 targets.
-    (index.rows || []).forEach(row => Object.values(row.kpi || {}).forEach(kpi => {
-      delete kpi.q3;
-      delete kpi.q4;
-    }));
+    if (immutable && (index.data_date !== release.data_date || manifest.data_date !== release.data_date || base2025?.data_date !== release.data_date || index.release_id !== release.release_id || manifest.release_id !== release.release_id || base2025.release_id !== release.release_id)) {
+      throw new Error('Sales Target release metadata differs; refresh to load the complete published version');
+    }
     STATE.index = index;
     STATE.manifest = manifest;
     STATE.base2025 = base2025 && base2025.base ? base2025.base : null;
@@ -1235,7 +1251,7 @@ function targetSalesSetForCurrentScope(ignoreSales = true) {
   const salesSet = (!ignoreSales && salesSel.length) ? new Set(salesSel) : null;
   const set = new Set();
   (STATE.index?.rows || []).forEach(r => {
-    if (r.row_type !== 'SALES') return;
+    if (!['SALES', 'PERFORMANCE_ONLY'].includes(r.row_type)) return;
     if (!scope.has(r.tab)) return;
     if (salesSet && !salesSet.has(r.name)) return;
     set.add(r.name);
@@ -1367,6 +1383,7 @@ function filteredSummaryRows() {
   const salesSet = salesSel.length ? new Set(salesSel) : null;
   const rows = STATE.index?.rows || [];
   return groupRowsByTab(rows.filter(r => {
+    if (r.goal_roster_quarters && r.row_type === 'SALES' && !r.goal_roster_quarters.includes(STATE.filters.quarter)) return false;
     if (!scope.has(r.tab)) return false;
     if (r.row_type === 'TOTAL') return !salesSet;
     if (salesSet && !salesSet.has(r.name)) return false;
@@ -1374,8 +1391,48 @@ function filteredSummaryRows() {
   }));
 }
 
+const APPROVED_TARGET_BLANKS = new Set(['no_historical_performance', 'zero_baseline_denominator', 'no_historical_month_weight', 'no_assigned_goal_basis', 'not_current_office']);
+
+function targetStateLabel(cell) {
+  const labels = {
+    no_historical_performance: '전년 실적 없음 / No prior-year performance',
+    zero_baseline_denominator: '전년 기준 분모 0 / Prior-year denominator is zero',
+    no_historical_month_weight: '전년 해당 월 기준 실적 없음 / No prior-year activity in this month',
+    no_assigned_goal_basis: '배정 업체의 전년 목표 기준 없음 / No assigned prior-year target basis',
+    not_current_office: '현재 공식 소속 아님 / Not the current official office',
+    source_missing: '원천 기준 누락 / Missing source basis',
+  };
+  const states = Object.keys(cell?.blank_states || {});
+  if (!states.length && cell?.basis_state) states.push(cell.basis_state);
+  return states.filter(state => labels[state]).map(state => labels[state]).join('; ');
+}
+
 function kpiOfRow(r, quarter, kpiKey) {
-  return r.kpi?.[kpiKey]?.[quarter] || { target: null, perform: null, progress: null, gap: null };
+  const cell = r.kpi?.[kpiKey]?.[quarter] || { target: null, perform: null, progress: null, gap: null };
+  if (cell.target_source === 'explicit') return cell;
+  const months = STATE.filters.month === 'ALL' ? QUARTER_MONTHS[quarter] || [] : [STATE.filters.month];
+  const measures = months.map(month => r.month_targets?.[month]?.[kpiKey]);
+  if (!measures.some(Boolean)) return cell;
+  // A partial month history must never silently become a full-quarter target.
+  if (!measures.every(Boolean)) return { ...cell, target: null, gap: null, basis_state: 'source_missing' };
+  let numerator = 0, denominator = 0;
+  for (const measure of measures) {
+    const num = finiteOptionalNumber(measure.numerator);
+    const den = finiteOptionalNumber(measure.denominator);
+    if (num === null || den === null) {
+      if (APPROVED_TARGET_BLANKS.has(measure.basis_state)) continue;
+      return { ...cell, target: null, gap: null, basis_state: 'source_missing' };
+    }
+    if (den < 0) return { ...cell, target: null, gap: null };
+    numerator += num; denominator += den;
+  }
+  const target = denominator > 0 ? numerator / denominator : null;
+  const actual = cell[performKeyForQuarter(quarter)];
+  const blankStates = {};
+  for (const measure of measures) for (const [state, count] of Object.entries(measure.blank_states || {})) blankStates[state] = (blankStates[state] || 0) + count;
+  return { ...cell, target, gap: target !== null && actual != null ? actual - target : null,
+    blank_states: blankStates, basis_state: denominator > 0 ? 'known' : Object.keys(blankStates)[0] || cell.basis_state };
+
 }
 
 // Aggregate KPI across multiple rows (for filter scope summary cards).
@@ -1402,10 +1459,24 @@ function kpiDenominatorWeight(row, quarter, kpiKey) {
   return (typeof w === 'number' && isFinite(w) && w > 0) ? w : null;
 }
 
+function targetDenominatorWeight(row, quarter, kpiKey) {
+  const months = STATE.filters.month === 'ALL' ? QUARTER_MONTHS[quarter] || [] : [STATE.filters.month];
+  const measures = months.map(month => row.month_targets?.[month]?.[kpiKey]);
+  if (!measures.some(Boolean)) {
+    const metric = row.quarter_metrics?.[quarter];
+    if (kpiKey !== 'booking' && metric && Object.prototype.hasOwnProperty.call(metric, 'goal_w3f')) {
+      return Math.max(0, finiteOptionalNumber(metric.goal_w3f) || 0);
+    }
+    return kpiDenominatorWeight(row, quarter, kpiKey);
+  }
+  if (!measures.every(Boolean)) return 0;
+  return measures.reduce((sum, measure) => sum + (finiteOptionalNumber(measure.denominator) || 0), 0);
+}
+
 function aggregateKpi(rows, quarter, kpiKey) {
   const performKey = performKeyForQuarter(quarter);
   const totals = rows.filter(r => r.row_type === 'TOTAL');
-  const pool = totals.length ? totals : rows.filter(r => r.row_type === 'SALES');
+  const pool = totals.length ? totals : rows.filter(r => ['SALES', 'PERFORMANCE_ONLY'].includes(r.row_type));
   const useTeu = pool.some(r => kpiDenominatorWeight(r, quarter, kpiKey) !== null);
   let tw = 0, pw = 0, gw = 0, targetW = 0, performW = 0, gapW = 0;
   pool.forEach(r => {
@@ -1413,20 +1484,21 @@ function aggregateKpi(rows, quarter, kpiKey) {
     const weight = useTeu
       ? (kpiDenominatorWeight(r, quarter, kpiKey) || 0)
       : Math.max(1, r.accounts?.total || 1);
+    const targetWeight = targetDenominatorWeight(r, quarter, kpiKey) ?? weight;
+    if (k.target !== null && k.target !== undefined && targetWeight > 0) { tw += k.target * targetWeight; targetW += targetWeight; }
     if (!weight) return;
-    if (k.target !== null && k.target !== undefined) { tw += k.target * weight; targetW += weight; }
     if (k[performKey] !== null && k[performKey] !== undefined) { pw += k[performKey] * weight; performW += weight; }
     if (k.gap !== null && k.gap !== undefined) { gw += k.gap * weight; gapW += weight; }
   });
   return {
     target: targetW ? tw / targetW : null,
     perform: performW ? pw / performW : null,
-    gap: gapW ? gw / gapW : null,
+    gap: targetW && performW ? (pw / performW) - (tw / targetW) : null,
   };
 }
 
 function summaryCardValues(rows, q) {
-  const sales = rows.filter(r => r.row_type === 'SALES');
+  const sales = rows.filter(r => ['SALES', 'PERFORMANCE_ONLY'].includes(r.row_type));
   const origins = new Set(sales.map(r => r.tab));
   return {
     originCount: origins.size ? origins.size : 0,
@@ -1507,7 +1579,8 @@ function scopedChunkListForMonths(months) {
   const scope = effectiveOrigins();
   const salesSel = STATE.filters.sales;
   const salesSet = salesSel.length ? new Set(salesSel) : null;
-  return (STATE.manifest.chunks || []).filter(c => {
+  const chunks = [...(STATE.manifest.chunks || []), ...(!salesSet ? (STATE.manifest.capacity_reserve_chunks || []) : [])];
+  return chunks.filter(c => {
     if (!scope.has(c.origin)) return false;
     if (salesSet && !salesSet.has(c.salesman)) return false;
     return months.includes(c.yyyymm);
@@ -1533,7 +1606,7 @@ async function loadScopedCardBookings() {
 
 function targetRowsForFilteredBookings(rows, bookings) {
   const pairs = new Set(bookings.map(b => `${b.__origin}\u0001${b.__salesman}`));
-  const filtered = rows.filter(r => r.row_type === 'SALES' && pairs.has(`${r.tab}\u0001${r.name}`));
+  const filtered = rows.filter(r => ['SALES', 'PERFORMANCE_ONLY'].includes(r.row_type) && pairs.has(`${r.tab}\u0001${r.name}`));
   return filtered.length ? filtered : rows;
 }
 
@@ -1541,7 +1614,7 @@ function targetRowMaps(rows) {
   const sales = new Map();
   const totals = new Map();
   rows.forEach(r => {
-    if (r.row_type === 'SALES') sales.set(`${r.tab}\u0001${r.name}`, r);
+    if (['SALES', 'PERFORMANCE_ONLY'].includes(r.row_type)) sales.set(`${r.tab}\u0001${r.name}`, r);
     else if (r.row_type === 'TOTAL') totals.set(r.tab, r);
   });
   return { sales, totals };
@@ -1560,10 +1633,11 @@ function weightedTargetFromBookings(rows, bookings, quarter, kpiKey, weightFn) {
   let tw = 0;
   let w = 0;
   bookings.forEach(b => {
+    if (b.target_eligible === false) return;
     const weight = Math.max(0, Number(weightFn(b)) || 0);
     if (!weight) return;
     const row = targetRowForBooking(maps, b);
-    const target = Number(row?.kpi?.[kpiKey]?.[quarter]?.target);
+    const target = finiteTargetOfRow(row, quarter, kpiKey);
     if (!Number.isFinite(target)) return;
     tw += target * weight;
     w += weight;
@@ -1592,10 +1666,11 @@ function weightedTargetFromBsaAllocations(rows, allocations, quarter, kpiKey) {
   let tw = 0;
   let w = 0;
   (allocations || []).forEach(a => {
+    if (a.goal_eligible === false) return;
     const weight = Math.max(0, Number(a.allocated_bsa) || 0);
     if (!weight) return;
     const row = targetRowForBsaAllocation(maps, a);
-    const target = Number(row?.kpi?.[kpiKey]?.[quarter]?.target);
+    const target = finiteTargetOfRow(row, quarter, kpiKey);
     if (!Number.isFinite(target)) return;
     tw += target * weight;
     w += weight;
@@ -1605,8 +1680,13 @@ function weightedTargetFromBsaAllocations(rows, allocations, quarter, kpiKey) {
 }
 
 function finiteTargetOfRow(row, quarter, kpiKey) {
-  const target = Number(row?.kpi?.[kpiKey]?.[quarter]?.target);
-  return Number.isFinite(target) ? target : null;
+  return finiteOptionalNumber(kpiOfRow(row || {}, quarter, kpiKey).target);
+}
+
+function finiteOptionalNumber(value) {
+  if (value == null || typeof value === 'boolean' || (typeof value === 'string' && !value.trim())) return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
 }
 
 function routeBookingFiltersActive() {
@@ -1615,8 +1695,8 @@ function routeBookingFiltersActive() {
 }
 
 function bookingTargetDeltaOfRow(row, quarter) {
-  const target = Number(row?.kpi?.booking?.[quarter]?.target);
-  const base = Number(row?.booking_base_2025);
+  const target = finiteTargetOfRow(row, quarter, 'booking');
+  const base = finiteOptionalNumber(row?.booking_base_2025);
   if (!Number.isFinite(target) || !Number.isFinite(base)) return null;
   return target - base;
 }
@@ -1625,10 +1705,11 @@ function bsaBookingReferenceGroups(rows, allocations, quarter) {
   const maps = targetRowMaps(rows);
   const groups = new Map();
   (allocations || []).forEach(a => {
+    if (a.goal_eligible === false) return;
     const weight = Math.max(0, Number(a.allocated_bsa) || 0);
     if (!weight) return;
     const row = targetRowForBsaAllocation(maps, a);
-    const target = Number(row?.kpi?.booking?.[quarter]?.target);
+    const target = finiteTargetOfRow(row, quarter, 'booking');
     if (!Number.isFinite(target)) return;
     const origin = a.__origin || row?.tab;
     if (!origin) return;
@@ -1682,7 +1763,7 @@ function detailedCardValues(allBookings, allBsaAllocations, summaryRows, q) {
 
   const bookingPairs = new Set(countBookings.map(b => `${b.__origin}\u0001${b.__salesman}`));
   const matchedSalesRows = summaryRows.filter(r =>
-    r.row_type === 'SALES' && bookingPairs.has(`${r.tab}\u0001${r.name}`)
+    ['SALES', 'PERFORMANCE_ONLY'].includes(r.row_type) && bookingPairs.has(`${r.tab}\u0001${r.name}`)
   );
   const origins = new Set(matchedSalesRows.map(r => r.tab).filter(Boolean));
   const routes = new Set(countBookings.map(routeKeyOf));
@@ -1794,6 +1875,7 @@ function computeLiveCardCounts(allBookings) {
 
 // ─── View renderers ──────────────────────────────────────────────
 function render() {
+  updatePerformanceLabels(STATE.filters.quarter);
   renderKpiCards();
   const panel = document.getElementById('viewPanel');
   if (STATE.view === 'summary') panel.innerHTML = renderSummaryView();
@@ -1822,8 +1904,8 @@ function scopedSummaryTargetRows() {
   const salesSet = salesSel.length ? new Set(salesSel) : null;
   return (STATE.index?.rows || []).filter(r => {
     if (!scope.has(r.tab)) return false;
-    if (r.row_type === 'SALES' && salesSet && !salesSet.has(r.name)) return false;
-    return r.row_type === 'SALES' || r.row_type === 'TOTAL';
+    if (['SALES', 'PERFORMANCE_ONLY'].includes(r.row_type) && salesSet && !salesSet.has(r.name)) return false;
+    return ['SALES', 'PERFORMANCE_ONLY'].includes(r.row_type) || r.row_type === 'TOTAL';
   });
 }
 
@@ -1951,8 +2033,8 @@ function recompute2025ForRow(row, q, preds, teamNlstByTab) {
   const filtBase = { booking: bases.booking_base_2025, lifting: bases.lifting_base_2025, high_profit: bases.hp_base_2025 };
   const targets = {};
   ['booking', 'lifting', 'high_profit'].forEach(kpi => {
-    const sheetTarget = Number(row?.kpi?.[kpi]?.[q]?.target);
-    if (Number.isFinite(sheetTarget) && Number.isFinite(filtBase[kpi]) && Number.isFinite(unfBase[kpi])) {
+    const sheetTarget = finiteTargetOfRow(row, q, kpi);
+    if (!row.month_targets && Number.isFinite(sheetTarget) && Number.isFinite(filtBase[kpi]) && Number.isFinite(unfBase[kpi])) {
       targets[kpi] = filtBase[kpi] + (sheetTarget - unfBase[kpi]);
     } else {
       targets[kpi] = Number.isFinite(sheetTarget) ? sheetTarget : null;
@@ -1978,7 +2060,10 @@ function detailedSummaryRows(displayRows, targetRows, allBookings, allBsaAllocat
     const rowCountBookings = countBookings.filter(b => summaryRowMatchesBooking(row, b));
     const rowKpiBookings = kpiBookings.filter(b => summaryRowMatchesBooking(row, b));
     const rowBsaAllocations = bsaAllocations.filter(a => summaryRowMatchesBsaAllocation(row, a));
-    if (!rowCountBookings.length && !rowKpiBookings.length && !rowBsaAllocations.length) return null;
+    const f=STATE.filters;
+    const onlyPeriodScope=!(f.destCountries || []).length && !(f.destPorts || []).length && (!f.grade || f.grade === 'ALL') && (!f.profit || f.profit === 'ALL');
+    const hasVerifiedGoalHistory=onlyPeriodScope && row.month_targets && monthsForFilter().every(month => row.month_targets[month]);
+    if (!rowCountBookings.length && !rowKpiBookings.length && !rowBsaAllocations.length && !hasVerifiedGoalHistory) return null;
 
     const w3Fst = rowKpiBookings.reduce((s, b) => s + (b.is_w3 ? (b.fst_teu || 0) : 0), 0);
     const w3Lst = rowKpiBookings.reduce((s, b) => s + (b.is_w3 ? wosNormalLstTeu(b) : 0), 0);
@@ -2086,7 +2171,7 @@ function renderSummaryTable(rows, q) {
     const hp = kpiOfRow(r, q, 'high_profit');
     const performKey = performKeyForQuarter(q);
     const totalCls = r.row_type === 'TOTAL' ? ' row-total' : '';
-    const clickAttr = r.row_type === 'SALES'
+    const clickAttr = ['SALES', 'PERFORMANCE_ONLY'].includes(r.row_type)
       ? ` data-action="drill" data-origin="${escapeHtml(r.tab)}" data-sales="${escapeHtml(r.name)}" class="row-clickable${totalCls}"`
       : ` class="${totalCls}"`;
     h += `<tr${clickAttr}>
@@ -2094,9 +2179,9 @@ function renderSummaryTable(rows, q) {
       <td class="txt">${escapeHtml(r.name)}</td>
       <td class="narrow-col">${fmtPct(r.share_2025)}</td>
       <td class="narrow-col" title="${r.w3_2025_teu ? `2025 WOS-3 BKG: ${fmtNum(r.w3_2025_teu)} TEU` : ''}">${fmtPct(r.booking_base_2025)}</td>
-      <td>${fmtPct(bk.target)}</td><td>${fmtPct(bk[performKey])}</td><td class="pct">${fmtPct(achievementRate(bk, performKey))}</td><td class="pct ${gapClass(bk.gap)}">${fmtPctSigned(bk.gap)}</td>
-      <td>${fmtPct(lf.target)}</td><td>${fmtPct(lf[performKey])}</td><td class="pct">${fmtPct(achievementRate(lf, performKey))}</td><td class="pct ${gapClass(lf.gap)}">${fmtPctSigned(lf.gap)}</td>
-      <td>${fmtPct(hp.target)}</td><td>${fmtPct(hp[performKey])}</td><td class="pct">${fmtPct(achievementRate(hp, performKey))}</td><td class="pct ${gapClass(hp.gap)}">${fmtPctSigned(hp.gap)}</td>
+      <td title="${escapeHtml(targetStateLabel(bk))}">${fmtPct(bk.target)}</td><td>${fmtPct(bk[performKey])}</td><td class="pct">${fmtPct(achievementRate(bk, performKey))}</td><td class="pct ${gapClass(bk.gap)}">${fmtPctSigned(bk.gap)}</td>
+      <td title="${escapeHtml(targetStateLabel(lf))}">${fmtPct(lf.target)}</td><td>${fmtPct(lf[performKey])}</td><td class="pct">${fmtPct(achievementRate(lf, performKey))}</td><td class="pct ${gapClass(lf.gap)}">${fmtPctSigned(lf.gap)}</td>
+      <td title="${escapeHtml(targetStateLabel(hp))}">${fmtPct(hp.target)}</td><td>${fmtPct(hp[performKey])}</td><td class="pct">${fmtPct(achievementRate(hp, performKey))}</td><td class="pct ${gapClass(hp.gap)}">${fmtPctSigned(hp.gap)}</td>
       <td>${fmtNum(r.accounts?.total)}</td>
       <td>${fmtNum(r.accounts?.w3)}</td>
       <td>${fmtPct(r.accounts?.pct)}</td>
@@ -2160,7 +2245,7 @@ function formatMonth(yyyymm) {
 async function loadChunk(origin, sales, yyyymm) {
   const key = `${origin}||${sales}||${yyyymm}`;
   if (STATE.chunkCache.has(key)) return STATE.chunkCache.get(key);
-  const chunks = STATE.manifest.chunks || [];
+  const chunks = [...(STATE.manifest.chunks || []), ...(STATE.manifest.capacity_reserve_chunks || [])];
   const meta = chunks.find(c => c.origin === origin && c.salesman === sales && c.yyyymm === yyyymm);
   if (!meta) return null;
   const pending = loadJson(meta.file)
@@ -2269,13 +2354,21 @@ function applyBookingFiltersCore(bookings, ignoreWos) {
 // route average. Falls back to the current-period Normal LST split only when
 // base2025 is absent/stale so a route's BSA is never silently dropped.
 function allocateShipperBsa(bookings, bsaAllocations) {
+  const performanceOnly = new Set(bookings.filter(b => b.target_eligible === false).map(b => b.shipper_no || b.shipper_name));
   const SEP = '\u0001';
   const routeBsa = new Map();          // origin|salesman|dlyc|dly -> allocated 2026 BSA
   (bsaAllocations || []).forEach(a => {
+    if (a.goal_eligible === false) return;
     const rk = `${a.__origin}${SEP}${a.__salesman}${SEP}${a.pod_country}${SEP}${a.pod}`;
     routeBsa.set(rk, (routeBsa.get(rk) || 0) + (Number(a.allocated_bsa) || 0));
   });
   const shipperBsa = new Map();
+  const direct=(bsaAllocations || []).filter(a => a.shipper_no && a.goal_eligible !== false);
+  if (direct.length && direct.length === (bsaAllocations || []).filter(a => a.goal_eligible !== false).length) {
+    direct.forEach(a => shipperBsa.set(a.shipper_no,(shipperBsa.get(a.shipper_no) || 0)+(a.allocated_bsa || 0)));
+    return shipperBsa;
+  }
+
   const base = STATE.base2025;
   const fallbackRoutes = new Set();    // routes with no 2025 basis → legacy split below
   routeBsa.forEach((bsa, rk) => {
@@ -2291,7 +2384,7 @@ function allocateShipperBsa(bookings, bsaAllocations) {
     let total = 0;
     const matched = [];
     cells.forEach(c => {
-      if (c.dlyc === dlyc && c.dly === dly && c.nlst > 0) { total += c.nlst; matched.push(c); }
+      if (!performanceOnly.has(c.sk) && c.dlyc === dlyc && c.dly === dly && c.nlst > 0) { total += c.nlst; matched.push(c); }
     });
     if (total > 0) {
       matched.forEach(c => {
@@ -2309,6 +2402,7 @@ function allocateShipperBsa(bookings, bsaAllocations) {
     const routeBasis = new Map();
     const shipperRouteBasis = new Map();
     bookings.forEach(b => {
+      if (b.target_eligible === false) return;
       const basis = normalLstTeu(b);
       if (!basis) return;
       const rk = `${b.__origin}${SEP}${b.__salesman}${SEP}${b.dly_country}${SEP}${b.dly_plc}`;
@@ -2339,6 +2433,7 @@ function aggregateShippers(bookings, shipperBsa, scopeAllocations) {
       map.set(key, {
         shipper_no: b.shipper_no,
         shipper_name: b.shipper_name,
+        target_eligible: b.target_eligible !== false,
         grade: b.grade,
         bkg_count: 0,
         fst_teu: 0,
@@ -2353,6 +2448,7 @@ function aggregateShippers(bookings, shipperBsa, scopeAllocations) {
       });
     }
     const s = map.get(key);
+    if (b.target_eligible === false) s.target_eligible = false;
     if (isBookingMetricRow(b)) s.bkg_count++;
     if (isBookingMetricRow(b) && b.bkg_no) s.bkg_nos.add(b.bkg_no);
     s.fst_teu += b.fst_teu || 0;
@@ -2370,7 +2466,7 @@ function aggregateShippers(bookings, shipperBsa, scopeAllocations) {
   const rows = Array.from(map.values())
     .map(s => {
       const key = s.shipper_no || s.shipper_name || '(unknown)';
-      const bsa = (shipperBsa && shipperBsa.get(key)) || 0;
+      const bsa = s.target_eligible === false ? null : ((shipperBsa && shipperBsa.get(key)) || 0);
       return {
         ...s,
         bkg_count_unique: s.bkg_nos.size,
