@@ -1253,6 +1253,15 @@ function originOptionsFromSet(set) {
   return opts;
 }
 
+function summaryRowAvailableForPeriod(row) {
+  if (row.row_type === 'SALES' && row.goal_roster_quarters && !row.goal_roster_quarters.includes(STATE.filters.quarter)) return false;
+  if (row.row_type === 'PERFORMANCE_ONLY' && Array.isArray(STATE.manifest?.chunks)) {
+    const months = monthsForFilter();
+    return STATE.manifest.chunks.some(chunk => chunk.origin === row.tab && chunk.salesman === row.name && months.includes(chunk.yyyymm) && chunk.rows > 0);
+  }
+  return true;
+}
+
 function targetSalesSetForCurrentScope(ignoreSales = true) {
   const scope = effectiveOrigins();
   const salesSel = STATE.filters.sales || [];
@@ -1260,6 +1269,7 @@ function targetSalesSetForCurrentScope(ignoreSales = true) {
   const set = new Set();
   (STATE.index?.rows || []).forEach(r => {
     if (!['SALES', 'PERFORMANCE_ONLY'].includes(r.row_type)) return;
+    if (!summaryRowAvailableForPeriod(r)) return;
     if (!scope.has(r.tab)) return;
     if (salesSet && !salesSet.has(r.name)) return;
     set.add(r.name);
@@ -1271,7 +1281,9 @@ function salesOptionsForCurrentFacet(matchingSalesSet) {
   const targetSet = targetSalesSetForCurrentScope(true);
   let names = [...targetSet];
   if (matchingSalesSet && detailCardFiltersActive()) {
-    names = names.filter(n => matchingSalesSet.has(n));
+    const scope = effectiveOrigins();
+    const goalNames = new Set((STATE.index?.rows || []).filter(row => row.row_type === 'SALES' && scope.has(row.tab) && summaryRowAvailableForPeriod(row)).map(row => row.name));
+    names = names.filter(n => matchingSalesSet.has(n) || goalNames.has(n));
   }
   return names.sort().map(n => ({ value: n, label: n }));
 }
@@ -1391,7 +1403,7 @@ function filteredSummaryRows() {
   const salesSet = salesSel.length ? new Set(salesSel) : null;
   const rows = STATE.index?.rows || [];
   return groupRowsByTab(rows.filter(r => {
-    if (r.goal_roster_quarters && r.row_type === 'SALES' && !r.goal_roster_quarters.includes(STATE.filters.quarter)) return false;
+    if (!summaryRowAvailableForPeriod(r)) return false;
     if (!scope.has(r.tab)) return false;
     if (r.row_type === 'TOTAL') return !salesSet;
     if (salesSet && !salesSet.has(r.name)) return false;

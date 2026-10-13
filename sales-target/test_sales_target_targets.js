@@ -103,6 +103,15 @@ assert.equal(run('verifiedReleaseFiles(null)'),null);
 assert.throws(() => run(`verifiedReleaseFiles({_format:'bad'})`),/Invalid Sales Target/);
 assert.throws(() => run(`verifiedReleaseFiles({_format:'sales-target-release-v1',release_id:'ok',data_date:'20261012',files:{index:'../index.json'}})`),/Invalid Sales Target/);
 assert.equal(run(`verifiedReleaseFiles({_format:'sales-target-release-v1',release_id:'ok',data_date:'20261012',files:{index:'index.vok.json',manifest:'manifest.vok.json',base2025:'base2025.vok.json'}}).index`),'index.vok.json');
+run(`STATE.filters.origins=['TH'];STATE.filters.countries=[];STATE.filters.sales=['ACTIVE'];STATE.filters.quarter='q4';STATE.filters.month='202612';STATE.filters.grade='ALL';STATE.filters.profit='ALL';STATE.filters.destCountries=[];STATE.filters.destPorts=[];
+  STATE.index={rows:[{tab:'TH',name:'ACTIVE',row_type:'SALES',goal_roster_quarters:['q4']},{tab:'TH',name:'OLD',row_type:'PERFORMANCE_ONLY'}]};
+  STATE.manifest={months:['202609','202612'],chunks:[{origin:'TH',salesman:'OLD',yyyymm:'202609',rows:2}]};`);
+assert.equal(run(`salesOptionsForCurrentFacet(new Set()).some(option=>option.value==='ACTIVE')`),true);
+assert.equal(run(`summaryRowAvailableForPeriod(STATE.index.rows[1])`),false);
+run(`STATE.filters.quarter='q3';STATE.filters.month='202609'`);
+assert.equal(run(`summaryRowAvailableForPeriod(STATE.index.rows[1])`),true);
+assert.equal(run(`summaryRowAvailableForPeriod(STATE.index.rows[0])`),false);
+run(`STATE.manifest=null;STATE.filters.origins=[];STATE.filters.sales=[];STATE.filters.quarter='q4';STATE.filters.month='ALL'`);
 // Exercise the real loader twice: loaded Q3/Q4 objects must survive refresh.
 run(`
   const inputIndex = {rows: [testRow]};
