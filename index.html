@@ -447,7 +447,7 @@ async function loadData() {
     [DATA] = await Promise.all([loadCurrentDataJson(), ensurePlotly()]);
     normalizeMetricKeys(DATA);
     const sel = document.getElementById('dataDateSel');
-    sel.innerHTML = `<option value="today">${publishedDateLabel(DATA.data_date)}</option>`;
+    sel.innerHTML = `<option value="today" data-published-date="${normalizeDataDate(DATA.data_date) || ''}">${publishedDateLabel(DATA.data_date)}</option>`;
     _driveFiles = {};
     initFilters();
     document.getElementById('loading').style.display = 'none';
@@ -503,6 +503,7 @@ async function loadHistoricalData() {
     DATA = await loadCurrentDataJson();
     normalizeMetricKeys(DATA);
     sel.options[0].textContent = publishedDateLabel(DATA.data_date);
+    sel.options[0].dataset.publishedDate = normalizeDataDate(DATA.data_date) || '';
     document.getElementById('loading').style.display = 'none';
     initFilters(); render();
     return;
@@ -3364,7 +3365,7 @@ function applyLang() {
   const dSel = document.getElementById('dataDateSel');
   if (dSel && DATA) {
     const first = dSel.options[0];
-    if (first && first.value === 'today') first.text = `${DATA.data_date} (${_lang==='en'?'Latest':'최신'})`;
+    if (first && first.value === 'today') first.text = publishedDateLabel(first.dataset.publishedDate || DATA.data_date);
   }
   // Month options (월 → English month names)
   if (DATA) {
