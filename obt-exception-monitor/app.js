@@ -1371,7 +1371,31 @@ function mergeChoiceRows(...groups) {
   return Array.from(map.values());
 }
 
+function renderPartialWosCoverage() {
+  const host = document.querySelector('#app main') || document.getElementById('app');
+  if (!host) return;
+  let banner = document.getElementById('partial-wos-coverage');
+  if (!state.raw?.wos_partial) { if (banner) banner.remove(); return; }
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'partial-wos-coverage';
+    banner.setAttribute('role', 'status');
+    banner.style.cssText = 'padding:12px;margin:0 0 16px;border:1px solid #b86e00;border-radius:8px;background:#fff7e6;color:#603900';
+    host.prepend(banner);
+  }
+  const quality = state.raw.original_booking_quality || {};
+  const date = String(state.raw.data_date || '').replace(/^(\d{4})(\d{2})(\d{2})$/, '$1-$2-$3');
+  const first = String(state.raw.first_booking_fields_captured_at || state.raw.first_booking_field_evidence_asof || state.raw.data_date || '');
+  const lifting = String(state.raw.wos_original_lifting_source_date || state.raw.data_date || '').replace(/^(\d{4})(\d{2})(\d{2})$/, '$1-$2-$3');
+  const missing = Number(quality.missing_first_schedule_rows || 0).toLocaleString();
+  const unknown = Number(quality.unresolved_rows || 0).toLocaleString();
+  banner.textContent = state.lang === 'en'
+    ? `WOS rates are partial indicators based on confirmed data. Post-July current Booking/BL source: ${date}; first-field capture: ${first}; WOS conversion snapshot: ${lifting}. ${missing} bookings have no first schedule; first FST for ${unknown} bookings is unconfirmed. Current Booking performance is retained. Unknown first FST is not zero.`
+    : `WOS 비율은 확인된 자료 기준 부분 지표입니다. 7월 이후 현재 부킹/BL 기준일 ${date}, 최초 필드 조회 ${first}, WOS 전환 실적 ${lifting}. ${missing}건은 최초 일정 미분류, ${unknown}건은 최초 FST 미확정입니다. 현재 부킹 실적은 보존하며, 미확정 최초 FST를 0으로 간주하지 않습니다.`;
+}
+
 function render() {
+  renderPartialWosCoverage();
   if (!state.rows.length) return;
 
   const periods = getPeriods();

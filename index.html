@@ -430,13 +430,25 @@ function ensurePlotly() {
   return plotlyReady;
 }
 
+function normalizeDataDate(value) {
+  const digits = String(value ?? '').replace(/-/g, '');
+  return /^\d{8}$/.test(digits) ? digits : null;
+}
+
+function publishedDateLabel(value) {
+  const day = normalizeDataDate(value);
+  const label = day ? `${day.slice(0,4)}-${day.slice(4,6)}-${day.slice(6,8)}` : String(value || '');
+  return `${label} (${L('현재 게시','Published')})`;
+}
+
 async function loadData() {
   try {
     // Start charts and data together after auth, then render a complete screen.
     [DATA] = await Promise.all([loadCurrentDataJson(), ensurePlotly()]);
     normalizeMetricKeys(DATA);
     const sel = document.getElementById('dataDateSel');
-    sel.innerHTML = `<option value="today">${DATA.data_date} (${L('최신','Latest')})</option>`;
+    sel.innerHTML = `<option value="today">${publishedDateLabel(DATA.data_date)}</option>`;
+    _driveFiles = {};
     initFilters();
     document.getElementById('loading').style.display = 'none';
     render();
@@ -465,12 +477,12 @@ async function loadDriveFileList() {
     if (!r.ok) return;
     const files = (await r.json()).files || [];
     const sel = document.getElementById('dataDateSel');
-    const today = DATA.data_date;
+    const today = normalizeDataDate(DATA.data_date);
     files.forEach(f => {
       const daily = f.name.match(/dashboard_summary_(\d{8})\.json/);
       const yearly = f.name.match(/dashboard_summary_(\d{4})\.json/);
       const key = daily ? daily[1] : yearly ? yearly[1] : null;
-      if (key && key !== today) {
+      if (key && key !== today && !_driveFiles[key]) {
         _driveFiles[key] = f.id;
         const label = daily
           ? `${key.slice(0,4)}-${key.slice(4,6)}-${key.slice(6,8)}`
@@ -490,6 +502,7 @@ async function loadHistoricalData() {
     document.getElementById('loading').textContent = L('최신 데이터 로딩...','Loading latest...');
     DATA = await loadCurrentDataJson();
     normalizeMetricKeys(DATA);
+    sel.options[0].textContent = publishedDateLabel(DATA.data_date);
     document.getElementById('loading').style.display = 'none';
     initFilters(); render();
     return;
@@ -1556,7 +1569,62 @@ function dualLineValueAnnotations(x, topAwareSeries, options = {}) {
   return annotations;
 }
 
+function renderUnassignedQualityBanner() {
+  const quality = DATA && DATA.customer_code_quality;
+  const app = document.getElementById('app');
+  if (!app) return;
+  let banner = document.getElementById('unassigned-quality-banner');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'unassigned-quality-banner';
+    banner.setAttribute('role', 'status');
+    banner.style.cssText = 'padding:10px 20px;background:#fff8e1;color:#5d4200;border-bottom:1px solid #d8bd69;line-height:1.5';
+    app.insertBefore(banner, app.firstChild);
+  }
+  if (!quality || !quality.retained_unassigned_rows) {
+    banner.style.display = 'none';
+    banner.textContent = '';
+    return;
+  }
+  banner.style.display = 'block';
+  const rows = Number(quality.retained_unassigned_rows);
+  const teu = Number(quality.retained_unassigned_fst_teu);
+  const keys = (quality.unassigned_booking_keys || []).join(', ');
+  banner.textContent = `미배정 ${rows}건 / FST ${teu.toLocaleString()} TEU: 전체 비취소 합계에 포함되어 있습니다. 회사 코드를 원천에서 확인해 주세요. ${keys}`;
+}
+
+function renderOriginalBookingQualityBanner() {
+  const quality = DATA && DATA.original_booking_quality;
+  const app = document.getElementById('app');
+  if (!app) return;
+  let banner = document.getElementById('original-booking-quality-banner');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'original-booking-quality-banner';
+    banner.setAttribute('role', 'status');
+    banner.style.cssText = 'padding:10px 20px;background:#fff8e1;color:#5d4200;border-bottom:1px solid #d8bd69;line-height:1.5';
+    app.insertBefore(banner, app.firstChild);
+  }
+  const unresolved = Number(quality?.unresolved_rows || 0);
+  const missing = Number(quality?.missing_first_schedule_rows || 0);
+  if (!unresolved && !missing) {
+    banner.style.display = 'none'; banner.textContent = ''; return;
+  }
+  banner.style.display = 'block';
+  const portions = [];
+  if (quality.retained_verified_original_rows) portions.push(`현재 내보내기에 없는 최초 정보 ${Number(quality.retained_verified_original_rows).toLocaleString()}건은 ${quality.retained_reference_asof} 확인 원천에서 보존했습니다. 현재 부킹·B/L 수량은 그대로 유지했습니다.`);
+  if (quality.unconfirmed_wos_lifting_rows) portions.push(`WOS 전환 상태·실적 미확인 ${Number(quality.unconfirmed_wos_lifting_rows).toLocaleString()}건: 비율은 확인된 자료 기준 부분 지표입니다.`);
+  if (unresolved) portions.push(`원래 부킹 ${unresolved}건은 ${quality.asOfDate} 시점 미확정: 현재 조회 수량을 해당 일자 FST로 사용하지 않았습니다.`);
+  if (missing) portions.push(`최초 일정 없는 ${missing.toLocaleString()}건 / FST ${Number(quality.missing_first_schedule_fst_teu || 0).toLocaleString()} TEU: 최초 일정 기준 월·주 배분 미확정.`);
+  portions.unshift('WOS 달성률: 확인된 자료 기준 부분 지표. 현재 부킹 실적과 최초 FST는 서로 다른 지표입니다.');
+  if (quality.groups) portions.push(`복구 대상 현재 부킹 ${Number(quality.current_booking_performance_teu).toLocaleString()} TEU / 최초 FST 분류 가능 ${Number(quality.groups.classified.verified_original_fst_teu).toLocaleString()} TEU + 일정 미분류 ${Number(quality.groups.first_schedule_unclassified.verified_original_fst_teu).toLocaleString()} TEU + 19건 최초 FST 미확정. 미확정 19건의 현재 부킹 ${Number(quality.current_19_booking_teu).toLocaleString()} TEU는 유지합니다.`);
+  portions.push(`7월 이후 현재 부킹/BL 기준일 ${DATA.current_performance_source_date || DATA.data_date}, 최초 필드 조회 ${DATA.first_booking_fields_captured_at || DATA.first_booking_field_evidence_asof || DATA.data_date}, WOS 전환 상태·실적 ${DATA.wos_original_lifting_source_date || DATA.data_date}. 전환 실적까지 최신 기준으로 갱신된 것으로 해석하지 않습니다.`);
+  banner.textContent = portions.join(' ');
+}
+
 function render() {
+  renderUnassignedQualityBanner();
+  renderOriginalBookingQualityBanner();
   if (!DATA) return;
   resetFilterMemo();
   const fn = {t1: renderTab1, t2: renderTab2, t3: renderTab3, t4: renderTab4, t5: renderTab5, t6: renderTab6};
@@ -1583,7 +1651,7 @@ function renderTab1() {
   const cm1teu = cm1l>0 ? cm1/cm1l : 0;
 
   let html = `<div class="row">
-    ${kpi(T[_lang].totalBkg, fmt(totalBkg), '#1a73e8')}
+    ${kpi(DATA.wos_partial ? L('확인된 FST 소계','Confirmed FST subtotal') : T[_lang].totalBkg, fmt(totalBkg), '#1a73e8')}
     ${kpi(T[_lang].shipment, fmt(shipped), '#34a853')}
     ${kpi(T[_lang].w3bkg, fmt(w3Bkg), '#6c5ce7')}
     ${kpi(T[_lang].w3ship, fmt(w3Ship), '#00b894')}
