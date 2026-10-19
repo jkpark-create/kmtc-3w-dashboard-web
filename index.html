@@ -1617,51 +1617,8 @@ function renderUnassignedQualityBanner() {
   banner.textContent = `미배정 ${rows}건 / FST ${teu.toLocaleString()} TEU: 전체 비취소 합계에 포함되어 있습니다. 회사 코드를 원천에서 확인해 주세요. ${keys}`;
 }
 
-function renderOriginalBookingQualityBanner() {
-  const quality = DATA?.original_booking_quality || {};
-  const app = document.getElementById('app');
-  if (!app) return;
-  let banner = document.getElementById('original-booking-quality-banner');
-  if (!banner) {
-    banner = document.createElement('div');
-    banner.id = 'original-booking-quality-banner';
-    banner.setAttribute('role', 'status');
-    banner.style.cssText = 'padding:10px 20px;background:#fff8e1;color:#5d4200;border-bottom:1px solid #d8bd69;line-height:1.6;white-space:pre-line';
-    banner.setAttribute('aria-label', '자료 범위 안내');
-    app.insertBefore(banner, app.firstChild);
-  }
-  const unresolved = Number(quality?.unresolved_rows || 0);
-  const missing = Number(quality?.missing_first_schedule_rows || 0);
-  if (!unresolved && !missing && !Number(quality?.unconfirmed_wos_lifting_rows || 0) && !DATA?.wos_partial) {
-    banner.style.display = 'none'; banner.textContent = ''; return;
-  }
-  banner.style.display = 'block';
-  const dateLabel = value => {
-    const match = String(value || '').match(/(\d{4})-?(\d{2})-?(\d{2})/);
-    return match ? `${match[1]}-${match[2]}-${match[3]}` : '미제공';
-  };
-  const portions = ['자료 범위 안내 | WOS 달성률은 확인된 자료 기준 부분 지표입니다.'];
-  const coverage = [];
-  if (unresolved) coverage.push(`최초 FST 미확정 ${unresolved.toLocaleString()}건`);
-  if (missing) coverage.push(`최초 일정 미분류 ${missing.toLocaleString()}건 (FST ${Number(quality.missing_first_schedule_fst_teu || 0).toLocaleString()} TEU)`);
-  if (quality.unconfirmed_wos_lifting_rows) coverage.push(`WOS 전환 상태·실적 미확인 ${Number(quality.unconfirmed_wos_lifting_rows).toLocaleString()}건`);
-  if (coverage.length) portions.push(coverage.join(' · '));
-  portions.push('현재 부킹·B/L 실적은 유지하며 최초 FST와 구분합니다. 미확정 최초 FST를 현재 부킹 수량으로 대체하거나 0으로 간주하지 않습니다. 최초 일정 미분류 건의 월·주 배분은 미확정입니다.');
-  if (quality.retained_verified_original_rows) {
-    const reference = String(quality.retained_reference_asof || '').split('..').map(dateLabel).join(' ~ ');
-    portions.push(`보존한 최초 정보 ${Number(quality.retained_verified_original_rows).toLocaleString()}건: ${reference}에 확인한 원천 기준입니다.`);
-  }
-  if (quality.groups?.classified && quality.groups?.first_schedule_unclassified) portions.push(`복구 대상 현재 부킹 ${Number(quality.current_booking_performance_teu).toLocaleString()} TEU / 최초 FST 분류 가능 ${Number(quality.groups.classified.verified_original_fst_teu).toLocaleString()} TEU + 일정 미분류 ${Number(quality.groups.first_schedule_unclassified.verified_original_fst_teu).toLocaleString()} TEU + ${unresolved.toLocaleString()}건 최초 FST 미확정.`);
-  const conversion = String(DATA.wos_original_lifting_source_date || '');
-  const conversionIsCapture = /capture|business source date not supplied/i.test(conversion);
-  const conversionLabel = conversionIsCapture ? `WOS 전환 자료 조회 ${dateLabel(conversion)} (업무 기준일 미제공)` : `WOS 전환 업무 기준일 ${dateLabel(conversion)}`;
-  portions.push(`자료 기준: 현재 부킹·B/L ${dateLabel(DATA.current_performance_source_date || DATA.data_date)} · 최초 정보 조회 ${dateLabel(DATA.first_booking_fields_captured_at || DATA.first_booking_field_evidence_asof || DATA.data_date)} · ${conversionLabel}. 전환 실적까지 최신 업무일 기준으로 갱신된 것으로 해석하지 않습니다.`);
-  banner.textContent = portions.join('\n');
-}
-
 function render() {
   renderUnassignedQualityBanner();
-  renderOriginalBookingQualityBanner();
   if (!DATA) return;
   resetFilterMemo();
   const fn = {t1: renderTab1, t2: renderTab2, t3: renderTab3, t4: renderTab4, t5: renderTab5, t6: renderTab6};
