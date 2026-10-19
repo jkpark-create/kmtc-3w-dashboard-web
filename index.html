@@ -441,7 +441,29 @@ function publishedDateLabel(value) {
   return `${label} (${L('현재 게시','Published')})`;
 }
 
+function showLoadError(error, retry, rendering = false) {
+  const loading = document.getElementById('loading');
+  loading.style.display = 'block';
+  loading.setAttribute('role', 'alert');
+  loading.textContent = `${rendering ? L('화면 표시 실패','Display failed') : L('데이터 로드 실패','Data load failed')}: ${error.message}`;
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.textContent = L('다시 시도','Retry');
+  button.style.marginLeft = '12px';
+  button.onclick = retry;
+  loading.appendChild(button);
+}
+
+function showLoading(message) {
+  const loading = document.getElementById('loading');
+  loading.style.display = 'block';
+  loading.setAttribute('role', 'status');
+  loading.textContent = message;
+}
+
 async function loadData() {
+  showLoading(L('데이터 로딩 중...','Loading data...'));
+  let rendering = false;
   try {
     // Start charts and data together after auth, then render a complete screen.
     [DATA] = await Promise.all([loadCurrentDataJson(), ensurePlotly()]);
@@ -449,15 +471,16 @@ async function loadData() {
     const sel = document.getElementById('dataDateSel');
     sel.innerHTML = `<option value="today" data-published-date="${normalizeDataDate(DATA.data_date) || ''}">${publishedDateLabel(DATA.data_date)}</option>`;
     _driveFiles = {};
+    rendering = true;
     initFilters();
-    document.getElementById('loading').style.display = 'none';
     render();
+    document.getElementById('loading').style.display = 'none';
     // Load available dates from Drive in background
     loadDriveFileList();
     // Best-effort: load sales-target summary so bySales table can show Target/Perform/GAP columns.
     loadSalesTargetSummary();
   } catch(e) {
-    document.getElementById('loading').textContent = `${L('데이터 로드 실패','Data load failed')}: ${e.message}`;
+    showLoadError(e, loadData, rendering);
   }
 }
 
@@ -496,29 +519,29 @@ async function loadDriveFileList() {
 async function loadHistoricalData() {
   const sel = document.getElementById('dataDateSel');
   const val = sel.value;
-  if (val === 'today') {
-    // Reload current data
-    document.getElementById('loading').style.display = 'block';
-    document.getElementById('loading').textContent = L('최신 데이터 로딩...','Loading latest...');
-    DATA = await loadCurrentDataJson();
-    normalizeMetricKeys(DATA);
-    sel.options[0].textContent = publishedDateLabel(DATA.data_date);
-    sel.options[0].dataset.publishedDate = normalizeDataDate(DATA.data_date) || '';
-    document.getElementById('loading').style.display = 'none';
-    initFilters(); render();
-    return;
-  }
   const fileId = _driveFiles[val];
-  if (!fileId || !gToken) return;
-  document.getElementById('loading').style.display = 'block';
-  document.getElementById('loading').textContent = `${L('과거 데이터 로딩','Loading historical')}: ${val}...`;
+  if (val !== 'today' && (!fileId || !gToken)) return;
+  showLoading(val === 'today'
+    ? L('최신 데이터 로딩...','Loading latest...')
+    : `${L('과거 데이터 로딩','Loading historical')}: ${val}...`);
+  let rendering = false;
   try {
-    DATA = await fetchDriveJson(fileId, `dashboard_summary_${val}.json`);
-    normalizeMetricKeys(DATA);
+    const [data] = await Promise.all([
+      val === 'today' ? loadCurrentDataJson() : fetchDriveJson(fileId, `dashboard_summary_${val}.json`),
+      ensurePlotly()
+    ]);
+    normalizeMetricKeys(data);
+    DATA = data;
+    if (val === 'today') {
+      sel.options[0].textContent = publishedDateLabel(DATA.data_date);
+      sel.options[0].dataset.publishedDate = normalizeDataDate(DATA.data_date) || '';
+    }
+    rendering = true;
+    initFilters();
+    render();
     document.getElementById('loading').style.display = 'none';
-    initFilters(); render();
   } catch(e) {
-    document.getElementById('loading').textContent = `${L('로드 실패','Load failed')}: ${e.message}`;
+    showLoadError(e, loadHistoricalData, rendering);
   }
 }
 
@@ -1595,7 +1618,7 @@ function renderUnassignedQualityBanner() {
 }
 
 function renderOriginalBookingQualityBanner() {
-  const quality = DATA && DATA.original_booking_quality;
+  const quality = DATA?.original_booking_quality || {};
   const app = document.getElementById('app');
   if (!app) return;
   let banner = document.getElementById('original-booking-quality-banner');
@@ -1608,7 +1631,7 @@ function renderOriginalBookingQualityBanner() {
   }
   const unresolved = Number(quality?.unresolved_rows || 0);
   const missing = Number(quality?.missing_first_schedule_rows || 0);
-  if (!unresolved && !missing) {
+  if (!unresolved && !missing && !Number(quality?.unconfirmed_wos_lifting_rows || 0) && !DATA?.wos_partial) {
     banner.style.display = 'none'; banner.textContent = ''; return;
   }
   banner.style.display = 'block';
@@ -1618,7 +1641,7 @@ function renderOriginalBookingQualityBanner() {
   if (unresolved) portions.push(`원래 부킹 ${unresolved}건은 ${quality.asOfDate} 시점 미확정: 현재 조회 수량을 해당 일자 FST로 사용하지 않았습니다.`);
   if (missing) portions.push(`최초 일정 없는 ${missing.toLocaleString()}건 / FST ${Number(quality.missing_first_schedule_fst_teu || 0).toLocaleString()} TEU: 최초 일정 기준 월·주 배분 미확정.`);
   portions.unshift('WOS 달성률: 확인된 자료 기준 부분 지표. 현재 부킹 실적과 최초 FST는 서로 다른 지표입니다.');
-  if (quality.groups) portions.push(`복구 대상 현재 부킹 ${Number(quality.current_booking_performance_teu).toLocaleString()} TEU / 최초 FST 분류 가능 ${Number(quality.groups.classified.verified_original_fst_teu).toLocaleString()} TEU + 일정 미분류 ${Number(quality.groups.first_schedule_unclassified.verified_original_fst_teu).toLocaleString()} TEU + 19건 최초 FST 미확정. 미확정 19건의 현재 부킹 ${Number(quality.current_19_booking_teu).toLocaleString()} TEU는 유지합니다.`);
+  if (quality.groups?.classified && quality.groups?.first_schedule_unclassified) portions.push(`복구 대상 현재 부킹 ${Number(quality.current_booking_performance_teu).toLocaleString()} TEU / 최초 FST 분류 가능 ${Number(quality.groups.classified.verified_original_fst_teu).toLocaleString()} TEU + 일정 미분류 ${Number(quality.groups.first_schedule_unclassified.verified_original_fst_teu).toLocaleString()} TEU + ${unresolved.toLocaleString()}건 최초 FST 미확정.`);
   portions.push(`7월 이후 현재 부킹/BL 기준일 ${DATA.current_performance_source_date || DATA.data_date}, 최초 필드 조회 ${DATA.first_booking_fields_captured_at || DATA.first_booking_field_evidence_asof || DATA.data_date}, WOS 전환 상태·실적 ${DATA.wos_original_lifting_source_date || DATA.data_date}. 전환 실적까지 최신 기준으로 갱신된 것으로 해석하지 않습니다.`);
   banner.textContent = portions.join(' ');
 }
