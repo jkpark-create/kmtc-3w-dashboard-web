@@ -295,7 +295,10 @@ function updatePerformanceLabels(q) {
     const complete = rows.length > 0 && rows.every(row => ['booking', 'lifting', 'high_profit']
       .every(key => finiteTargetOfRow(row, q, key) !== null));
     const blankLabels = [...new Set(rows.flatMap(row => ['booking', 'lifting', 'high_profit'].flatMap(key => targetStateLabel(kpiOfRow(row, q, key)).split('; ').filter(Boolean))))];
-    notice.textContent = blankLabels.length ? blankLabels.join(' · ') : STATE.index && !rows.length && scopedRows.some(row => row.row_type === 'PERFORMANCE_ONLY')
+    notice.title = blankLabels.join(' · ');
+    notice.textContent = blankLabels.length ? (STATE.lang === 'en'
+      ? 'Some target components have no prior-year basis; available targets and actuals are shown. Hover for details.'
+      : '일부 목표 항목에 전년 기준이 없습니다. 산출 가능한 목표와 실적은 정상 조회됩니다. 상세 사유는 이 안내에 마우스를 올려 확인하세요.') : STATE.index && !rows.length && scopedRows.some(row => row.row_type === 'PERFORMANCE_ONLY')
       ? scopedRows.some(row => row.goal_exclusion_reason === 'unassigned_current_owner')
         ? '담당자 미지정 실적 포함 / 목표 배정 제외 · Unassigned-owner actuals included; excluded from targets'
         : '신규 업체 실적 포함 / 별도 목표 없음 · New-customer actuals included; no separate target'
@@ -414,6 +417,17 @@ function shipmentLineageTitle(b) {
 function normalCm1(b) {
   if (Object.prototype.hasOwnProperty.call(b, 'norm_cm1')) return Number(b.norm_cm1) || 0;
   return normalLstTeu(b) ? (b.cm1 || 0) : 0;
+}
+// Detail views are fixed to the original WOS-3 booking cohort. Since July,
+// canonical B/L rows carry physical actuals separately from booking rows.
+function detailLstTeu(b) {
+  return STATE.filters.wos === 'W3' ? wosNormalLstTeu(b) : normalLstTeu(b);
+}
+function detailCm1(b) {
+  if (STATE.filters.wos === 'W3' && Object.prototype.hasOwnProperty.call(b, 'wos_norm_cm1')) {
+    return Number(b.wos_norm_cm1) || 0;
+  }
+  return normalCm1(b);
 }
 function routeHighFlag(b) {
   if (Object.prototype.hasOwnProperty.call(b, 'is_route_hi')) return !!b.is_route_hi;
@@ -718,6 +732,8 @@ function applyInitialParams() {
   if (/^2026(0[1-9]|1[0-2])$/.test(params.month || '')) {
     STATE.filters.quarter = 'q' + Math.ceil(Number(params.month.slice(4)) / 3);
     STATE.filters.month = params.month;
+  } else if (params.month === 'ALL' || (params.quarter && !params.month)) {
+    STATE.filters.month = 'ALL';
   } else if (params.month && params.month !== 'ALL') {
     showError('2026 기간만 지원 / Only 2026 periods are supported');
     STATE.filters.month = 'ALL';
@@ -2472,8 +2488,8 @@ function aggregateShippers(bookings, shipperBsa, scopeAllocations) {
     if (isBookingMetricRow(b)) s.bkg_count++;
     if (isBookingMetricRow(b) && b.bkg_no) s.bkg_nos.add(b.bkg_no);
     s.fst_teu += b.fst_teu || 0;
-    s.lst_teu += normalLstTeu(b);
-    s.cm1 += normalCm1(b);
+    s.lst_teu += detailLstTeu(b);
+    s.cm1 += detailCm1(b);
     if (b.is_w3) {
       if (isBookingMetricRow(b) && b.bkg_no) s.w3_bkg_nos.add(b.bkg_no);
       s.w3_fst += b.fst_teu || 0;
@@ -2708,9 +2724,9 @@ function buildFlatBkgTable(bookings) {
       <td class="txt">${vsl}</td>
       <td>${escapeHtml(fmtBookingDate(b.booking_date))}</td>
       <td>${fmtNum(b.fst_teu)}</td>
-      <td>${fmtNum(b.lst_teu)}</td>
-      <td>${fmtNum(b.cm1)}</td>
-      <td>${fmtNum(b.cm1_per_teu, 0)}</td>
+      <td>${fmtNum(detailLstTeu(b))}</td>
+      <td>${fmtNum(detailCm1(b))}</td>
+      <td>${fmtNum(safeRatio(detailCm1(b), detailLstTeu(b)), 0)}</td>
       <td>${escapeHtml(b.lead_time_bkg_sche || '')}</td>
       <td>${routeHighFlag(b) ? '<span class="hi-tag">HI</span>' : ''}</td>
       <td class="${statusClass}">${escapeHtml(b.lst_status || '')}</td>
@@ -2750,7 +2766,8 @@ function exportBkgListAsCsv(bookings, filename) {
     'BKG_NO','BL_NO','RELATED_BKG_NO','PERFORMANCE_METRIC_KIND','SOURCE_SALESMAN','WOS_NORM_LST_TEU','origin','salesman','yyyymm','shipper_no','shipper_name','grade',
     'pol','pod','dly_plc','vsl','voy','lst_vsl','lst_voy','lst_route',
     'booking_date','booking_schedule','cancel_date','week_start','lead_time_bkg_sche',
-    'fst_teu','lst_teu','norm_lst_teu','cm1','norm_cm1','cm1_per_teu','is_w3','is_hi','is_route_hi','is_lifted','is_cancel','lst_status'
+    'fst_teu','lst_teu','norm_lst_teu','cm1','norm_cm1','cm1_per_teu','is_w3','is_hi','is_route_hi','is_lifted','is_cancel','lst_status',
+    'WOS_NORM_CM1','VIEW_LST_TEU','VIEW_CM1','VIEW_CM1_PER_TEU'
   ];
   const lines = [headers.join(',')];
   bookings.forEach(b => {
@@ -2759,7 +2776,8 @@ function exportBkgListAsCsv(bookings, filename) {
       b.pol, b.pod, b.dly_plc, b.vsl, b.voy, b.lst_vsl, b.lst_voy, b.lst_route,
       b.booking_date, b.booking_schedule, b.cancel_date, b.week_start_date, b.lead_time_bkg_sche,
       b.fst_teu, b.lst_teu, normalLstTeu(b), b.cm1, normalCm1(b), b.cm1_per_teu,
-      b.is_w3, b.is_hi, routeHighFlag(b), b.is_lifted, b.is_cancel, b.lst_status
+      b.is_w3, b.is_hi, routeHighFlag(b), b.is_lifted, b.is_cancel, b.lst_status,
+      b.wos_norm_cm1 ?? '', detailLstTeu(b), detailCm1(b), safeRatio(detailCm1(b), detailLstTeu(b))
     ].map(v => csvEscape(v));
     lines.push(row.join(','));
   });
@@ -2800,9 +2818,9 @@ function renderBkgDetail(shipperKey, allBookings) {
       <td class="txt">${vsl}</td>
       <td>${escapeHtml(fmtBookingDate(b.booking_date))}</td>
       <td>${fmtNum(b.fst_teu)}</td>
-      <td>${fmtNum(b.lst_teu)}</td>
-      <td>${fmtNum(b.cm1)}</td>
-      <td>${fmtNum(b.cm1_per_teu, 0)}</td>
+      <td>${fmtNum(detailLstTeu(b))}</td>
+      <td>${fmtNum(detailCm1(b))}</td>
+      <td>${fmtNum(safeRatio(detailCm1(b), detailLstTeu(b)), 0)}</td>
       <td>${escapeHtml(b.lead_time_bkg_sche || '')}</td>
       <td>${gradeBadge(b.grade)}</td>
       <td>${routeHighFlag(b) ? '<span class="hi-tag">HI</span>' : ''}</td>
@@ -2945,7 +2963,7 @@ function pivotAggregate(rows, metric) {
   const init = { fst: 0, lst: 0, w3_fst: 0, w3_lst: 0, w3_hi_fst: 0, cancel: 0, bkg_count: 0, bkg_no_set: new Set(), shipper_set: new Set(), cm1: 0 };
   rows.forEach(b => {
     init.fst += b.fst_teu || 0;
-    init.lst += normalLstTeu(b);
+    init.lst += detailLstTeu(b);
     if (b.is_w3) {
       init.w3_fst += b.fst_teu || 0;
       init.w3_lst += wosNormalLstTeu(b);
@@ -2955,7 +2973,7 @@ function pivotAggregate(rows, metric) {
     if (isBookingMetricRow(b)) init.bkg_count++;
     if (isBookingMetricRow(b) && b.bkg_no) init.bkg_no_set.add(b.bkg_no);
     if (b.shipper_no || b.shipper_name) init.shipper_set.add(b.shipper_no || b.shipper_name);
-    init.cm1 += normalCm1(b);
+    init.cm1 += detailCm1(b);
   });
   switch (metric) {
     case 'fst': return init.fst;
@@ -3053,7 +3071,7 @@ function renderPivotTable(bookings) {
     return `background:rgba(26,115,232,${alpha.toFixed(3)});`;
   };
   const formatCell = (val, rowBks, colBks) => {
-    if (!val) return '';
+    if (val === null || val === undefined || !Number.isFinite(val)) return '—';
     if (normalize === 'value' || RATIO_METRICS.has(metric)) return pivotFormat(val, metric);
     let denom = 0;
     if (normalize === 'row') denom = pivotAggregate(rowBks || [], metric);
