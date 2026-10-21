@@ -696,6 +696,8 @@ function updateDataInfo() {
   const quality = STATE.index.cm1_quality;
   const state = quality ? `${quality.status === 'partial' ? (STATE.lang === 'en' ? 'unconfirmed' : '미확인') : quality.status} ${quality.unknown_rows ?? ''}${STATE.lang === 'en' ? ' rows' : '건'}` : (STATE.lang === 'en' ? 'not supplied' : '미제공');
   el.textContent += (STATE.lang === 'en' ? ' · CM1 quality: ' : ' · CM1 결측 검증: ') + state;
+  if (STATE.index.generated_at) el.textContent += (STATE.lang === 'en' ? ' · Data built: ' : ' · 데이터 생성: ') + STATE.index.generated_at;
+  if (quality?.verified_at) el.textContent += (STATE.lang === 'en' ? ' · CM1 checked: ' : ' · CM1 검증: ') + quality.verified_at;
 }
 
 function showError(msg) {
