@@ -286,27 +286,6 @@ function performanceLabelForQuarter(q) {
 }
 
 function updatePerformanceLabels(q) {
-  const notice = document.getElementById('targetAvailability');
-  if (notice) {
-    const scopedRows = STATE.index ? filteredSummaryRows() : [];
-    const rows = scopedRows.filter(row => row.row_type !== 'PERFORMANCE_ONLY' && row.target_eligible !== false);
-    const available = rows.some(row => ['booking', 'lifting', 'high_profit']
-      .some(key => finiteTargetOfRow(row, q, key) !== null));
-    const complete = rows.length > 0 && rows.every(row => ['booking', 'lifting', 'high_profit']
-      .every(key => finiteTargetOfRow(row, q, key) !== null));
-    const blankLabels = [...new Set(rows.flatMap(row => ['booking', 'lifting', 'high_profit'].flatMap(key => targetStateLabel(kpiOfRow(row, q, key)).split('; ').filter(Boolean))))];
-    notice.title = blankLabels.join(' · ');
-    notice.textContent = blankLabels.length ? (STATE.lang === 'en'
-      ? 'Some target components have no prior-year basis; available targets and actuals are shown. Hover for details.'
-      : '일부 목표 항목에 전년 기준이 없습니다. 산출 가능한 목표와 실적은 정상 조회됩니다. 상세 사유는 이 안내에 마우스를 올려 확인하세요.') : STATE.index && !rows.length && scopedRows.some(row => row.row_type === 'PERFORMANCE_ONLY')
-      ? scopedRows.some(row => row.goal_exclusion_reason === 'unassigned_current_owner')
-        ? '담당자 미지정 실적 포함 / 목표 배정 제외 · Unassigned-owner actuals included; excluded from targets'
-        : '신규 업체 실적 포함 / 별도 목표 없음 · New-customer actuals included; no separate target'
-      : !STATE.index || complete ? '' : available
-      ? '일부 목표 미제공 / Some targets unavailable in the selected scope'
-      : '선택 범위 목표 미제공 / Targets unavailable in the selected scope';
-  }
-
   document.querySelectorAll('[data-quarter-performance-label]').forEach(el => {
     el.textContent = performanceLabelForQuarter(q);
   });
