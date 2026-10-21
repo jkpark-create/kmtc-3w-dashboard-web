@@ -372,9 +372,26 @@ function fmtBookingDate(s) {
   return `${y}년 ${mo}월 ${d}일`;
 }
 
+function finiteMetric(value) {
+  if (value === null || value === undefined || typeof value === 'boolean' || (typeof value === 'string' && !value.trim())) return null;
+  const n = Number(typeof value === 'string' ? value.replace(/,/g, '') : value);
+  return Number.isFinite(n) ? n : null;
+}
+function sumMetric(left, right) {
+  const a = finiteMetric(left), b = finiteMetric(right);
+  return a === null || b === null ? null : a + b;
+}
+function cm1QualityNotice(bookings) {
+  const unknown = bookings.filter(b => detailCm1(b) === null).length;
+  if (!unknown) return '';
+  const text = STATE.lang === 'en'
+    ? `CM1 unconfirmed: ${unknown} rows. Affected totals and averages are shown as '-'; known row values remain available. Missing amounts are not zero.`
+    : `CM1 미확인 ${unknown}건: 영향을 받는 합계·평균은 '-'로 표시하며 확인된 행의 값은 유지합니다. 결측 금액은 0이 아닙니다.`;
+  return `<div role="status" class="error-banner">${escapeHtml(text)}</div>`;
+}
 function fmtNum(n, digits = 0) {
-  if (n === null || n === undefined || Number.isNaN(n)) return '-';
-  return Number(n).toLocaleString('ko-KR', { maximumFractionDigits: digits, minimumFractionDigits: digits });
+  const value = finiteMetric(n);
+  return value === null ? '-' : value.toLocaleString('ko-KR', { maximumFractionDigits: digits, minimumFractionDigits: digits });
 }
 function gapClass(gap) {
   if (gap === null || gap === undefined || Number.isNaN(gap)) return '';
@@ -383,8 +400,8 @@ function gapClass(gap) {
   return 'neg';
 }
 function safeRatio(num, den) {
-  if (!den || Number.isNaN(num) || Number.isNaN(den)) return null;
-  return num / den;
+  const numerator = finiteMetric(num), denominator = finiteMetric(den);
+  return numerator === null || denominator === null || denominator === 0 ? null : numerator / denominator;
 }
 function achievementRate(kpi, performKey) {
   const rawTarget = kpi?.target;
@@ -415,8 +432,8 @@ function shipmentLineageTitle(b) {
   return b.bl_no ? 'B/L ' + b.bl_no + (b.related_booking_no ? '; related Booking ' + b.related_booking_no : '') : 'Booking ' + (b.bkg_no || '');
 }
 function normalCm1(b) {
-  if (Object.prototype.hasOwnProperty.call(b, 'norm_cm1')) return Number(b.norm_cm1) || 0;
-  return normalLstTeu(b) ? (b.cm1 || 0) : 0;
+  if (Object.prototype.hasOwnProperty.call(b, 'norm_cm1')) return finiteMetric(b.norm_cm1);
+  return normalLstTeu(b) ? finiteMetric(b.cm1) : 0;
 }
 // Detail views are fixed to the original WOS-3 booking cohort. Since July,
 // canonical B/L rows carry physical actuals separately from booking rows.
@@ -424,9 +441,7 @@ function detailLstTeu(b) {
   return STATE.filters.wos === 'W3' ? wosNormalLstTeu(b) : normalLstTeu(b);
 }
 function detailCm1(b) {
-  if (STATE.filters.wos === 'W3' && Object.prototype.hasOwnProperty.call(b, 'wos_norm_cm1')) {
-    return Number(b.wos_norm_cm1) || 0;
-  }
+  if (STATE.filters.wos === 'W3' && Object.prototype.hasOwnProperty.call(b, 'wos_norm_cm1')) return finiteMetric(b.wos_norm_cm1);
   return normalCm1(b);
 }
 function routeHighFlag(b) {
@@ -594,10 +609,21 @@ async function loadJson(url) {
 
 function verifiedReleaseFiles(release) {
   if (release === null) return null;
-  if (release?._format !== 'sales-target-release-v1' || !/^[0-9A-Za-z-]+$/.test(release.release_id || '') || !/^\d{8}$/.test(release.data_date || '') || !['index', 'manifest', 'base2025'].every(key => release.files?.[key] === `${key}.v${release.release_id}.json`)) {
+  if (!['sales-target-release-v1', 'sales-target-release-v2'].includes(release?._format) || !/^[0-9A-Za-z-]+$/.test(release.release_id || '') || !/^\d{8}$/.test(release.data_date || '') || !['index', 'manifest', 'base2025'].every(key => release.files?.[key] === `${key}.v${release.release_id}.json`)) {
     throw new Error('Invalid Sales Target release metadata');
   }
+  if (release._format === 'sales-target-release-v2' && (!Array.isArray(release.required_capabilities) || release.required_capabilities.length !== 1 || release.required_capabilities[0] !== 'nullable-cm1-v1')) {
+    throw new Error('Unsupported Sales Target data capability; refresh the dashboard');
+  }
   return release.files;
+}
+
+function verifyCm1QualityMetadata(release, index, manifest) {
+  if (release?._format !== 'sales-target-release-v2') return;
+  const a = index.cm1_quality, b = manifest.cm1_quality;
+  if (!a || !b || a.source_date !== release.data_date || b.source_date !== release.data_date || a.status !== 'partial' || JSON.stringify(a) !== JSON.stringify(b) || !Number.isInteger(a.unknown_rows) || a.unknown_rows <= 0) {
+    throw new Error('Incomplete CM1 quality provenance; no unverified aggregate will be shown');
+  }
 }
 
 async function init() {
@@ -617,6 +643,7 @@ async function init() {
     if (immutable && (index.data_date !== release.data_date || manifest.data_date !== release.data_date || base2025?.data_date !== release.data_date || index.release_id !== release.release_id || manifest.release_id !== release.release_id || base2025.release_id !== release.release_id)) {
       throw new Error('Sales Target release metadata differs; refresh to load the complete published version');
     }
+    verifyCm1QualityMetadata(release, index, manifest);
     STATE.index = index;
     STATE.manifest = manifest;
     STATE.base2025 = base2025 && base2025.base ? base2025.base : null;
@@ -666,6 +693,9 @@ function updateDataInfo() {
   const chunks = (STATE.manifest.chunk_count || 0).toLocaleString();
   const bkgRows = (STATE.manifest.bkg_rows || 0).toLocaleString();
   el.textContent = I18N[STATE.lang].dataInfo(date, chunks, bkgRows);
+  const quality = STATE.index.cm1_quality;
+  const state = quality ? `${quality.status === 'partial' ? (STATE.lang === 'en' ? 'unconfirmed' : '미확인') : quality.status} ${quality.unknown_rows ?? ''}${STATE.lang === 'en' ? ' rows' : '건'}` : (STATE.lang === 'en' ? 'not supplied' : '미제공');
+  el.textContent += (STATE.lang === 'en' ? ' · CM1 quality: ' : ' · CM1 결측 검증: ') + state;
 }
 
 function showError(msg) {
@@ -2489,7 +2519,7 @@ function aggregateShippers(bookings, shipperBsa, scopeAllocations) {
     if (isBookingMetricRow(b) && b.bkg_no) s.bkg_nos.add(b.bkg_no);
     s.fst_teu += b.fst_teu || 0;
     s.lst_teu += detailLstTeu(b);
-    s.cm1 += detailCm1(b);
+    s.cm1 = sumMetric(s.cm1, detailCm1(b));
     if (b.is_w3) {
       if (isBookingMetricRow(b) && b.bkg_no) s.w3_bkg_nos.add(b.bkg_no);
       s.w3_fst += b.fst_teu || 0;
@@ -2573,7 +2603,7 @@ function renderShipperTable(origin, sales, shippers, bookings) {
     w3fst: shippers.reduce((s, r) => s + r.w3_fst, 0),
     w3lst: shippers.reduce((s, r) => s + r.w3_lst, 0),
     w3hi: shippers.reduce((s, r) => s + r.hi_w3_fst, 0),
-    cm1: shippers.reduce((s, r) => s + r.cm1, 0),
+    cm1: shippers.reduce((s, r) => sumMetric(s, r.cm1), 0),
   };
   const lstRate = safeRatio(totals.w3lst, totals.w3fst);
   const hiShare = safeRatio(totals.w3hi, totals.w3fst);
@@ -2583,7 +2613,7 @@ function renderShipperTable(origin, sales, shippers, bookings) {
 
   // The breadcrumbs above already display origin + salesperson scope, so the
   // panel title only needs the month range to avoid the long comma-separated repeat.
-  let h = `<div class="panel-header">
+  let h = cm1QualityNotice(bookings) + `<div class="panel-header">
     <div class="panel-title">${cols.shipper} (${escapeHtml(monthLabel(monthsForFilter()))})</div>
     <div class="panel-actions">${cols.shipper} ${shippers.length} · ${cols.bkgCnt} ${fmtNum(totals.bkgU)}</div>
   </div>
@@ -2973,7 +3003,7 @@ function pivotAggregate(rows, metric) {
     if (isBookingMetricRow(b)) init.bkg_count++;
     if (isBookingMetricRow(b) && b.bkg_no) init.bkg_no_set.add(b.bkg_no);
     if (b.shipper_no || b.shipper_name) init.shipper_set.add(b.shipper_no || b.shipper_name);
-    init.cm1 += detailCm1(b);
+    init.cm1 = sumMetric(init.cm1, detailCm1(b));
   });
   switch (metric) {
     case 'fst': return init.fst;
@@ -2984,7 +3014,7 @@ function pivotAggregate(rows, metric) {
     case 'bkg_unique': return init.bkg_no_set.size;
     case 'shipper_unique': return init.shipper_set.size;
     case 'cm1': return init.cm1;
-    case 'cm1_per_teu': return init.lst ? init.cm1 / init.lst : 0;
+    case 'cm1_per_teu': return safeRatio(init.cm1, init.lst);
     case 'lst_rate_w3': return init.w3_fst ? init.w3_lst / init.w3_fst : 0;
     case 'hi_share_w3': return init.w3_fst ? init.w3_hi_fst / init.w3_fst : 0;
     case 'cancel_rate': return init.fst ? init.cancel / init.fst : 0;
@@ -3064,7 +3094,7 @@ function renderPivotTable(bookings) {
     });
   }
   const heatStyle = (val) => {
-    if (!heatmap || heatMax <= 0 || RATIO_METRICS.has(metric)) return '';
+    if (finiteMetric(val) === null || !heatmap || heatMax <= 0 || RATIO_METRICS.has(metric)) return '';
     const intensity = Math.max(0, Math.min(1, val / heatMax));
     if (intensity < 0.02) return '';
     const alpha = 0.08 + intensity * 0.55;
@@ -3077,7 +3107,7 @@ function renderPivotTable(bookings) {
     if (normalize === 'row') denom = pivotAggregate(rowBks || [], metric);
     else if (normalize === 'col') denom = pivotAggregate(colBks || [], metric);
     else if (normalize === 'grand') denom = grandValue;
-    if (!denom) return pivotFormat(val, metric);
+    if (finiteMetric(denom) === null || denom === 0) return '-';
     return ((val / denom) * 100).toFixed(0) + '%';
   };
 
@@ -3089,7 +3119,7 @@ function renderPivotTable(bookings) {
   const normNote = normalize !== 'value' && !RATIO_METRICS.has(metric)
     ? ` · ${tr('pivotNorm')} ${tr('pivotNorm' + normalize[0].toUpperCase() + normalize.slice(1))}` : '';
 
-  let h = `<div style="font-size:11px;color:#80868b;margin-bottom:6px">${tr('cluePivot')} · ${tr('pivotMetric')}: <b>${escapeHtml(I18N[STATE.lang].metricNames[metric] || metric)}</b>${normNote}${heatmap ? ' · 🔥' : ''}${sort && sort.col ? ` · ${sort.dir === 'asc' ? tr('pivotSortAsc') : tr('pivotSortDesc')}` : ''}</div>`;
+  let h = cm1QualityNotice(bookings) + `<div style="font-size:11px;color:#80868b;margin-bottom:6px">${tr('cluePivot')} · ${tr('pivotMetric')}: <b>${escapeHtml(I18N[STATE.lang].metricNames[metric] || metric)}</b>${normNote}${heatmap ? ' · 🔥' : ''}${sort && sort.col ? ` · ${sort.dir === 'asc' ? tr('pivotSortAsc') : tr('pivotSortDesc')}` : ''}</div>`;
   h += `<table class="dt"><thead><tr>`;
   h += `<th>${escapeHtml(rowLabel(row))}${useRow2 ? ' › ' + escapeHtml(rowLabel(row2)) : ''}</th>`;
   colOrder.forEach(ck => {
