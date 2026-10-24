@@ -182,6 +182,7 @@ table.summary.shipper-table tr:hover td.basis-col{background:#f2f6ff}
 
 <script src="drive-config.js"></script>
 <script src="independent-bsa.js?v=20261024"></script>
+<script src="independent-bl.js?v=20261024"></script>
 <script>
 // ═══════════════════════════════════════════════
 // Auth (OAuth2 implicit redirect flow)
@@ -412,6 +413,10 @@ async function loadCurrentDataJson() {
       const bsa = await findDriveFileByName(DRIVE_CONFIG.mainFolderId, 'independent_bsa.json.gz');
       if (bsa) data.independent_bsa = await fetchDriveJson(bsa.id, bsa.name);
     } catch (error) { data.independent_bsa_error = error.message; }
+    try {
+      const bl = await findDriveFileByName(DRIVE_CONFIG.mainFolderId, 'independent_bl.json.gz');
+      if (bl) data.independent_bl = await fetchDriveJson(bl.id, bl.name);
+    } catch (error) { data.independent_bl_error = error.message; }
     return data;
   }
   if (isLocalPreview()) {
@@ -1625,6 +1630,7 @@ function renderUnassignedQualityBanner() {
 
 function render() {
   if (window.IndependentBSA) IndependentBSA.mount(DATA, document.getElementById('app'));
+  if (window.IndependentBL) IndependentBL.mount(DATA, document.getElementById('app'));
   renderUnassignedQualityBanner();
   if (!DATA) return;
   resetFilterMemo();

@@ -985,6 +985,10 @@ async function loadData(force = false) {
       if (OBTAuth.getToken() && DRIVE_CONFIG.mainFolderId) data.independent_bsa = await fetchDriveJson(DRIVE_CONFIG.mainFolderId, "independent_bsa.json.gz", force);
     } catch (error) { data.independent_bsa_error = error.message; }
     if (window.IndependentBSA) IndependentBSA.mount(data, document.querySelector('main'), 'OBT');
+    try {
+      if (OBTAuth.getToken() && DRIVE_CONFIG.mainFolderId) data.independent_bl = await fetchDriveJson(DRIVE_CONFIG.mainFolderId, "independent_bl.json.gz", force);
+    } catch (error) { data.independent_bl_error = error.message; }
+    if (window.IndependentBL) IndependentBL.mount(data, document.querySelector('main'), 'OBT');
     state.raw = data;
     state.loadedPath = loadedPath;
     state.rows = normalizeRows(toTeamRecordArray(data.shipper, "OBT"));
