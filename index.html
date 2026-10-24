@@ -181,6 +181,7 @@ table.summary.shipper-table tr:hover td.basis-col{background:#f2f6ff}
 </div>
 
 <script src="drive-config.js"></script>
+<script src="independent-bsa.js?v=20261024"></script>
 <script>
 // ═══════════════════════════════════════════════
 // Auth (OAuth2 implicit redirect flow)
@@ -406,7 +407,12 @@ async function loadCurrentDataJson() {
   if (gToken && DRIVE_CONFIG.mainFolderId) {
     const file = await findDriveFileByName(DRIVE_CONFIG.mainFolderId, 'data.json.gz');
     if (!file) throw new Error('Google Drive data.json.gz not found');
-    return fetchDriveJson(file.id, file.name);
+    const data = await fetchDriveJson(file.id, file.name);
+    try {
+      const bsa = await findDriveFileByName(DRIVE_CONFIG.mainFolderId, 'independent_bsa.json.gz');
+      if (bsa) data.independent_bsa = await fetchDriveJson(bsa.id, bsa.name);
+    } catch (error) { data.independent_bsa_error = error.message; }
+    return data;
   }
   if (isLocalPreview()) {
     const stamp = Date.now();
@@ -1618,6 +1624,7 @@ function renderUnassignedQualityBanner() {
 }
 
 function render() {
+  if (window.IndependentBSA) IndependentBSA.mount(DATA, document.getElementById('app'));
   renderUnassignedQualityBanner();
   if (!DATA) return;
   resetFilterMemo();

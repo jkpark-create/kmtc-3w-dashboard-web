@@ -981,6 +981,10 @@ async function loadData(force = false) {
     }
     if (!data) throw new Error("dist/data.json 파일을 읽을 수 없습니다.");
 
+    try {
+      if (OBTAuth.getToken() && DRIVE_CONFIG.mainFolderId) data.independent_bsa = await fetchDriveJson(DRIVE_CONFIG.mainFolderId, "independent_bsa.json.gz", force);
+    } catch (error) { data.independent_bsa_error = error.message; }
+    if (window.IndependentBSA) IndependentBSA.mount(data, document.querySelector('main'), 'OBT');
     state.raw = data;
     state.loadedPath = loadedPath;
     state.rows = normalizeRows(toTeamRecordArray(data.shipper, "OBT"));
