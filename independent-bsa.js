@@ -28,16 +28,21 @@
     if (!data || (!data.independent_bsa && !data.independent_bsa_error)) { if (panel) panel.remove(); return; }
     if (panel && panel._source === data.independent_bsa) return;
     if (panel) panel.remove();
-    panel = document.createElement('details'); panel.dataset.independentBsa = '1'; panel.open = true;
+    panel = document.createElement('details'); panel.dataset.independentBsa = '1'; panel.open = false;
     panel.style.cssText = 'margin:12px;padding:12px;border:1px solid #c1d5ee;border-radius:8px;background:#f5f9ff;color:#172b4d;font:14px/1.5 sans-serif';
-    host.prepend(panel);
+    const top = host.querySelector('.app-top');
+    const previous = host.querySelector('[data-independent-bl], [data-independent-bsa]');
+    if (previous) previous.after(panel);
+    else if (top) top.after(panel);
+    else host.prepend(panel);
     function element(tag, text, parent) { const el = document.createElement(tag); if (text !== undefined) el.textContent = text; if (parent) parent.appendChild(el); return el; }
     if (data.independent_bsa_error) { panel.setAttribute('role','alert'); panel.textContent='최신 BSA 독립 원천 로드 실패: '+data.independent_bsa_error+' · 기존 계산 기준일 '+data.data_date+' 유지'; return; }
     let source;
     try { source = read(data); } catch (error) { panel.setAttribute('role','alert'); panel.textContent = error.message; return; }
     if (!source) { panel.remove(); return; }
     panel._source = data.independent_bsa;
-    element('summary', '최신 BSA 단독 조회 · 원천 기준일 ' + source.sourceDate, panel);
+    const summary = element('summary', '최신 BSA 단독 조회 · 원천 기준일 ' + source.sourceDate + ' · 펼쳐서 조회', panel);
+    summary.style.cssText='cursor:pointer;font-weight:600;padding:2px 0';
     element('p', 'BSA는 Booking 없이 독립 검증·갱신했습니다. 아래 필터와 표는 최신 BSA입니다. 기존 Booking·BL·WOS 및 활용률/비율 화면은 검증된 ' + data.data_date + ' 묶음을 유지합니다. 서로 다른 날짜의 수치를 같은 기준일로 합산하지 않습니다.', panel);
     element('p', '원천 생성 ' + source.generatedAt + ' · 검증 ' + source.verifiedAt + ' · 월별 합계 대조 통과', panel);
     const controls = element('div', undefined, panel); controls.style.cssText='display:flex;gap:10px;flex-wrap:wrap';
@@ -56,7 +61,7 @@
     const wrap=element('div',undefined,panel);wrap.style.cssText='overflow:auto;max-height:380px';
     const table=element('table',undefined,wrap); table.style.cssText='border-collapse:collapse;width:100%;background:white';
     const head=element('tr',undefined,element('thead',undefined,table));
-    ['팀','월','주차','출발국','출발지','도착국','도착지','BSA TEU'].forEach(value=>element('th',value,head));
+    ['팀','월','주차','출발국','출발지','도착국','도착지','BSA TEU'].forEach((value,index)=>{const th=element('th',value,head);th.scope='col';th.style.cssText='position:sticky;top:0;background:#e8f0fe;padding:8px;text-align:'+(index>=7?'right':'left')+';white-space:nowrap;border-bottom:1px solid #c1d5ee';});
     const body=element('tbody',undefined,table);const nav=element('div',undefined,panel);
     const prev=element('button','이전 100행',nav), next=element('button','다음 100행',nav);prev.type=next.type='button';
     prev.onclick=()=>{page--;draw();};next.onclick=()=>{page++;draw();};
@@ -64,7 +69,7 @@
       const rows=select(source,filters),total=rows.reduce((sum,row)=>sum+row[7],0);
       status.textContent='선택 BSA '+total.toLocaleString('ko-KR',{maximumFractionDigits:3})+' TEU · '+rows.length.toLocaleString()+'행 · '+(rows.length ? (page*100+1)+'–'+Math.min((page+1)*100,rows.length) : '0')+'행 표시';
       body.replaceChildren();
-      for(const row of rows.slice(page*100,(page+1)*100)) {const tr=element('tr',undefined,body); for(const i of [6,3,2,5,1,4,0,7]){const td=element('td',i===7 ? row[i].toLocaleString('ko-KR',{maximumFractionDigits:3}) : String(row[i]),tr);td.style.cssText='padding:4px;border-bottom:1px solid #eee';}}
+      for(const row of rows.slice(page*100,(page+1)*100)) {const tr=element('tr',undefined,body); for(const i of [6,3,2,5,1,4,0,7]){const td=element('td',i===7 ? row[i].toLocaleString('ko-KR',{maximumFractionDigits:3}) : String(row[i]),tr);td.style.cssText='padding:6px 8px;border-bottom:1px solid #eee;white-space:nowrap;text-align:'+(i>=7?'right':'left');}}
       prev.disabled=page===0;next.disabled=(page+1)*100>=rows.length;
     }
     draw();
