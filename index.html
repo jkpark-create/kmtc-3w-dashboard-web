@@ -183,6 +183,7 @@ table.summary.shipper-table tr:hover td.basis-col{background:#f2f6ff}
 <script src="drive-config.js"></script>
 <script src="independent-bsa.js?v=20261026-layout"></script>
 <script src="independent-bl.js?v=20261026-layout"></script>
+<script src="current-components.js?v=20261026-tables"></script>
 <script>
 // ═══════════════════════════════════════════════
 // Auth (OAuth2 implicit redirect flow)
@@ -449,6 +450,11 @@ function normalizeDataDate(value) {
 function publishedDateLabel(value) {
   const day = normalizeDataDate(value);
   const label = day ? `${day.slice(0,4)}-${day.slice(4,6)}-${day.slice(6,8)}` : String(value || '');
+  const dates = DATA?.current_component_dates;
+  if (dates && (dates.bl !== day || dates.bsa !== day)) {
+    const format = value => value.slice(0,4)+'-'+value.slice(4,6)+'-'+value.slice(6,8);
+    return `BKG/WOS ${label} · B/L ${format(dates.bl)} · BSA ${format(dates.bsa)}`;
+  }
   return `${label} (${L('현재 게시','Published')})`;
 }
 
@@ -610,6 +616,7 @@ function normalizeMetricKeys(data) {
       });
     });
   });
+  CurrentComponents.apply(data, {bsa:IndependentBSA.read, bl:IndependentBL.read});
   deriveHighProfitMetrics(data, 'monthly');
   deriveHighProfitMetrics(data, 'weekly');
 }
@@ -1629,8 +1636,6 @@ function renderUnassignedQualityBanner() {
 }
 
 function render() {
-  if (window.IndependentBSA) IndependentBSA.mount(DATA, document.getElementById('app'));
-  if (window.IndependentBL) IndependentBL.mount(DATA, document.getElementById('app'));
   renderUnassignedQualityBanner();
   if (!DATA) return;
   resetFilterMemo();
