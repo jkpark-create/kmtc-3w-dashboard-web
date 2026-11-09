@@ -29,24 +29,9 @@ async function findDriveFileByName(folderId, fileName) {
 }
 
 async function fetchDriveJson(folderId, fileName, force = false) {
-  const file = await findDriveFileByName(folderId, fileName);
-  if (!file) throw new Error(`Google Drive file not found: ${fileName}`);
-  const token = OBTAuth.getToken();
-  const suffix = force ? `&t=${Date.now()}` : "";
-  const response = await fetch(
-    `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(file.id)}?alt=media${suffix}`,
-    {
-      cache: "no-cache",
-      headers: {Authorization: "Bearer " + token}
-    }
-  );
-  if (!response.ok) throw new Error(`Google Drive ${fileName}: HTTP ${response.status}`);
-  if (!fileName.endsWith(".gz")) return response.json();
-  if (!("DecompressionStream" in window) || !response.body) {
-    throw new Error("gzip JSON is not supported by this browser");
-  }
-  const stream = response.body.pipeThrough(new DecompressionStream("gzip"));
-  return new Response(stream).json();
+  const file=await findDriveFileByName(folderId,fileName);
+  if (!file) throw new Error('Google Drive file not found: '+fileName);
+  return KMTCGlobalGate.readJson(file.id,fileName,OBTAuth.getToken());
 }
 
 async function fetchJson(path, force = false) {
@@ -962,7 +947,9 @@ async function loadData(force = false) {
   try {
     // Both inputs are required for a complete first query; overlap their IO.
     if (force) DRIVE_FILE_CACHE.clear();
+    const publicationBefore = OBTAuth.getToken() ? await KMTCGlobalGate.check(OBTAuth.getToken()) : null;
     const historyPromise = loadHistory(force);
+    historyPromise.catch(()=>{}); // Retain rejection for awaited validation without an unhandled background rejection.
     let data = null;
     let loadedPath = "";
     if (OBTAuth.getToken() && DRIVE_CONFIG.mainFolderId) {
@@ -983,19 +970,24 @@ async function loadData(force = false) {
 
     try {
       if (OBTAuth.getToken() && DRIVE_CONFIG.mainFolderId) data.independent_bsa = await fetchDriveJson(DRIVE_CONFIG.mainFolderId, "independent_bsa.json.gz", force);
-    } catch (error) { data.independent_bsa_error = error.message; }
-    if (window.IndependentBSA) IndependentBSA.mount(data, document.querySelector('main'), 'OBT');
+    } catch (error) { if (String(error.code||'').startsWith('PUBLICATION_')) throw error; if (error.code==='OPTIONAL_UNAVAILABLE') { delete data.independent_bsa; delete data.independent_bsa_error; data.independent_bsa_unavailable = error.message; } else data.independent_bsa_error = error.message; }
+
     try {
       if (OBTAuth.getToken() && DRIVE_CONFIG.mainFolderId) data.independent_bl = await fetchDriveJson(DRIVE_CONFIG.mainFolderId, "independent_bl.json.gz", force);
-    } catch (error) { data.independent_bl_error = error.message; }
+    } catch (error) { if (String(error.code||'').startsWith('PUBLICATION_')) throw error; if (error.code==='OPTIONAL_UNAVAILABLE') { delete data.independent_bl; delete data.independent_bl_error; data.independent_bl_unavailable = error.message; } else data.independent_bl_error = error.message; }
+
+    const checkedHistory = await historyPromise;
+    if (publicationBefore) await KMTCGlobalGate.assertSame(publicationBefore,OBTAuth.getToken());
+    if (window.IndependentBSA) IndependentBSA.mount(data, document.querySelector('main'), 'OBT');
     if (window.IndependentBL) IndependentBL.mount(data, document.querySelector('main'), 'OBT');
+    KMTCGlobalGate.showOptionalNotice(data);
     state.raw = data;
     state.loadedPath = loadedPath;
     state.rows = normalizeRows(toTeamRecordArray(data.shipper, "OBT"));
     state.bsaRows = normalizeBsaRows(toTeamRecordArray(data.bsa, "OBT"));
     state.spaceRows = normalizeSpaceRows(toRecordArray(data.space_opportunity));
     state.spaceMeta = data.scope_source?.space_opportunity || {};
-    state.history = await historyPromise;
+    state.history = checkedHistory;
     state.months = Array.from(new Set(state.rows.map((row) => row.month))).sort();
 
     const targetMonth = defaultTargetMonth(data.data_date);
@@ -1019,6 +1011,7 @@ async function loadHistory(force = false) {
     try {
       return await fetchDriveJson(DRIVE_CONFIG.obtFolderId, "history.json.gz", force);
     } catch (error) {
+      if (String(error.code||"").startsWith("PUBLICATION_")) throw error;
       console.warn("Google Drive history unavailable", error);
       return null;
     }

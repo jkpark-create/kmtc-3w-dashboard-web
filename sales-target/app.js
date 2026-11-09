@@ -568,7 +568,122 @@ async function loadDriveJson(folderId, fileName) {
   return response.json();
 }
 
+// latest-dual-control-reader-v1
+// Shared reader primitive. Gate must be the verified existing protected Drive
+// control object, not a public Pages asset. Caller supplies authenticated reader.
+function requireReadyPublication(gate) {
+  const p=gate?.publication;
+  if (p?.protocol !== 'latest-global-gate-v1' || p.state !== 'ready' || typeof p.runId !== 'string' || !p.runId || !p.components || !['main','obt','sales'].every(k => /^[0-9a-f]{64}$/.test(p.components[k]?.sha256 || '')) || p.integrated?.controlFileId !== '1EF5MH1jQziPzZC2FNj_J7z0_03TsMP0f' || typeof p.integrated.generation !== 'string' || !p.integrated.generation) {
+    const error=new Error('Dashboard publication is updating or unverified; retry after it completes');
+    error.code='PUBLICATION_NOT_READY';throw error;
+  }
+  // Bind the complete control document, including every physical object/hash.
+  // Stable JSON byte order is retained by JSON.parse for unchanged Drive bytes.
+  return JSON.stringify(gate);
+}
+function requireReadyIntegrated(control, gate) {
+  if (control?.protocol !== 'stable-id-latest-v1' || control.state !== 'ready' || control.generation !== gate.publication.integrated.generation) {
+    const error=new Error('Integrated publication is updating or mismatched');
+    error.code='PUBLICATION_NOT_READY';throw error;
+  }
+  return JSON.stringify(control);
+}
+async function withinReadyPublication(readGate, task, readIntegrated) {
+  if (typeof readIntegrated !== 'function') throw new Error('Integrated control reader required');
+  const before=await readGate(),identity=requireReadyPublication(before);
+  const integratedBefore=await readIntegrated(before.publication.integrated.controlFileId);
+  const integratedIdentity=requireReadyIntegrated(integratedBefore,before);
+  const value=await task(before);
+  const after=await readGate();
+  const afterIdentity=requireReadyPublication(after);
+  const integratedAfter=await readIntegrated(after.publication.integrated.controlFileId);
+  if (identity!==afterIdentity || integratedIdentity!==requireReadyIntegrated(integratedAfter,after)) {
+    const error=new Error('Dashboard generation changed while loading; refresh');
+    error.code='PUBLICATION_GENERATION_CHANGED';throw error;
+  }
+  return value;
+}
+
+// latest-sha256-slot-reader-v1: protected Drive objects only, no business data in Pages.
+let LATEST_RELEASE_V3 = null;
+const LATEST_SLOT_CACHE_V3 = new Map();
+function verifyLatestV3(release) {
+  requireReadyPublication(release);
+  if (release?._format !== 'sales-target-release-v3' || !/^[0-9A-Za-z-]+$/.test(release.release_id || '') || !/^\d{8}$/.test(release.data_date || '')) throw new Error('Invalid latest Sales Target generation');
+  const caps = release.required_capabilities;
+  if (!Array.isArray(caps) || !caps.includes('sha256-latest-v1') || new Set(caps).size !== caps.length || caps.some(c => !['sha256-latest-v1','nullable-cm1-v1'].includes(c))) throw new Error('Unsupported latest capability');
+  if (!['index','manifest','base2025'].every(k => release.files?.[k] === `${k}.json`)) throw new Error('Invalid latest document slots');
+  if (!release.objects || typeof release.objects !== 'object' || Array.isArray(release.objects)) throw new Error('Missing latest object map');
+  const ids = new Map();
+  for (const [logical, item] of Object.entries(release.objects)) {
+    const isChunk = /^data\/[^/\\]+\.json$/.test(logical) && !logical.includes('..');
+    if (!isChunk && !['index.json','manifest.json','base2025.json'].includes(logical)) throw new Error('Invalid latest logical path');
+    const folder = isChunk ? DRIVE_CONFIG.salesDataFolderId : DRIVE_CONFIG.salesFolderId;
+    if (!item || !/^[A-Za-z0-9_-]+$/.test(item.id || '') || item.folderId !== folder || !/^[^/\\]+\.json$/.test(item.name || '') || item.name.includes('..') || /^\d{8}-[0-9a-f]{16}-/.test(item.name) || /\.v\d{8}-[0-9a-f]{16}\.json$/.test(item.name) || !/^[0-9a-f]{64}$/.test(item.sha256 || '') || !Number.isSafeInteger(item.size) || item.size < 1 || item.size > 32*1024*1024) throw new Error('Invalid latest physical slot');
+    if (!isChunk && item.name !== logical) throw new Error('Latest metadata slot differs');
+    if (isChunk && (item.member !== logical || !/^[A-Z_]+__[A-Za-z0-9._-]+__\d{6}\.json$/.test(item.name))) throw new Error('Invalid latest bundle slot');
+    const physical = JSON.stringify([item.name,item.folderId,item.sha256,item.size]);
+    if (ids.has(item.id) && (!isChunk || ids.get(item.id) !== physical)) throw new Error('Conflicting latest slot aliases');
+    ids.set(item.id,physical);
+  }
+  if (!['index.json','manifest.json','base2025.json'].every(n => release.objects[n])) throw new Error('Incomplete latest document map');
+  LATEST_RELEASE_V3 = release;
+  return release.files;
+}
+async function sha256Hex(bytes) {
+  return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)), b => b.toString(16).padStart(2,'0')).join('');
+}
+async function verifyLatestBytes(bytes, descriptor) {
+  if (bytes.byteLength !== descriptor.size || await sha256Hex(bytes) !== descriptor.sha256) {
+    const error = new Error('Sales Target generation changed or failed integrity verification; reload after the update completes');
+    error.code = 'LATEST_GENERATION_MISMATCH'; throw error;
+  }
+  return JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));
+}
+async function loadLatestV3Json(logical) {
+  const descriptor = LATEST_RELEASE_V3?.objects[logical];
+  if (!descriptor) throw new Error('Unbound latest object; no legacy fallback');
+  const token = driveToken();
+  if (!token) throw new Error('Protected latest data requires Google Drive authentication');
+  const cacheKey = descriptor.id + ':' + descriptor.sha256;
+  const expectedIdentity=requireReadyPublication(LATEST_RELEASE_V3);
+  const value = await withinReadyPublication(async () => {
+    const current=await loadJson('sales-target-release.json');
+    if (requireReadyPublication(current)!==expectedIdentity) throw new Error('Latest generation changed; reload');
+    return current;
+  }, async () => {
+    if (!LATEST_SLOT_CACHE_V3.has(cacheKey)) {
+      const pending = (async () => {
+        const response = await withDriveDownloadSlot(() => fetchDriveWithRetry(
+          `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(descriptor.id)}?alt=media&t=${Date.now()}`,
+          {cache:'no-store',headers:{Authorization:'Bearer '+token}},'Latest verified Sales Target object'));
+        return verifyLatestBytes(await response.arrayBuffer(),descriptor);
+      })();
+      LATEST_SLOT_CACHE_V3.set(cacheKey,pending);
+      pending.catch(() => LATEST_SLOT_CACHE_V3.delete(cacheKey));
+    }
+    return LATEST_SLOT_CACHE_V3.get(cacheKey);
+  }, async controlFileId => {
+    const response=await fetchDriveWithRetry(
+      `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(controlFileId)}?alt=media&t=${Date.now()}`,
+      {cache:'no-store',headers:{Authorization:'Bearer '+token}},'Integrated publication control');
+    return response.json();
+  });
+  if (!descriptor.member) return value;
+  if (value?._format !== 'sales-target-slot-bundle-v1' || value.release_id !== LATEST_RELEASE_V3.release_id || value.data_date !== LATEST_RELEASE_V3.data_date || !value.objects || Object.keys(value.objects).length > 2 || !Object.prototype.hasOwnProperty.call(value.objects,descriptor.member)) throw new Error('Latest bundle generation/member differs');
+  return value.objects[descriptor.member];
+}
+function verifyLatestManifestBindings(manifest) {
+  if (!LATEST_RELEASE_V3) return;
+  const logical = [...(manifest.chunks || []),...(manifest.capacity_reserve_chunks || [])].map(c => c.file);
+  if (new Set(logical).size !== logical.length || logical.some(p => !LATEST_RELEASE_V3.objects[p])) throw new Error('Latest chunk coverage differs');
+  const actual = Object.keys(LATEST_RELEASE_V3.objects).filter(p => p.startsWith('data/'));
+  if (actual.length !== logical.length) throw new Error('Latest extra chunk bindings');
+}
+
 async function loadJson(url) {
+  const latestLogical = String(url || "").replace(/^\.\//, "");
+  if (LATEST_RELEASE_V3 && latestLogical !== "sales-target-release.json") return loadLatestV3Json(latestLogical);
   const token = driveToken();
   if (token && DRIVE_CONFIG.salesFolderId && DRIVE_CONFIG.salesDataFolderId) {
     const clean = String(url || '').replace(/^\.\//, '');
@@ -587,6 +702,7 @@ async function loadJson(url) {
 }
 
 function verifiedReleaseFiles(release) {
+  if (release?._format === "sales-target-release-v3") return verifyLatestV3(release);
   if (release === null) return null;
   if (!['sales-target-release-v1', 'sales-target-release-v2'].includes(release?._format) || !/^[0-9A-Za-z-]+$/.test(release.release_id || '') || !/^\d{8}$/.test(release.data_date || '') || !['index', 'manifest', 'base2025'].every(key => release.files?.[key] === `${key}.v${release.release_id}.json`)) {
     throw new Error('Invalid Sales Target release metadata');
@@ -598,7 +714,7 @@ function verifiedReleaseFiles(release) {
 }
 
 function verifyCm1QualityMetadata(release, index, manifest) {
-  if (release?._format !== 'sales-target-release-v2') return;
+  if (release?._format !== 'sales-target-release-v2' && !(release?._format === 'sales-target-release-v3' && release.required_capabilities.includes('nullable-cm1-v1'))) return;
   const a = index.cm1_quality, b = manifest.cm1_quality;
   if (!a || !b || a.source_date !== release.data_date || b.source_date !== release.data_date || a.status !== 'partial' || JSON.stringify(a) !== JSON.stringify(b) || !Number.isInteger(a.unknown_rows) || a.unknown_rows <= 0) {
     throw new Error('Incomplete CM1 quality provenance; no unverified aggregate will be shown');
@@ -623,6 +739,7 @@ async function init() {
       throw new Error('Sales Target release metadata differs; refresh to load the complete published version');
     }
     verifyCm1QualityMetadata(release, index, manifest);
+    verifyLatestManifestBindings(manifest);
     STATE.index = index;
     STATE.manifest = manifest;
     STATE.base2025 = base2025 && base2025.base ? base2025.base : null;
@@ -2302,6 +2419,7 @@ async function loadChunk(origin, sales, yyyymm) {
     })
     .catch(err => {
       console.error('chunk load failed', meta.file, err);
+      if (LATEST_RELEASE_V3) { STATE.chunkCache.delete(key); showError(err.message); throw err; }
       STATE.chunkCache.delete(key);
       return null;
     });

@@ -215,6 +215,7 @@ async function loadSalesTargetSummary() {
       json = response.ok ? await response.json() : null;
     }
       if (!json || !Array.isArray(json.rows)) return;
+      if (gToken && json.__latestPublicationRunId !== DATA?.__latestPublicationRunId) throw new Error('Sales overlay generation differs; reload dashboard');
       SALES_TARGET.byName.clear();
       SALES_TARGET.byIdentity.clear();
       json.rows.forEach(row => {
@@ -227,6 +228,7 @@ async function loadSalesTargetSummary() {
         named.push(row);
         SALES_TARGET.byName.set(row.name, named);
       });
+      SALES_TARGET.publicationRunId = json.__latestPublicationRunId;
       SALES_TARGET.loaded = true;
       SALES_TARGET.dataDate = json.data_date;
       // If currently looking at a Tab 2 table that can show target columns, re-render so columns populate.
@@ -370,19 +372,7 @@ async function fetchJson(path) {
 }
 
 async function fetchDriveJson(fileId, fileName) {
-  if (!gToken) throw new Error('Google Drive token is missing');
-  const stamp = Date.now();
-  const resp = await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media&t=${stamp}`, {
-    cache: 'no-cache',
-    headers: {'Authorization': 'Bearer ' + gToken}
-  });
-  if (!resp.ok) throw new Error(`Google Drive HTTP ${resp.status}`);
-  if (!String(fileName || '').endsWith('.gz')) return resp.json();
-  if (!('DecompressionStream' in window) || !resp.body) {
-    throw new Error('gzip JSON is not supported by this browser');
-  }
-  const stream = resp.body.pipeThrough(new DecompressionStream('gzip'));
-  return new Response(stream).json();
+  return KMTCGlobalGate.readJson(fileId,fileName,gToken);
 }
 
 async function findDriveFileByName(folderId, fileName) {
@@ -406,6 +396,10 @@ async function findDriveFileByName(folderId, fileName) {
 }
 
 async function loadCurrentDataJson() {
+  if (isLocalPreview() && !gToken) return loadCurrentDataJsonUnchecked();
+  return KMTCGlobalGate.within(gToken,()=>loadCurrentDataJsonUnchecked());
+}
+async function loadCurrentDataJsonUnchecked() {
   if (gToken && DRIVE_CONFIG.mainFolderId) {
     const file = await findDriveFileByName(DRIVE_CONFIG.mainFolderId, 'data.json.gz');
     if (!file) throw new Error('Google Drive data.json.gz not found');
@@ -413,11 +407,11 @@ async function loadCurrentDataJson() {
     try {
       const bsa = await findDriveFileByName(DRIVE_CONFIG.mainFolderId, 'independent_bsa.json.gz');
       if (bsa) data.independent_bsa = await fetchDriveJson(bsa.id, bsa.name);
-    } catch (error) { data.independent_bsa_error = error.message; }
+    } catch (error) { if (String(error.code||'').startsWith('PUBLICATION_')) throw error; if (error.code==='OPTIONAL_UNAVAILABLE') { delete data.independent_bsa; delete data.independent_bsa_error; data.independent_bsa_unavailable = error.message; } else data.independent_bsa_error = error.message; }
     try {
       const bl = await findDriveFileByName(DRIVE_CONFIG.mainFolderId, 'independent_bl.json.gz');
       if (bl) data.independent_bl = await fetchDriveJson(bl.id, bl.name);
-    } catch (error) { data.independent_bl_error = error.message; }
+    } catch (error) { if (String(error.code||'').startsWith('PUBLICATION_')) throw error; if (error.code==='OPTIONAL_UNAVAILABLE') { delete data.independent_bl; delete data.independent_bl_error; data.independent_bl_unavailable = error.message; } else data.independent_bl_error = error.message; }
     return data;
   }
   if (isLocalPreview()) {
@@ -484,6 +478,8 @@ async function loadData() {
   try {
     // Start charts and data together after auth, then render a complete screen.
     [DATA] = await Promise.all([loadCurrentDataJson(), ensurePlotly()]);
+    KMTCGlobalGate.showOptionalNotice(DATA);
+    if (SALES_TARGET.publicationRunId !== DATA.__latestPublicationRunId) { SALES_TARGET.byName.clear(); SALES_TARGET.byIdentity.clear(); SALES_TARGET.loaded=false; SALES_TARGET.dataDate=null; }
     normalizeMetricKeys(DATA);
     const sel = document.getElementById('dataDateSel');
     sel.innerHTML = `<option value="today" data-published-date="${normalizeDataDate(DATA.data_date) || ''}">${publishedDateLabel(DATA.data_date)}</option>`;
