@@ -789,7 +789,7 @@ function updateDataInfo() {
   const chunks = (STATE.manifest.chunk_count || 0).toLocaleString();
   const bkgRows = (STATE.manifest.bkg_rows || 0).toLocaleString();
   el.textContent = I18N[STATE.lang].dataInfo(date, chunks, bkgRows);
-  const sources = LATEST_RELEASE_V3?.publication?.sourceDates;
+  const sources = KMTCGlobalGate.publishedSourceDates(LATEST_RELEASE_V3?.publication);
   if (sources && ['booking','preparedBooking','bl','bsa','schedule'].every(key => /^\d{8}$/.test(sources[key] || ''))) {
     const schedule = STATE.lang === 'en' ? 'Schedule' : '스케줄';
     const preparedBooking = STATE.lang === 'en' ? 'Prepared BKG' : 'Booking 집계';

@@ -23,6 +23,23 @@ window.DASHBOARD_DRIVE_CONFIG = Object.freeze({
     if (!value.ok) fail('Publication read failed: HTTP '+value.status);
     return value;
   }
+  function publishedSourceDates(publication) {
+    const protectedHead=publication?.sourceHeadDescriptor;
+    const heads=protectedHead?.heads;
+    if (!heads || protectedHead.sourceDate!==publication.sourceDate
+        || protectedHead.headDigest!==publication.sourceHeadDigest) return null;
+    const dates={
+      booking:String(heads.canonicalBooking?.loadDtm||'').slice(0,10).replaceAll('-',''),
+      preparedBooking:heads.readiness?.sandboxPreparedBookingLatestBascDt,
+      bsa:heads.bsa?.bascDt,
+      bl:heads.readiness?.sandboxBlLatestBascDt,
+      schedule:String(heads.schedule?.closDtm||'').slice(0,10).replaceAll('-','')
+    };
+    if (!Object.values(dates).every(day=>typeof day==='string' && /^\d{8}$/.test(day))) return null;
+    const declared=publication.sourceDates;
+    if (declared && Object.keys(dates).some(name=>dates[name]!==declared[name])) return null;
+    return Object.freeze(dates);
+  }
   async function check(token) {
     const gate=await (await response(POINTER,token)).json(),p=gate.publication;
     const compatibleFormat=gate._format==='sales-target-release-v3' ||
@@ -64,7 +81,12 @@ window.DASHBOARD_DRIVE_CONFIG = Object.freeze({
         body=new Response(body.body.pipeThrough(new DecompressionStream('gzip')));
       }
       const value=await body.json();
-      if (value && typeof value==='object') Object.defineProperty(value,'__latestPublicationRunId',{value:before.gate.publication.runId,enumerable:false});
+      if (value && typeof value==='object') {
+        Object.defineProperty(value,'__latestPublicationRunId',{value:before.gate.publication.runId,enumerable:false});
+        if (name==='data.json.gz' && descriptor && value.data_date===before.gate.data_date) {
+          Object.defineProperty(value,'__publishedSourceDates',{value:publishedSourceDates(before.gate.publication),enumerable:false});
+        }
+      }
       return value;
     });
   }
@@ -77,5 +99,5 @@ window.DASHBOARD_DRIVE_CONFIG = Object.freeze({
     if (!panel) { panel=doc.createElement('div'); panel.id='latest-optional-notice'; panel.setAttribute('role','status'); (doc.querySelector('main')||doc.body).prepend(panel); }
     panel.textContent='별도 '+labels.join(' / ')+' 보정 자료는 이번 게시에서 제공되지 않습니다. 기본 대시보드의 원본 집계는 유지됩니다.';
   }
-  host.KMTCGlobalGate=Object.freeze({check,assertSame,within,readJson,showOptionalNotice,pointerId:POINTER,integratedControlId:INTEGRATED});
+  host.KMTCGlobalGate=Object.freeze({check,assertSame,within,readJson,publishedSourceDates,showOptionalNotice,pointerId:POINTER,integratedControlId:INTEGRATED});
 })(globalThis);
