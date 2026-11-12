@@ -444,6 +444,11 @@ function normalizeDataDate(value) {
 function publishedDateLabel(value) {
   const day = normalizeDataDate(value);
   const label = day ? `${day.slice(0,4)}-${day.slice(4,6)}-${day.slice(6,8)}` : String(value || '');
+  const sources = DATA?.scope_source?.source_dates;
+  if (sources && ['booking','preparedBooking','bsa','bl','schedule'].every(key => normalizeDataDate(sources[key]))) {
+    const format = value => normalizeDataDate(value).replace(/^(\d{4})(\d{2})(\d{2})$/, '$1-$2-$3');
+    return `BKG/WOS ${format(sources.booking)} · ${L('Booking 집계','Prepared BKG')} ${format(sources.preparedBooking)} · B/L ${format(sources.bl)} · BSA ${format(sources.bsa)} · ${L('스케줄','Schedule')} ${format(sources.schedule)}`;
+  }
   const dates = DATA?.current_component_dates;
   if (dates && (dates.bl !== day || dates.bsa !== day)) {
     const format = value => value.slice(0,4)+'-'+value.slice(4,6)+'-'+value.slice(6,8);

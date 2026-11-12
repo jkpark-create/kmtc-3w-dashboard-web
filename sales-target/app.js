@@ -789,6 +789,12 @@ function updateDataInfo() {
   const chunks = (STATE.manifest.chunk_count || 0).toLocaleString();
   const bkgRows = (STATE.manifest.bkg_rows || 0).toLocaleString();
   el.textContent = I18N[STATE.lang].dataInfo(date, chunks, bkgRows);
+  const sources = LATEST_RELEASE_V3?.publication?.sourceDates;
+  if (sources && ['booking','preparedBooking','bl','bsa','schedule'].every(key => /^\d{8}$/.test(sources[key] || ''))) {
+    const schedule = STATE.lang === 'en' ? 'Schedule' : '스케줄';
+    const preparedBooking = STATE.lang === 'en' ? 'Prepared BKG' : 'Booking 집계';
+    el.textContent += ` · Booking ${formatDataDate(sources.booking)} · ${preparedBooking} ${formatDataDate(sources.preparedBooking)} · B/L ${formatDataDate(sources.bl)} · BSA ${formatDataDate(sources.bsa)} · ${schedule} ${formatDataDate(sources.schedule)}`;
+  }
   const quality = STATE.index.cm1_quality;
   const state = quality ? `${quality.status === 'partial' ? (STATE.lang === 'en' ? 'unconfirmed' : '미확인') : quality.status} ${quality.unknown_rows ?? ''}${STATE.lang === 'en' ? ' rows' : '건'}` : (STATE.lang === 'en' ? 'not supplied' : '미제공');
   el.textContent += (STATE.lang === 'en' ? ' · CM1 quality: ' : ' · CM1 결측 검증: ') + state;

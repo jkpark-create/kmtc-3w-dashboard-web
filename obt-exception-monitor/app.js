@@ -1386,16 +1386,42 @@ function renderPartialWosCoverage() {
   }
   const quality = state.raw.original_booking_quality || {};
   const date = String(state.raw.data_date || '').replace(/^(\d{4})(\d{2})(\d{2})$/, '$1-$2-$3');
+  const sourceDates = state.raw?.scope_source?.source_dates;
+  const formatSourceDate = value => /^\d{8}$/.test(value || '')
+    ? value.replace(/^(\d{4})(\d{2})(\d{2})$/, '$1-$2-$3') : date;
+  const bookingDate = formatSourceDate(sourceDates?.booking);
+  const blDate = formatSourceDate(sourceDates?.bl);
   const first = String(state.raw.first_booking_fields_captured_at || state.raw.first_booking_field_evidence_asof || state.raw.data_date || '');
   const lifting = String(state.raw.wos_original_lifting_source_date || state.raw.data_date || '').replace(/^(\d{4})(\d{2})(\d{2})$/, '$1-$2-$3');
   const missing = Number(quality.missing_first_schedule_rows || 0).toLocaleString();
   const unknown = Number(quality.unresolved_rows || 0).toLocaleString();
   banner.textContent = state.lang === 'en'
-    ? `WOS rates are partial indicators based on confirmed data. Post-July current Booking/BL source: ${date}; first-field capture: ${first}; WOS conversion snapshot: ${lifting}. ${missing} bookings have no first schedule; first FST for ${unknown} bookings is unconfirmed. Current Booking performance is retained. Unknown first FST is not zero.`
-    : `WOS 비율은 확인된 자료 기준 부분 지표입니다. 7월 이후 현재 부킹/BL 기준일 ${date}, 최초 필드 조회 ${first}, WOS 전환 실적 ${lifting}. ${missing}건은 최초 일정 미분류, ${unknown}건은 최초 FST 미확정입니다. 현재 부킹 실적은 보존하며, 미확정 최초 FST를 0으로 간주하지 않습니다.`;
+    ? `WOS rates are partial indicators based on confirmed data. Post-July Booking ${bookingDate}, B/L ${blDate}; first-field capture: ${first}; WOS conversion snapshot: ${lifting}. ${missing} bookings have no first schedule; first FST for ${unknown} bookings is unconfirmed. Current Booking performance is retained. Unknown first FST is not zero.`
+    : `WOS 비율은 확인된 자료 기준 부분 지표입니다. 7월 이후 Booking ${bookingDate}, B/L ${blDate}, 최초 필드 조회 ${first}, WOS 전환 실적 ${lifting}. ${missing}건은 최초 일정 미분류, ${unknown}건은 최초 FST 미확정입니다. 현재 부킹 실적은 보존하며, 미확정 최초 FST를 0으로 간주하지 않습니다.`;
+}
+
+function renderSourceDates() {
+  const sources = state.raw?.scope_source?.source_dates;
+  let notice = document.getElementById('verified-source-dates');
+  const keys = ['booking','preparedBooking','bl','bsa','schedule'];
+  if (!sources || !keys.every(key => /^\d{8}$/.test(sources[key] || ''))) {
+    if (notice) notice.remove();
+    return;
+  }
+  if (!notice) {
+    notice = document.createElement('div');
+    notice.id = 'verified-source-dates';
+    notice.setAttribute('role','status');
+    (document.querySelector('main') || document.body).prepend(notice);
+  }
+  const format = value => value.replace(/^(\d{4})(\d{2})(\d{2})$/, '$1-$2-$3');
+  const schedule = state.lang === 'en' ? 'Schedule' : '스케줄';
+  const preparedBooking = state.lang === 'en' ? 'Prepared BKG' : 'Booking 집계';
+  notice.textContent = `Booking/WOS ${format(sources.booking)} · ${preparedBooking} ${format(sources.preparedBooking)} · B/L ${format(sources.bl)} · BSA ${format(sources.bsa)} · ${schedule} ${format(sources.schedule)}`;
 }
 
 function render() {
+  renderSourceDates();
   renderPartialWosCoverage();
   if (!state.rows.length) return;
 
