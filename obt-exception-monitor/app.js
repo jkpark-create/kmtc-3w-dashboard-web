@@ -1386,7 +1386,7 @@ function renderPartialWosCoverage() {
   }
   const quality = state.raw.original_booking_quality || {};
   const date = String(state.raw.data_date || '').replace(/^(\d{4})(\d{2})(\d{2})$/, '$1-$2-$3');
-  const sourceDates = state.raw?.scope_source?.source_dates || state.raw?.__publishedSourceDates;
+  const sourceDates = state.raw?.__publishedSourceDates || state.raw?.scope_source?.source_dates;
   const formatSourceDate = value => /^\d{8}$/.test(value || '')
     ? value.replace(/^(\d{4})(\d{2})(\d{2})$/, '$1-$2-$3') : date;
   const bookingDate = formatSourceDate(sourceDates?.booking);
@@ -1401,7 +1401,7 @@ function renderPartialWosCoverage() {
 }
 
 function renderSourceDates() {
-  const sources = state.raw?.scope_source?.source_dates || state.raw?.__publishedSourceDates;
+  const sources = state.raw?.__publishedSourceDates || state.raw?.scope_source?.source_dates;
   let notice = document.getElementById('verified-source-dates');
   const keys = ['booking','preparedBooking','bl','bsa','schedule'];
   if (!sources || !keys.every(key => /^\d{8}$/.test(sources[key] || ''))) {
