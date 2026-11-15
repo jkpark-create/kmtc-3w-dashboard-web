@@ -484,7 +484,6 @@ async function loadData() {
   try {
     // Start charts and data together after auth, then render a complete screen.
     [DATA] = await Promise.all([loadCurrentDataJson(), ensurePlotly()]);
-    KMTCGlobalGate.showOptionalNotice(DATA);
     if (SALES_TARGET.publicationRunId !== DATA.__latestPublicationRunId) { SALES_TARGET.byName.clear(); SALES_TARGET.byIdentity.clear(); SALES_TARGET.loaded=false; SALES_TARGET.dataDate=null; }
     normalizeMetricKeys(DATA);
     const sel = document.getElementById('dataDateSel');
@@ -1613,32 +1612,7 @@ function dualLineValueAnnotations(x, topAwareSeries, options = {}) {
   return annotations;
 }
 
-function renderUnassignedQualityBanner() {
-  const quality = DATA && DATA.customer_code_quality;
-  const app = document.getElementById('app');
-  if (!app) return;
-  let banner = document.getElementById('unassigned-quality-banner');
-  if (!banner) {
-    banner = document.createElement('div');
-    banner.id = 'unassigned-quality-banner';
-    banner.setAttribute('role', 'status');
-    banner.style.cssText = 'padding:10px 20px;background:#fff8e1;color:#5d4200;border-bottom:1px solid #d8bd69;line-height:1.5';
-    app.insertBefore(banner, app.firstChild);
-  }
-  if (!quality || !quality.retained_unassigned_rows) {
-    banner.style.display = 'none';
-    banner.textContent = '';
-    return;
-  }
-  banner.style.display = 'block';
-  const rows = Number(quality.retained_unassigned_rows);
-  const teu = Number(quality.retained_unassigned_fst_teu);
-  const keys = (quality.unassigned_booking_keys || []).join(', ');
-  banner.textContent = `미배정 ${rows}건 / FST ${teu.toLocaleString()} TEU: 전체 비취소 합계에 포함되어 있습니다. 회사 코드를 원천에서 확인해 주세요. ${keys}`;
-}
-
 function render() {
-  renderUnassignedQualityBanner();
   if (!DATA) return;
   resetFilterMemo();
   const fn = {t1: renderTab1, t2: renderTab2, t3: renderTab3, t4: renderTab4, t5: renderTab5, t6: renderTab6};
@@ -1659,7 +1633,7 @@ function renderTab1() {
 
   const totalBkg = profitSum(fd,'fst'), shipped = profitSum(fd,'norm_lst');
   const w3Bkg = profitSum(fd,'w3_fst'), w3Ship = profitSum(fd,'w3_norm_lst');
-  const occ = ratio(shipped,bsaTotal) ?? 0;
+  const occ = ratio(shipped,bsaTotal);
   const sr = ratio(w3Ship,w3Bkg) ?? 0;
   const cm1 = profitSum(fd,'cm1_norm'), cm1l = profitSum(fd,'lst_norm');
   const cm1teu = cm1l>0 ? cm1/cm1l : 0;
@@ -1670,14 +1644,14 @@ function renderTab1() {
     ${kpi(T[_lang].w3bkg, fmt(w3Bkg), '#6c5ce7')}
     ${kpi(T[_lang].w3ship, fmt(w3Ship), '#00b894')}
     ${kpi(T[_lang].bsa, fmt(bsaTotal), '#5f6368')}
-    ${kpi(T[_lang].occ, occ.toFixed(1)+'%', occ<=120?'#34a853':'#ea4335')}
+    ${kpi(T[_lang].occ, occ == null ? '—' : occ.toFixed(1)+'%', occ == null ? '#5f6368' : occ<=120?'#34a853':'#ea4335')}
     ${kpi(T[_lang].shipRate, sr.toFixed(1)+'%', sr>=55?'#34a853':'#f9ab00')}
     ${kpi('CM1/TEU', fmt(Math.round(cm1teu)), '#202124')}
   </div>`;
 
   // Charts
   html += `<div class="chart-row">
-    <div class="chart-card" style="flex:7"><h3>${T[_lang].monthlyChart}</h3><div id="ch1bar" style="height:450px"></div></div>
+    <div class="chart-card" style="flex:7"><h3>${T[_lang].monthlyChart}</h3><div id="ch1bar" style="height:510px"></div></div>
     <div class="chart-card" style="flex:5">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <h3 id="occTitle">${vl} ${L('3주전BKG/BSA','WOS-3 BKG/BSA')}</h3>
@@ -1712,13 +1686,6 @@ function renderTab1() {
       return profitSum(filterOccupancyMonthly(m), key);
     }
   }
-  function _getMonthMetric(m, key) {
-    if (isWeekSelected && m === month) {
-      return profitSum(filterOccupancyWeekly(m), key);
-    }
-    const v = profitSum(filterOccupancyMonthly(m), key);
-    return isWeekSelected ? v * weekScaleForMonth(m) : v;
-  }
   function _getBSA(m) {
     if (isWeekSelected && m === month) {
       return sum(filterBSA(m), 'teu_bsa');  // 해당월: 해당 주 BSA
@@ -1735,72 +1702,52 @@ function renderTab1() {
   // 3주전 BKG 바 + 3주전BKG/BSA 라인 + 구간별고수익비중(w3_route_hi_fst/w3_fst)
   const w3bkgM = ms.map(m => _getMonthData(m, 'w3_fst'));
   const w3bkgBsaM = ms.map((m,i) => ratio(w3bkgM[i],bsaM[i]));
-  const w3TotalBkgM = ms.map(m => _getMonthMetric(m, 'w3_fst'));
-  const w3RouteHiBkgM = ms.map(m => _getMonthMetric(m, 'w3_route_hi_fst'));
-  const hiBkgShareM = ms.map((m,i) => ratio(w3RouteHiBkgM[i],w3TotalBkgM[i]));
+  const w3RouteHiBkgM = ms.map(m => _getMonthData(m, 'w3_route_hi_fst'));
+  const hiBkgShareM = ms.map((m,i) => ratio(w3RouteHiBkgM[i],w3bkgM[i]));
 
-  // --- 월별 BKG vs BSA: smart label positioning (2D overlap) ---
-  const _axisRange = (vals, fallbackMax, minSpanRatio, lowPad, highPad) => {
-    const clean = vals.filter(v=>Number.isFinite(v) && v>0);
-    if (!clean.length) return [0, fallbackMax];
-    const mn = Math.min(...clean), mx = Math.max(...clean);
-    const span = Math.max(mx - mn, mx * minSpanRatio, 1);
-    return [Math.max(0, mn - span * lowPad), mx + span * highPad];
-  };
-  const _allBV = [...shipM, ...bsaM, ...w3bkgM];
-  const [_y1min, _y1m] = _axisRange(_allBV, 1000, 0.12, 0.12, 0.22);
-  const _allOV = [...occM, ...hiBkgShareM, ...w3bkgBsaM].filter(v=>v!=null);
-  const [_y2min, _y2m] = _axisRange(_allOV, 100, 0.22, 0.18, 0.22);
-  const _ny1 = v => (_y1m === _y1min ? 0 : (v - _y1min) / (_y1m - _y1min));
-  const _ny2 = v => (_y2m === _y2min ? 0 : (v - _y2min) / (_y2m - _y2min));
-  const _G=0.07, _oP=[], _wbP=[], _woP=[];
-  xl.forEach((_,i) => {
-    const bTops=[w3bkgM[i],shipM[i],bsaM[i]].filter(v=>v>0).map(v=>_ny1(v)+0.03);
-    const ents=[
-      {yn:occM[i]!=null?_ny2(occM[i]):null,def:'top',idx:0},
-      {yn:w3bkgBsaM[i]!=null?_ny2(w3bkgBsaM[i]):null,def:'top',idx:1},
-      {yn:hiBkgShareM[i]!=null?_ny2(hiBkgShareM[i]):null,def:'bottom',idx:2}];
-    const res=['top center','top center','bottom center'];
-    const cP=[...bTops], rP=[];  // center-placed vs right-placed (separate columns)
-    const noC=(y)=>!cP.some(p=>Math.abs(y-p)<_G);
-    const noR=(y)=>!rP.some(p=>Math.abs(y-p)<_G);
-    ents.filter(e=>e.yn!=null).sort((a,b)=>b.yn-a.yn).forEach(e=>{
-      const td=e.def==='top'?0.04:-0.04, od=-td;
-      if(noC(e.yn+td)){res[e.idx]=e.def+' center';cP.push(e.yn+td);}
-      else if(noC(e.yn+od)){res[e.idx]=(e.def==='top'?'bottom':'top')+' center';cP.push(e.yn+od);}
-      else if(noR(e.yn)){res[e.idx]='middle right';rP.push(e.yn);}
-      else {res[e.idx]='middle left';}
-    });
-    _oP.push(res[0]); _wbP.push(res[1]); _woP.push(res[2]);
+  const volumeTrace = (name, values, color) => ({
+    x:xl, y:values, type:'bar', name, marker:{color},
+    text:values.map(fmt), textposition:'outside', textangle:-90,
+    textfont:{size:13,color:'#202124'}, cliponaxis:false,
+    hovertemplate:'%{x} · %{fullData.name}<br>%{y:,.0f} TEU<extra></extra>',
   });
+  const ratioTrace = (name, values, numerator, denominator, color, dash, symbol) => {
+    const selected = values.at(-1);
+    return {
+      x:xl, y:values, type:'scatter', mode:'lines+markers', yaxis:'y2',
+      name:name + ' · ' + (selected == null ? '—' : selected.toFixed(1)+'%'),
+      customdata:numerator.map((v,i) => [v,denominator[i]]),
+      hovertemplate: '%{x} · ' + name + '<br>%{y:.1f}% (%{customdata[0]:,.0f} / %{customdata[1]:,.0f} TEU)<extra></extra>',
+      line:{color,width:2,dash}, marker:{size:7,symbol},
+    };
+  };
+  const volumeMax = Math.max(1, ...shipM, ...bsaM, ...w3bkgM);
+  const ratioMax = Math.max(100, ...occM, ...w3bkgBsaM, ...hiBkgShareM);
+  document.getElementById('ch1bar').style.minWidth = (ms.length * 50 + 90) + 'px';
   plot('ch1bar', [
-    {x:xl, y:w3bkgM, type:'bar', name:L('3주전BKG','WOS-3 BKG'), marker:{color:'#6c5ce7',opacity:.7}, text:w3bkgM.map(fmt), textposition:'outside', textfont:{size:9}},
-    {x:xl, y:shipM, type:'bar', name:L('실선적(Normal)','LFT(Normal)'), marker:{color:'#1a73e8',opacity:.85}, text:shipM.map(fmt), textposition:'outside', textfont:{size:10}},
-    {x:xl, y:bsaM, type:'bar', name:'BSA', marker:{color:'#dadce0',opacity:.5}, text:bsaM.map(fmt), textposition:'outside', textfont:{size:10}},
-    {x:xl, y:occM, type:'scatter', mode:'lines+markers+text', name:L('BSA활용률(Normal/BSA)','Occ(Normal/BSA)'), yaxis:'y2',
-     text:occM.map(v=>v?v.toFixed(0)+'%':''), textposition:_oP, line:{color:'#ea4335',width:2}, marker:{size:8}},
-    {x:xl, y:w3bkgBsaM, type:'scatter', mode:'lines+markers+text', name:L('3주전BKG/BSA','WOS-3 BKG/BSA'), yaxis:'y2',
-     text:w3bkgBsaM.map(v=>v?v.toFixed(0)+'%':''), textposition:_wbP, line:{color:'#f9ab00',width:2,dash:'dot'}, marker:{size:6,symbol:'square'}},
-    {x:xl, y:hiBkgShareM, type:'scatter', mode:'lines+markers+text', name:L('3주 전 부킹 중 구간고수익 물량 비중','Route-High Share of WOS-3 Booking TEU'), yaxis:'y2',
-     text:hiBkgShareM.map(v=>v?v.toFixed(0)+'%':''), textposition:_woP, line:{color:'#6c5ce7',width:2,dash:'dash'}, marker:{size:6,symbol:'diamond'}},
-  ], {barmode:'group', margin:{l:50,r:50,t:40,b:30},
-    yaxis:{title:'TEU',gridcolor:'#f0f0f0',range:[_y1min,_y1m]},
-    yaxis2:{title:L('비율 %','Ratio %'),overlaying:'y',side:'right',range:[_y2min,_y2m]},
-    legend:{orientation:'h',y:1.15}, plot_bgcolor:'#fff', paper_bgcolor:'#fff'},
+    volumeTrace(L('3주전BKG','WOS-3 BKG'), w3bkgM, '#8b7aeb'),
+    volumeTrace(L('실선적(Normal)','LFT(Normal)'), shipM, '#4387df'),
+    volumeTrace('BSA', bsaM, '#ccd1d8'),
+    ratioTrace(L('BSA활용률(Normal/BSA)','Occ(Normal/BSA)'), occM, shipM, bsaM, '#b42318','solid','circle'),
+    ratioTrace(L('3주전BKG/BSA','WOS-3 BKG/BSA'), w3bkgBsaM, w3bkgM, bsaM, '#9a5900','dot','square'),
+    ratioTrace(L('3주 전 부킹 중 구간고수익 물량 비중','Route-High Share of WOS-3 Booking TEU'), hiBkgShareM, w3RouteHiBkgM, w3bkgM, '#5c42c7','dash','diamond'),
+  ], {barmode:'group', uniformtext:{minsize:13,mode:'show'}, margin:{l:60,r:32,t:88,b:30},
+    xaxis:{type:'category',anchor:'y2',tickfont:{size:13}},
+    yaxis:{title:'TEU',domain:[.4,1],gridcolor:'#f0f0f0',range:[0,volumeMax*1.35]},
+    yaxis2:{title:L('비율','Ratio'),domain:[0,.32],gridcolor:'#f0f0f0',ticksuffix:'%',range:[0,ratioMax*1.28]},
+    legend:{orientation:'h',x:0,y:1.02,yanchor:'bottom',font:{size:12}}, plot_bgcolor:'#fff', paper_bgcolor:'#fff'},
   {displayModeBar:false});
 
-  // Occupancy bar
   const items = groupByKey(fd, vk);
-  // 주차 선택: 해당 주 BSA, 전체: 월 BSA
-  const _bsaForOcc = _weekSel ? filterBSA(month) : filterBSA(month, null);
-  const bsaByKey = {};
-  _bsaForOcc.forEach(r => { const k = r[bk]; bsaByKey[k] = (bsaByKey[k]||0) + (r.teu_bsa||0); });
-  // Occ data for mode switching (w3=3주전BKG/BSA, normal=Normal/BSA)
-  window._occRows = Object.entries(items).map(([k,rows]) => {
-    const s = profitSum(rows,'norm_lst'), b = bsaByKey[k]||0;
-    const w3b = profitSum(rows,'w3_fst');
-    return {name:k, ship:s, w3bkg:w3b, bsa:b, occ: ratio(s,b) ?? 0, w3ratio: ratio(w3b,b) ?? 0};
-  }).filter(r=>r.ship>0||r.bsa>0);
+  const bsaByKey = new Map();
+  filterBSA(month, _weekSel ? undefined : null).forEach(r => {
+    const k = r[bk];
+    bsaByKey.set(k, (bsaByKey.get(k)||0) + (r.teu_bsa||0));
+  });
+  window._occRows = [...new Set([...Object.keys(items), ...bsaByKey.keys()])].map(name => {
+    const rows = items[name] || [];
+    return {name, ship:profitSum(rows,'norm_lst'), w3bkg:profitSum(rows,'w3_fst'), bsa:bsaByKey.get(name)||0};
+  });
   if (!window._occMode) window._occMode = 'w3';
   // Re-apply mode so titles/buttons reflect the current state after a filter change.
   setOccMode(window._occMode);
@@ -1913,6 +1860,7 @@ function buildOccTrendByCountry(topN = 8) {
 }
 
 function drawTrendChart() {
+  document.getElementById('ch1occ').style.height = '430px';
   const { periods, countries } = buildOccTrendByCountry();
   if (!periods.length || !countries.length) {
     Plotly.purge('ch1occ');
@@ -1923,7 +1871,6 @@ function drawTrendChart() {
   const traces = countries.map((c, i) => ({
     x, y: c.values, name: c.name, type: 'scatter', mode: 'lines+markers',
     line: { color: colors[i % colors.length], width: 2 }, marker: { size: 6 },
-    connectgaps: true,
     hovertemplate: `${c.name} %{x}<br>3W BKG/BSA: %{y:.0f}%<extra></extra>`,
   }));
   // Trend chart: no upper cap — show every point so spikes are not hidden.
@@ -1943,35 +1890,37 @@ function drawTrendChart() {
 }
 
 function drawOccChart() {
-  const rows = window._occRows;
-  if (!rows || !rows.length) return;
-  const mode = window._occMode || 'w3';
-  const sorted = [...rows].sort((a,b) => mode==='w3' ? a.w3ratio-b.w3ratio : a.occ-b.occ);
-  const vals = sorted.map(r => mode==='w3' ? r.w3ratio : r.occ);
-  const labels = sorted.map(r => {
-    const num = mode==='w3' ? r.w3bkg : r.ship;
-    return `(${fmt(num)} / ${fmt(r.bsa)})  ${r.name}`;
-  });
-  // Ranking chart: dynamic max under 200 so low ratios stay readable; cap at 200
-  // so a single outlier doesn't squash the rest. Bars with values > 200 are
-  // clipped visually but keep their original label so the real number stays visible.
-  const HARD_CAP = 200;
-  const finiteVals = vals.filter(v => Number.isFinite(v));
-  const dataMax = finiteVals.length ? Math.max(...finiteVals) : 0;
-  // Round up to nearest 10 with a 12% headroom for outside-text, then cap at 200.
-  const dynamicMax = Math.min(HARD_CAP, Math.max(50, Math.ceil(dataMax * 1.12 / 10) * 10));
-  const displayVals = vals.map(v => Math.min(v, HARD_CAP));
+  const metric = window._occMode === 'normal' ? 'ship' : 'w3bkg';
+  const target = document.getElementById('ch1occ');
+  const rows = (window._occRows || [])
+    .filter(r => r[metric] !== 0 || r.bsa !== 0)
+    .map(r => ({...r, value:ratio(r[metric],r.bsa)}))
+    .sort((a,b) => (a.value ?? -Infinity) - (b.value ?? -Infinity));
+  target.style.height = Math.max(430, rows.length * 22 + 50) + 'px';
+  const labels = rows.map(r => `(${fmt(r[metric])} / ${fmt(r.bsa)})  ${r.name}`);
+  const points = rows.map((r,i) => ({y:i,value:r.value}));
+  const available = points.filter(r => r.value != null);
+  const maxValue = Math.max(65, ...available.map(r => r.value));
+  const unavailable = L('BSA 없음','No BSA');
+  const valueText = value => value.toLocaleString(undefined,{maximumFractionDigits:1}) + '%';
   plot('ch1occ', [{
-    y: labels, x: displayVals, type:'bar', orientation:'h',
-    marker:{color:vals.map(v => v>=65?'#34a853':v>=50?'#f9ab00':'#ea4335')},
-    text:vals.map(v=>v.toFixed(0)+'%'), textposition:'outside', textfont:{size:11}, cliponaxis:false,
-    customdata: vals,
-    hovertemplate: '%{y}<br>%{customdata:.1f}%<extra></extra>',
-  }], {margin:{l:200,r:60,t:10,b:30},
-    xaxis:{gridcolor:'#f0f0f0',range:[0,dynamicMax]},
-    yaxis:{tickfont:{family:'Consolas,monospace',size:11}},
+    y:available.map(r => r.y), x:available.map(r => r.value),
+    customdata:available.map(r => labels[r.y]),
+    type:'bar', orientation:'h',
+    marker:{color:available.map(r => r.value>=65?'#34a853':r.value>=50?'#f9ab00':'#ea4335')},
+    text:available.map(r => valueText(r.value)), textposition:'outside',
+    textfont:{size:13,color:'#202124'}, cliponaxis:false,
+    hovertemplate:'%{customdata}<br>%{x:.1f}%<extra></extra>',
+  }], {margin:{l:10,r:58,t:10,b:36}, uniformtext:{minsize:13,mode:'show'},
+    xaxis:{gridcolor:'#f0f0f0',ticksuffix:'%',tickfont:{size:12},range:[0,maxValue*1.1]},
+    yaxis:{automargin:true,range:[-.5,Math.max(.5,rows.length-.5)],
+      tickvals:points.map(r => r.y),ticktext:labels,showgrid:false,zeroline:false,
+      tickfont:{family:'Consolas,monospace',size:13}},
+    annotations:rows.flatMap((r,i) => r.value == null ? [{
+      x:0,y:i,text:unavailable,showarrow:false,xanchor:'left',xshift:4,font:{size:12,color:'#5f6368'},
+    }] : []),
     plot_bgcolor:'#fff',paper_bgcolor:'#fff',showlegend:false,
-    shapes:[{type:'line',x0:50,x1:50,y0:-0.5,y1:sorted.length-0.5,line:{dash:'dot',color:'#5f6368',width:1}}]
+    shapes:[{type:'line',x0:50,x1:50,y0:0,y1:1,yref:'paper',line:{dash:'dot',color:'#5f6368',width:1}}]
   }, {displayModeBar:false});
 }
 
